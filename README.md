@@ -2,6 +2,8 @@
 
 Hệ thống tính điểm Chuyên viên Kinh doanh (CVKD) bất động sản tự động tốc độ cao, tích hợp giao diện cấu hình trực quan (Enterprise Web App) trên nền tảng Google Sheets và Google Apps Script.
 
+![Bảng Cấu Hình Điểm](docs/images/bang_tong_hop.png)
+
 ## 📚 Tài Liệu Hướng Dẫn & Đào Tạo
 
 Toàn bộ thông tin chi tiết về chức năng, luồng nghiệp vụ, sơ đồ Flowchart (Mermaid) và hướng dẫn sử dụng từng bước đã được biên soạn đầy đủ tại:

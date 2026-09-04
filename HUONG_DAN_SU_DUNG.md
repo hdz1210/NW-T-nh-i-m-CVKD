@@ -154,35 +154,49 @@ flowchart TD
 
 Tab **Bảng Tổng Hợp (Quỹ NW)** dùng để quản lý điểm cho các dự án nội bộ với điều kiện chi tiết:
 
+![Giao diện Bảng Tổng Hợp (Quỹ NW)](docs/images/bang_tong_hop.png)
+
+*Giao diện Bảng Tổng Hợp: Thẻ KPI tổng quan, thanh công cụ tìm kiếm/lọc đa tiêu chí, cột thao tác với icon SVG chuẩn enterprise và ma trận điểm theo tháng.*
+
 #### a. Sửa điểm trực tiếp trên ma trận tháng:
-- Nhấp trực tiếp vào ô điểm của tháng cần sửa.
+- Nhấp trực tiếp vào ô điểm của tháng cần sửa (ví dụ: cột `09/2026 MỚI NHẤT`).
 - Nhập số điểm mới (hỗ trợ số nguyên và số thập phân như `8`, `8.5`, `10.25`).
 - Ô vừa sửa sẽ tự động đổi viền nổi bật để bạn dễ theo dõi.
 - Sau khi nhập xong, bấm nút **Lưu Thay Đổi** ở góc trên cùng bên phải.
 
-#### b. Thêm dự án / điều kiện mới:
-1. Nhấp nút **Thêm Dòng Mới** ở góc trên thanh công cụ.
-2. Chọn loại quỹ: **Quỹ NW (Bảng Tổng Hợp)**.
-3. Nhập **Mã dự án** (VD: `MAS OCP2`) và **Tên dự án** (VD: `Vinhomes Ocean Park 2`).
-4. Chọn **Chủ đầu tư (CĐT)** và **Miền** (Bắc / Trung / Nam).
-5. **Cấu hình 3 Tiêu Chí Khớp**:
-   - **Sản phẩm**: Chọn `Tất cả`, `Cao tầng`, hoặc `Thấp tầng`.
-   - **Loại căn**: Chọn dropdown đa chọn (Studio, 1PN, 2PN, 3PN, Duplex, Penthouse...). Hỗ trợ chọn nhanh hoặc tìm kiếm.
-   - **Khoảng giá**: Nhập khoảng giá Min - Max (tỷ VNĐ). Nếu dự án chỉ áp dụng trên tiền đất, tích chọn **Chỉ tính tiền đất (VHHVB)**.
-6. Nhập **Điểm Cơ Sở** ban đầu cho các tháng.
-7. Bấm **Thêm Ngay**.
-
-#### c. Thao tác trên từng dòng:
+#### b. Thao tác trên từng dòng:
 Ở cột **THAO TÁC** của mỗi dòng có 3 nút bấm SVG tinh gọn:
 - **Nút Bút Chì**: Chỉnh sửa thông tin dự án và 3 tiêu chí khớp.
 - **Nút Ngọn Lửa (Flame)**: Đưa dòng này vào **Chiến dịch bán hàng** chỉ với 1 click.
 - **Nút Thùng Rác**: Xóa vĩnh viễn dòng cấu hình này.
+
+#### c. Thêm dự án / điều kiện mới:
+1. Nhấp nút **Thêm Dòng Mới** ở góc trên thanh công cụ.
+2. Một cửa sổ modal thiết lập sẽ xuất hiện:
+
+![Modal Thêm Dự Án / Điều Kiện (Quỹ NW)](docs/images/modal_them_du_an_th.png)
+
+*Cửa sổ cấu hình dự án mới: Phân loại quỹ, mã/tên dự án, CĐT, vùng miền, cùng khối 3 tiêu chí khớp (Sản phẩm - Loại căn - Khoảng giá).*
+
+3. Chọn loại quỹ: **Quỹ NW (Bảng Tổng Hợp)**.
+4. Nhập **Mã dự án** (VD: `MAS OCP2`) và **Tên dự án** (VD: `Vinhomes Ocean Park 2`).
+5. Chọn **Chủ đầu tư (CĐT)** và **Miền** (Bắc / Trung / Nam).
+6. **Cấu hình 3 Tiêu Chí Khớp**:
+   - **Sản phẩm**: Chọn `Tất cả (Cao & Thấp tầng)`, `Cao tầng`, hoặc `Thấp tầng`.
+   - **Loại căn**: Chọn dropdown đa chọn (Studio, 1PN, 2PN, 3PN, Duplex, Penthouse, Shophouse...). Hỗ trợ tìm kiếm nhanh và chọn hàng loạt.
+   - **Khoảng giá**: Nhập khoảng giá Min - Max (tỷ VNĐ). Nếu dự án chỉ áp dụng trên tiền đất, tích chọn **Chỉ tính tiền đất (VHHVB)**.
+7. Nhập **Điểm Cơ Sở** ban đầu cho các tháng.
+8. Bấm **Thêm Ngay**.
 
 ---
 
 ### 4.3. Quản Lý Điểm Quỹ Chéo (Bảng Dự Án F2)
 
 Tab **Dự Án F2 (Quỹ Chéo)** quản lý điểm cho các dự án liên kết bán chéo:
+
+![Giao diện Bảng Dự Án F2 (Quỹ Chéo)](docs/images/du_an_f2.png)
+
+*Giao diện Bảng Dự Án F2: Quản lý ma trận điểm lịch sử qua các tháng (09/2026, 08/2026, 07/2026...) của từng dự án liên kết F2.*
 
 1. Chuyển sang tab **Dự Án F2 (Quỹ Chéo)**.
 2. Bạn có thể sửa điểm trực tiếp trên từng cột tháng tương tự Bảng Tổng Hợp.
@@ -196,7 +210,11 @@ Tab **Dự Án F2 (Quỹ Chéo)** quản lý điểm cho các dự án liên k�
 
 ### 4.4. Quản Lý Điểm Chiến Dịch Đặc Biệt (Multi-Campaign)
 
-Tab **Điểm Chiến Dịch** cho phép bạn chạy nhiều chiến dịch thi đua cùng lúc (ví dụ: *Chiến dịch 1*, *Chiến dịch Bùng Nổ*, *Chiến dịch Mùa Hè*):
+Tab **Điểm Chiến Dịch** cho phép bạn chạy nhiều chiến dịch thi đua cùng lúc (ví dụ: *Chiến dịch 1*, *Chiến dịch 2*, *Chiến dịch Bùng Nổ*):
+
+![Giao diện Bảng Điểm Chiến Dịch](docs/images/diem_chien_dich.png)
+
+*Giao diện Điểm Chiến Dịch: Bảng điều khiển đa chiến dịch, theo dõi trạng thái bằng badge màu (Đang chạy / Kết thúc), khoảng thời gian áp dụng và mức điểm thi đua.*
 
 #### a. Tạo chiến dịch mới:
 1. Chuyển sang tab **Điểm Chiến Dịch**.
@@ -208,9 +226,15 @@ Tab **Điểm Chiến Dịch** cho phép bạn chạy nhiều chiến dịch thi
 4. Điền Mã dự án, điều kiện khớp và mức **Điểm Chiến Dịch**.
 5. Bấm **Thêm Ngay**.
 
-#### b. Thêm nhanh dự án từ Bảng Tổng Hợp vào Chiến Dịch:
-- **Cách 1**: Tại Tab *Bảng Tổng Hợp*, bấm **Icon Ngọn Lửa (Flame)** ở dòng dự án muốn áp dụng $\rightarrow$ Cửa sổ modal sẽ tự động điền sẵn toàn bộ tiêu chí khớp của dự án đó, bạn chỉ cần chọn tên chiến dịch và nhập điểm chiến dịch.
-- **Cách 2**: Tại Tab *Điểm Chiến Dịch*, bấm nút **Chọn Dòng Từ Tổng Hợp** $\rightarrow$ Danh sách dự án hiện ra $\rightarrow$ Bấm nút **Chọn & Sửa** tại dòng tương ứng.
+#### b. Thêm nhanh dự án từ Bảng Tổng Hợp vào Chiến Dịch (Icon Ngọn Lửa):
+- Tại Tab *Bảng Tổng Hợp*, bấm **Icon Ngọn Lửa (Flame)** ở dòng dự án muốn áp dụng:
+
+![Modal Thêm Vào Chiến Dịch](docs/images/modal_them_vao_chien_dich.png)
+
+*Cửa sổ Thêm Vào Chiến Dịch: Tự động kế thừa toàn bộ tiêu chí (mã, tên, CĐT, miền, loại căn, khoảng giá). Người dùng chỉ cần chọn tên chiến dịch và mức điểm thưởng.*
+
+- Cửa sổ modal sẽ tự động điền sẵn toàn bộ tiêu chí khớp của dự án đó.
+- Bạn chọn tên chiến dịch (chọn chiến dịch đang chạy trong dropdown hoặc nhập tên mới), chọn ngày áp dụng và nhập **Điểm Chiến Dịch** $\rightarrow$ Bấm **Thêm Vào Chiến Dịch**.
 
 #### c. Lọc và theo dõi chiến dịch:
 - Dropdown **Chiến dịch** trên thanh điều khiển cho phép:
@@ -229,7 +253,7 @@ Tab **Điểm Chiến Dịch** cho phép bạn chạy nhiều chiến dịch thi
 
 ### 4.5. Lưu Thay Đổi An Toàn
 
-- Khi có bất kỳ ô điểm nào được sửa hoặc có dòng mới được thêm, huy hiệu số lượng thay đổi chưa lưu (`Thay đổi chưa lưu: X ô/dòng`) sẽ hiển thị.
+- Khi có bất kỳ ô điểm nào được sửa hoặc có dòng mới được thêm, huy hiệu số lượng thay đổi chưa lưu (`Thay đổi chưa lưu: X ô/dòng`) sẽ hiển thị trên KPI deck.
 - Nút **Lưu Thay Đổi** ở góc phải sẽ chuyển sang trạng thái sẵn sàng.
 - **Tính năng bảo vệ chống mất dữ liệu**: Nếu bạn vô tình đóng cửa sổ khi chưa lưu, một hộp thoại xác nhận sẽ hiện ra nhắc bạn lưu lại dữ liệu trước khi thoát.
 
