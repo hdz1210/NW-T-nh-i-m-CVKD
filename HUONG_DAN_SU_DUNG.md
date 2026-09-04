@@ -9,9 +9,11 @@ Tài liệu này cung cấp toàn bộ kiến trúc, sơ đồ luồng hoạt đ
 1. [Tổng Quan Hệ Thống](#1-tổng-quan-hệ-thống)
 2. [Cấu Trúc Dữ Liệu & 3 Bảng Cấu Hình](#2-cấu-trúc-dữ-liệu--3-bảng-cấu-hình)
 3. [Sơ Đồ Luồng Hoạt Động (Flowcharts)](#3-sơ-đồ-luồng-hoạt-động-flowcharts)
-   - [3.1. Luồng Tính Điểm Tự Động Cho Giao Dịch (Calculation Engine Flow)](#31-luồng-tính-điểm-tự-động-cho-giao-dịch)
-   - [3.2. Luồng Vận Hành Cấu Hình Trên Giao Diện Web UI](#32-luồng-vận-hành-cấu-hình-trên-giao-diện-web-ui)
-   - [3.3. Luồng Tự Động Chuyển Tháng & Sao Chép Điểm](#33-luồng-tự-động-chuyển-tháng--sao-chép-điểm)
+   - [3.1. Luồng Tạo & Cập Nhật Điểm Quỹ NW (Bảng Tổng Hợp)](#31-luồng-tạo--cập-nhật-điểm-quỹ-nw-bảng-tổng-hợp)
+   - [3.2. Luồng Tạo & Cập Nhật Điểm Quỹ Chéo (Bảng Dự Án F2)](#32-luồng-tạo--cập-nhật-điểm-quỹ-chéo-bảng-dự-án-f2)
+   - [3.3. Luồng Tạo Điểm Thi Đua Theo Chiến Dịch (Multi-Campaign)](#33-luồng-tạo-điểm-thi-đua-theo-chiến-dịch-multi-campaign)
+   - [3.4. Luồng Tính Điểm Tự Động Cho Giao Dịch (Calculation Engine Flow)](#34-luồng-tính-điểm-tự-động-cho-giao-dịch)
+   - [3.5. Luồng Tự Động Chuyển Tháng & Sao Chép Điểm (Auto Sync Month)](#35-luồng-tự-động-chuyển-tháng--sao-chép-điểm)
 4. [Hướng Dẫn Thao Tác Chi Tiết (Step-by-Step Training)](#4-hướng-dẫn-thao-tác-chi-tiết)
    - [4.1. Mở Bảng Cấu Hình Điểm](#41-mở-bảng-cấu-hình-điểm)
    - [4.2. Quản Lý Điểm Quỹ NW (Bảng Tổng Hợp)](#42-quản-lý-điểm-quỹ-nw-bảng-tổng-hợp)
@@ -59,9 +61,97 @@ Google Spreadsheet
 
 ## 3. SƠ ĐỒ LUỒNG HOẠT ĐỘNG (FLOWCHARTS)
 
-### 3.1. Luồng Tính Điểm Tự Động Cho Giao Dịch
+### 3.1. Luồng Tạo & Cập Nhật Điểm Quỹ NW (Bảng Tổng Hợp)
 
-Sơ đồ thể hiện cách bộ máy tính điểm xử lý từng dòng dữ liệu trong sheet `DATA`:
+Sơ đồ thể hiện quy trình tạo mới hoặc cập nhật điểm số cho các dự án nội bộ Quỹ NW:
+
+```mermaid
+flowchart TD
+    StartTH(["Bắt đầu: Mở Bảng Cấu Hình Điểm"]) --> TabTH["Chọn Tab 'Bảng Tổng Hợp (Quỹ NW)'"]
+    TabTH --> ActionTH{"Bạn muốn thực hiện thao tác nào?"}
+    
+    %% Nhánh 1: Sửa điểm nhanh
+    ActionTH -- "1. Sửa điểm tháng có sẵn" --> EditMonthTH["Nhấp trực tiếp vào ô điểm tháng cần đổi<br/>(Ví dụ: Cột '09/2026 MỚI NHẤT')"]
+    EditMonthTH --> InputValTH["Gõ mức điểm mới (VD: 8, 8.5)"]
+    InputValTH --> ChangedTH["Ô chuyển viền cam nổi bật<br/>(Ghi nhận thay đổi vào bộ nhớ đệm)"]
+    
+    %% Nhánh 2: Thêm dự án / điều kiện mới
+    ActionTH -- "2. Thêm dự án / điều kiện mới" --> BtnAddTH["Bấm nút '+ Thêm Dòng Mới'"]
+    BtnAddTH --> FormTH["1. Nhập Mã DA, Tên DA, CĐT, Miền<br/>2. Cài đặt 3 Tiêu Chí Khớp:<br/>   - Sản phẩm: Cao tầng / Thấp tầng / Tất cả<br/>   - Loại căn: Studio, 1PN, 2PN, 3PN...<br/>   - Khoảng giá: Min - Max (tỷ VNĐ)<br/>3. Nhập Điểm Cơ Sở ban đầu cho các tháng"]
+    FormTH --> SubmitTH["Bấm 'Thêm Ngay'<br/>-> Dòng mới xuất hiện trong Bảng Tổng Hợp"]
+    
+    %% Gom về Lưu
+    ChangedTH --> SaveTH["Bấm nút 'Lưu Thay Đổi' (Góc trên cùng bên phải)"]
+    SubmitTH --> SaveTH
+    
+    SaveTH --> SheetTH["Hệ thống tự động chuẩn hóa số liệu<br/>và ghi vào Sheet 'Tổng hợp' trên Google Sheets"]
+    SheetTH --> DoneTH(["Hoàn tất: Điểm Quỹ NW sẵn sàng áp dụng"])
+```
+
+---
+
+### 3.2. Luồng Tạo & Cập Nhật Điểm Quỹ Chéo (Bảng Dự Án F2)
+
+Sơ đồ thể hiện quy trình thiết lập điểm độc lập cho các dự án liên kết bán chéo:
+
+```mermaid
+flowchart TD
+    StartF2(["Bắt đầu: Mở Bảng Cấu Hình Điểm"]) --> TabF2["Chọn Tab 'Dự Án F2 (Quỹ Chéo)'"]
+    TabF2 --> ActionF2{"Bạn muốn thực hiện thao tác nào?"}
+    
+    %% Nhánh 1: Sửa điểm tháng
+    ActionF2 -- "1. Sửa điểm tháng có sẵn" --> EditMonthF2["Nhấp vào ô điểm của tháng cần đổi<br/>(Ví dụ: Cột tháng '09/2026')"]
+    EditMonthF2 --> InputValF2["Gõ mức điểm mới (VD: 1.0, 0.5)"]
+    InputValF2 --> ChangedF2["Ô chuyển viền cam nổi bật"]
+    
+    %% Nhánh 2: Thêm dự án F2 mới
+    ActionF2 -- "2. Thêm dự án F2 mới" --> BtnAddF2["Bấm nút '+ Thêm Dòng Mới'"]
+    BtnAddF2 --> FormF2["1. Chọn loại quỹ: 'Quỹ chéo'<br/>2. Nhập Tên dự án F2 (VD: The Gió, Eaton Park...)<br/>3. Nhập mức điểm áp dụng cho các tháng"]
+    FormF2 --> SubmitF2["Bấm 'Thêm Ngay'<br/>-> Dự án mới xuất hiện trong bảng F2"]
+    
+    %% Gom về Lưu
+    ChangedF2 --> SaveF2["Bấm nút 'Lưu Thay Đổi'"]
+    SubmitF2 --> SaveF2
+    
+    SaveF2 --> SheetF2["Hệ thống tự động chuẩn hóa và ghi vào Sheet 'Dự án F2'"]
+    SheetF2 --> DoneF2(["Hoàn tất: Điểm Quỹ Chéo sẵn sàng áp dụng"])
+```
+
+---
+
+### 3.3. Luồng Tạo Điểm Thi Đua Theo Chiến Dịch (Multi-Campaign)
+
+Sơ đồ thể hiện quy trình thiết lập chiến dịch bán hàng ngắn hạn với điểm thưởng nóng có độ ưu tiên cao nhất:
+
+```mermaid
+flowchart TD
+    StartCamp(["Bắt đầu: Muốn thiết lập Điểm Chiến Dịch"]) --> MethodCamp{"Chọn cách thức tạo"}
+    
+    %% Cách 1: Nhanh từ Bảng Tổng Hợp
+    MethodCamp -- "Cách 1: Thêm nhanh từ Bảng Tổng Hợp (Khuyên dùng)" --> FlameCamp["Tại Tab 'Bảng Tổng Hợp':<br/>Bấm icon Ngọn Lửa ở dòng dự án muốn thưởng"]
+    FlameCamp --> InheritCamp["Hệ thống tự động kế thừa toàn bộ:<br/>Mã DA, Tên DA, CĐT và 3 Tiêu chí khớp"]
+    InheritCamp --> FillCampDetail1["Nhập thông tin chiến dịch:<br/>1. Tên chiến dịch (VD: Đua Top Thu Đông 2026)<br/>2. Thời gian: Từ Ngày -> Đến Ngày<br/>3. Nhập Mức Điểm Chiến Dịch thưởng nóng"]
+    FillCampDetail1 --> AddListCamp["Bấm 'Thêm Vào Chiến Dịch'<br/>-> Dòng được đưa vào bảng Điểm Chiến Dịch"]
+    
+    %% Cách 2: Tự tạo mới từ Tab Chiến Dịch
+    MethodCamp -- "Cách 2: Tự tạo mới tại Tab Chiến Dịch" --> TabCamp["Chuyển sang Tab 'Điểm Chiến Dịch'"]
+    TabCamp --> BtnNewCamp["Bấm nút '+ Tạo Dòng Mới'"]
+    BtnNewCamp --> FillCampDetail2["Điền tên chiến dịch, ngày bắt đầu - kết thúc,<br/>chọn dự án, 3 tiêu chí và Mức Điểm Chiến Dịch"]
+    FillCampDetail2 --> AddListCamp
+    
+    %% Lưu và kích hoạt
+    AddListCamp --> CheckCamp["Kiểm tra danh sách dòng cấu hình:<br/>Trạng thái hiển thị Chấm Xanh 'Đang chạy'"]
+    CheckCamp --> SaveCamp["Bấm nút 'Lưu Thay Đổi'"]
+    SaveCamp --> SheetCamp["Backend ghi dữ liệu vào Sheet 'Điểm chiến dịch'"]
+    SheetCamp --> ActiveCamp["Hệ thống kích hoạt tức thì:<br/>Mọi giao dịch trong thời gian chiến dịch<br/>tự động lấy Điểm Chiến Dịch thay thế điểm tháng"]
+    ActiveCamp --> DoneCamp(["Hoàn tất cấu hình chiến dịch"])
+```
+
+---
+
+### 3.4. Luồng Tính Điểm Tự Động Cho Giao Dịch
+
+Sơ đồ thể hiện cách bộ máy tính điểm tự động xử lý và tra cứu khi có dòng giao dịch mới trong sheet `DATA`:
 
 ```mermaid
 flowchart TD
@@ -96,33 +186,7 @@ flowchart TD
 
 ---
 
-### 3.2. Luồng Vận Hành Cấu Hình Trên Giao Diện Web UI
-
-Sơ đồ thao tác người dùng khi quản lý và chỉnh sửa điểm số:
-
-```mermaid
-flowchart TD
-    OpenUI["Mở Bảng Cấu Hình Điểm từ Menu Google Sheets"] --> LoadData["Hệ thống tải dữ liệu 3 bảng và tự đồng bộ tháng mới"]
-    LoadData --> ViewTab{"Chọn Tab Quản Lý"}
-    
-    ViewTab -- "Tab Bảng Tổng Hợp" --> EditTH["1. Nhập điểm trực tiếp trên ô ma trận tháng<br/>2. Bấm Sửa để đổi 3 tiêu chí khớp<br/>3. Bấm icon Ngọn Lửa để đưa vào Chiến Dịch<br/>4. Bấm Thêm Dòng Mới để tạo dự án mới"]
-    
-    ViewTab -- "Tab Dự Án F2" --> EditF2["1. Nhập điểm trực tiếp trên ô ma trận tháng<br/>2. Bấm Sửa để đổi tên dự án<br/>3. Bấm Thêm Dòng Mới để thêm dự án F2"]
-    
-    ViewTab -- "Tab Điểm Chiến Dịch" --> EditCamp["1. Chọn bộ lọc chiến dịch<br/>2. Bấm Đổi Tên / Thời Gian để sửa ngày áp dụng<br/>3. Bấm Tạo Dòng Mới hoặc Chọn Dòng Từ Tổng Hợp<br/>4. Nhập điểm chiến dịch cho từng dự án"]
-    
-    EditTH --> CheckDirty["Hệ thống phát hiện thay đổi:<br/>- Đổi màu ô viền cam/vàng<br/>- Tăng bộ đếm Thay đổi chưa lưu"]
-    EditF2 --> CheckDirty
-    EditCamp --> CheckDirty
-    
-    CheckDirty --> ClickSave["Bấm nút Lưu Thay Đổi"]
-    ClickSave --> BatchSave["Ghi hàng loạt xuống Google Sheets<br/>Chuẩn hóa định dạng số .0 và .5"]
-    BatchSave --> SuccessToast["Thông báo: Lưu thay đổi thành công!"]
-```
-
----
-
-### 3.3. Luồng Tự Động Chuyển Tháng & Sao Chép Điểm
+### 3.5. Luồng Tự Động Chuyển Tháng & Sao Chép Điểm
 
 Hệ thống hoạt động hoàn toàn tự động khi bước sang chu kỳ tháng mới:
 
