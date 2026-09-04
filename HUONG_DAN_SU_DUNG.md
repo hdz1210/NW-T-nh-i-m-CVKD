@@ -1,0 +1,294 @@
+# HƯỚNG DẪN SỬ DỤNG & ĐÀO TẠO VẬN HÀNH HỆ THỐNG CẤU HÌNH TÍNH ĐIỂM CVKD
+
+Tài liệu này cung cấp toàn bộ kiến trúc, sơ đồ luồng hoạt động (flowcharts), quy tắc tính điểm và hướng dẫn chi tiết từng bước dành cho Quản lý, Chuyên viên Vận hành, Kế toán và Chuyên viên Kinh doanh (CVKD).
+
+---
+
+## MỤC LỤC
+
+1. [Tổng Quan Hệ Thống](#1-tổng-quan-hệ-thống)
+2. [Cấu Trúc Dữ Liệu & 3 Bảng Cấu Hình](#2-cấu-trúc-dữ-liệu--3-bảng-cấu-hình)
+3. [Sơ Đồ Luồng Hoạt Động (Flowcharts)](#3-sơ-đồ-luồng-hoạt-động-flowcharts)
+   - [3.1. Luồng Tính Điểm Tự Động Cho Giao Dịch (Calculation Engine Flow)](#31-luồng-tính-điểm-tự-động-cho-giao-dịch)
+   - [3.2. Luồng Vận Hành Cấu Hình Trên Giao Diện Web UI](#32-luồng-vận-hành-cấu-hình-trên-giao-diện-web-ui)
+   - [3.3. Luồng Tự Động Chuyển Tháng & Sao Chép Điểm](#33-luồng-tự-động-chuyển-tháng--sao-chép-điểm)
+4. [Hướng Dẫn Thao Tác Chi Tiết (Step-by-Step Training)](#4-hướng-dẫn-thao-tác-chi-tiết)
+   - [4.1. Mở Bảng Cấu Hình Điểm](#41-mở-bảng-cấu-hình-điểm)
+   - [4.2. Quản Lý Điểm Quỹ NW (Bảng Tổng Hợp)](#42-quản-lý-điểm-quỹ-nw-bảng-tổng-hợp)
+   - [4.3. Quản Lý Điểm Quỹ Chéo (Bảng Dự Án F2)](#43-quản-lý-điểm-quỹ-chéo-bảng-dự-án-f2)
+   - [4.4. Quản Lý Điểm Chiến Dịch Đặc Biệt (Multi-Campaign)](#44-quản-lý-điểm-chiến-dịch-đặc-biệt-multi-campaign)
+   - [4.5. Lưu Thay Đổi An Toàn](#45-lưu-thay-đổi-an-toàn)
+5. [Cơ Chế Khớp & Thứ Tự Ưu Tiên Tính Điểm](#5-cơ-chế-khớp--thứ-tự-ưu-tiên-tính-điểm)
+6. [Hệ Thống Trigger Tự Động & Menu Tiện Ích](#6-hệ-thống-trigger-tự-động--menu-tiện-ích)
+7. [Câu Hỏi Thường Gặp & Xử Lý Sự Cố (FAQ)](#7-câu-hỏi-thường-gặp--xử-lý-sự-cố-faq)
+
+---
+
+## 1. TỔNG QUAN HỆ THỐNG
+
+Hệ thống **Tính Điểm CVKD Tự Động** được thiết kế để thay thế toàn bộ công thức Excel lồng ghép thủ công phức tạp bằng một bộ máy tính điểm tự động tốc độ cao (Batch Calculation Engine), tích hợp giao diện cấu hình trực quan (Enterprise Web App) ngay trong Google Sheets.
+
+### Lợi ích cốt lõi:
+- **Tự động hóa 100%**: Điểm được tính ngay lập tức khi phát sinh giao dịch mới mà không cần kéo công thức.
+- **Quản lý đa tháng linh hoạt**: Theo dõi lịch sử thay đổi điểm số theo từng tháng độc lập (ma trận điểm).
+- **Hỗ trợ đa chiến dịch đồng thời (Multi-Campaign)**: Thiết lập các chiến dịch bán hàng ngắn hạn với thời gian và điều kiện áp dụng riêng biệt.
+- **Không hardcode**: Người dùng quản trị có thể tự thêm dự án, sửa điều kiện, điều chỉnh điểm số mà không cần biết lập trình.
+
+---
+
+## 2. CẤU TRÚC DỮ LIỆU & 3 BẢNG CẤU HÌNH
+
+Hệ thống phân tách rõ ràng dữ liệu phát sinh và cấu hình điểm thành các sheet chuyên biệt:
+
+```
+Google Spreadsheet
+├── 📄 DATA                  --> Chứa toàn bộ giao dịch phát sinh (cần tính điểm)
+├── 📄 Tổng hợp              --> Cấu hình điểm Quỹ NW (đa tháng + 3 tiêu chí khớp)
+├── 📄 Dự án F2              --> Cấu hình điểm Quỹ Chéo (đa tháng)
+└── 📄 Điểm chiến dịch       --> Cấu hình điểm các chiến dịch bán hàng đặc biệt
+```
+
+### Chi tiết 3 bảng cấu hình:
+
+| Bảng Cấu Hình | Thuộc Sheet | Đối Tượng Áp Dụng | Tiêu Chí Khớp Điểm |
+| :--- | :--- | :--- | :--- |
+| **Bảng Tổng Hợp (Quỹ NW)** | `Tổng hợp` | Các giao dịch thuộc Quỹ NW (Cột Z = `Quỹ NW`) | Mã dự án + Tháng GD + 3 tiêu chí: Sản phẩm, Loại căn, Khoảng giá |
+| **Dự Án F2 (Quỹ Chéo)** | `Dự án F2` | Các giao dịch quỹ chéo liên kết (Cột Z = `Quỹ chéo`) | Tên dự án F2 + Tháng giao dịch |
+| **Điểm Chiến Dịch** | `Điểm chiến dịch` | Các giao dịch diễn ra trong đợt thi đua / sự kiện bán hàng | Ngày GD thuộc [Từ Ngày -> Đến Ngày] + Trạng thái `Đang chạy` + Khớp dự án & 3 tiêu chí |
+
+---
+
+## 3. SƠ ĐỒ LUỒNG HOẠT ĐỘNG (FLOWCHARTS)
+
+### 3.1. Luồng Tính Điểm Tự Động Cho Giao Dịch
+
+Sơ đồ thể hiện cách bộ máy tính điểm xử lý từng dòng dữ liệu trong sheet `DATA`:
+
+```mermaid
+flowchart TD
+    Start([Dòng giao dịch mới trong sheet DATA]) --> CheckFund{Kiểm tra Loại Quỹ\nCột Z}
+    
+    CheckFund -- Trống / Chưa điền --> NoScore[Bỏ qua, không tính điểm]
+    
+    CheckFund -- Quỹ NW hoặc Quỹ chéo --> CheckCampaign{1. Kiểm tra Điểm Chiến Dịch\n- Có chiến dịch 'Đang chạy'?\n- Ngày GD thuộc [Từ ngày - Đến ngày]?\n- Khớp Mã DA & 3 Tiêu chí?}
+    
+    CheckCampaign -- Khớp Chiến Dịch --> ApplyCampScore[LẤY ĐIỂM CHIẾN DỊCH\nƯu tiên số 1 - Đè điểm tháng]
+    
+    CheckCampaign -- Không khớp --> CheckFundType{2. Tra cứu theo Loại Quỹ & Tháng GD}
+    
+    CheckFundType -- Quỹ NW --> MatchTH{Khớp Bảng Tổng Hợp:\n1. Mã Dự Án\n2. Sản Phẩm: Cao tầng/Thấp tầng/*\n3. Loại Căn: Studio/1PN/2PN/*\n4. Khoảng Giá: Min-Max, Tiền đất\n5. Cột Tháng tương ứng}
+    
+    MatchTH -- Khớp dòng cấu hình --> ApplyTHScore[LẤY ĐIỂM QUỸ NW\nTheo tháng giao dịch]
+    MatchTH -- Không khớp dòng nào --> DefaultTH[Lấy điểm cơ sở mặc định / 0]
+    
+    CheckFundType -- Quỹ chéo --> MatchF2{Khớp Bảng Dự Án F2:\n1. Tên Dự Án F2\n2. Cột Tháng tương ứng}
+    
+    MatchF2 -- Khớp tên dự án --> ApplyF2Score[LẤY ĐIỂM QUỸ CHÉO\nTheo tháng giao dịch]
+    MatchF2 -- Không khớp --> DefaultF2[Điểm = 0]
+    
+    ApplyCampScore --> WriteScore[Ghi điểm vào Cột X / AA trên sheet DATA]
+    ApplyTHScore --> WriteScore
+    DefaultTH --> WriteScore
+    ApplyF2Score --> WriteScore
+    DefaultF2 --> WriteScore
+    
+    WriteScore --> End([Hoàn tất tính điểm])
+```
+
+---
+
+### 3.2. Luồng Vận Hành Cấu Hình Trên Giao Diện Web UI
+
+Sơ đồ thao tác người dùng khi quản lý và chỉnh sửa điểm số:
+
+```mermaid
+flowchart TD
+    OpenUI[Bấm Menu: Cấu Hình Điểm -> Bảng Cấu Hình Điểm] --> LoadData[Hệ thống tải dữ liệu 3 bảng & tự đồng bộ tháng mới]
+    LoadData --> ViewTab{Chọn Tab Quản Lý}
+    
+    ViewTab -- Tab Bảng Tổng Hợp --> EditTH[1. Nhập điểm trực tiếp trên ô ma trận tháng\n2. Bấm 'Sửa' để đổi 3 tiêu chí khớp\n3. Bấm icon Ngọn Lửa để đưa vào Chiến Dịch\n4. Bấm 'Thêm Dòng Mới' để tạo dự án mới]
+    
+    ViewTab -- Tab Dự Án F2 --> EditF2[1. Nhập điểm trực tiếp trên ô ma trận tháng\n2. Bấm 'Sửa' để đổi tên dự án\n3. Bấm 'Thêm Dòng Mới' để thêm dự án F2]
+    
+    ViewTab -- Tab Điểm Chiến Dịch --> EditCamp[1. Chọn bộ lọc chiến dịch\n2. Bấm 'Đổi Tên / Thời Gian' để sửa ngày áp dụng\n3. Bấm 'Tạo Dòng Mới' hoặc 'Chọn Dòng Từ Tổng Hợp'\n4. Nhập điểm chiến dịch cho từng dự án]
+    
+    EditTH --> CheckDirty[Hệ thống phát hiện thay đổi:\n- Đổi màu ô vàng/cam\n- Tăng bộ đếm 'Thay đổi chưa lưu']
+    EditF2 --> CheckDirty
+    EditCamp --> CheckDirty
+    
+    CheckDirty --> ClickSave[Bấm nút 'Lưu Thay Đổi']
+    ClickSave --> BatchSave[Ghi hàng loạt xuống Google Sheets\nChuẩn hóa định dạng số .0 và .5]
+    BatchSave --> SuccessToast[Thông báo 'Lưu thay đổi thành công!']
+```
+
+---
+
+### 3.3. Luồng Tự Động Chuyển Tháng & Sao Chép Điểm
+
+Hệ thống hoạt động hoàn toàn tự động khi bước sang chu kỳ tháng mới:
+
+```mermaid
+flowchart TD
+    TriggerStart[Trigger 1h sáng ngày mùng 1 hàng tháng\nHOẶC khi Người dùng mở Bảng Cấu Hình] --> CheckMonth{Kiểm tra cột tháng hiện tại\nVí dụ: Tháng 10/2026 đã có chưa?}
+    
+    CheckMonth -- Đã tồn tại --> NoAction[Giữ nguyên cấu hình, không chèn thêm]
+    
+    CheckMonth -- Chưa có --> InsertCol[1. Tự động chèn cột tháng mới vào vị trí đầu tiên]
+    InsertCol --> CopyScores[2. Sao chép toàn bộ điểm số từ tháng trước sang tháng mới]
+    CopyScores --> FormatCol[3. Định dạng chuẩn mm/yyyy và gắn nhãn 'MỚI NHẤT']
+    FormatCol --> DoneSync[Sẵn sàng tính điểm cho tháng mới mà không cần thao tác tay]
+```
+
+---
+
+## 4. HƯỚNG DẪN THAO TÁC CHI TIẾT
+
+### 4.1. Mở Bảng Cấu Hình Điểm
+1. Trên thanh menu Google Sheets, nhấp vào mục **Cấu Hình Điểm**.
+2. Chọn **Bảng Cấu Hình Điểm**.
+3. Cửa sổ ứng dụng hiện đại sẽ hiển thị toàn màn hình với đầy đủ 3 Tab quản lý.
+
+---
+
+### 4.2. Quản Lý Điểm Quỹ NW (Bảng Tổng Hợp)
+
+Tab **Bảng Tổng Hợp (Quỹ NW)** dùng để quản lý điểm cho các dự án nội bộ với điều kiện chi tiết:
+
+#### a. Sửa điểm trực tiếp trên ma trận tháng:
+- Nhấp trực tiếp vào ô điểm của tháng cần sửa.
+- Nhập số điểm mới (hỗ trợ số nguyên và số thập phân như `8`, `8.5`, `10.25`).
+- Ô vừa sửa sẽ tự động đổi viền nổi bật để bạn dễ theo dõi.
+- Sau khi nhập xong, bấm nút **Lưu Thay Đổi** ở góc trên cùng bên phải.
+
+#### b. Thêm dự án / điều kiện mới:
+1. Nhấp nút **Thêm Dòng Mới** ở góc trên thanh công cụ.
+2. Chọn loại quỹ: **Quỹ NW (Bảng Tổng Hợp)**.
+3. Nhập **Mã dự án** (VD: `MAS OCP2`) và **Tên dự án** (VD: `Vinhomes Ocean Park 2`).
+4. Chọn **Chủ đầu tư (CĐT)** và **Miền** (Bắc / Trung / Nam).
+5. **Cấu hình 3 Tiêu Chí Khớp**:
+   - **Sản phẩm**: Chọn `Tất cả`, `Cao tầng`, hoặc `Thấp tầng`.
+   - **Loại căn**: Chọn dropdown đa chọn (Studio, 1PN, 2PN, 3PN, Duplex, Penthouse...). Hỗ trợ chọn nhanh hoặc tìm kiếm.
+   - **Khoảng giá**: Nhập khoảng giá Min - Max (tỷ VNĐ). Nếu dự án chỉ áp dụng trên tiền đất, tích chọn **Chỉ tính tiền đất (VHHVB)**.
+6. Nhập **Điểm Cơ Sở** ban đầu cho các tháng.
+7. Bấm **Thêm Ngay**.
+
+#### c. Thao tác trên từng dòng:
+Ở cột **THAO TÁC** của mỗi dòng có 3 nút bấm SVG tinh gọn:
+- **Nút Bút Chì**: Chỉnh sửa thông tin dự án và 3 tiêu chí khớp.
+- **Nút Ngọn Lửa (Flame)**: Đưa dòng này vào **Chiến dịch bán hàng** chỉ với 1 click.
+- **Nút Thùng Rác**: Xóa vĩnh viễn dòng cấu hình này.
+
+---
+
+### 4.3. Quản Lý Điểm Quỹ Chéo (Bảng Dự Án F2)
+
+Tab **Dự Án F2 (Quỹ Chéo)** quản lý điểm cho các dự án liên kết bán chéo:
+
+1. Chuyển sang tab **Dự Án F2 (Quỹ Chéo)**.
+2. Bạn có thể sửa điểm trực tiếp trên từng cột tháng tương tự Bảng Tổng Hợp.
+3. Để thêm dự án F2 mới:
+   - Bấm **Thêm Dòng Mới**.
+   - Chọn loại quỹ: **Quỹ Chéo (Bảng Dự Án F2)**.
+   - Nhập tên dự án (VD: `The Gió`, `Eaton Park`...).
+   - Bấm **Thêm Ngay**.
+
+---
+
+### 4.4. Quản Lý Điểm Chiến Dịch Đặc Biệt (Multi-Campaign)
+
+Tab **Điểm Chiến Dịch** cho phép bạn chạy nhiều chiến dịch thi đua cùng lúc (ví dụ: *Chiến dịch 1*, *Chiến dịch Bùng Nổ*, *Chiến dịch Mùa Hè*):
+
+#### a. Tạo chiến dịch mới:
+1. Chuyển sang tab **Điểm Chiến Dịch**.
+2. Nhấp nút **Tạo Dòng Mới**.
+3. Tại khối **THÔNG TIN CHIẾN DỊCH ÁP DỤNG**:
+   - Ô **Tên Chiến Dịch**: Nhập tên chiến dịch mới (VD: `Chiến dịch Thu Đông 2026`).
+   - Ô **Từ Ngày** và **Đến Ngày**: Chọn khoảng thời gian chiến dịch có hiệu lực.
+   - **Trạng thái**: Chọn `Đang chạy` hoặc `Tạm dừng`.
+4. Điền Mã dự án, điều kiện khớp và mức **Điểm Chiến Dịch**.
+5. Bấm **Thêm Ngay**.
+
+#### b. Thêm nhanh dự án từ Bảng Tổng Hợp vào Chiến Dịch:
+- **Cách 1**: Tại Tab *Bảng Tổng Hợp*, bấm **Icon Ngọn Lửa (Flame)** ở dòng dự án muốn áp dụng $\rightarrow$ Cửa sổ modal sẽ tự động điền sẵn toàn bộ tiêu chí khớp của dự án đó, bạn chỉ cần chọn tên chiến dịch và nhập điểm chiến dịch.
+- **Cách 2**: Tại Tab *Điểm Chiến Dịch*, bấm nút **Chọn Dòng Từ Tổng Hợp** $\rightarrow$ Danh sách dự án hiện ra $\rightarrow$ Bấm nút **Chọn & Sửa** tại dòng tương ứng.
+
+#### c. Lọc và theo dõi chiến dịch:
+- Dropdown **Chiến dịch** trên thanh điều khiển cho phép:
+  - Xem riêng từng chiến dịch kèm thời gian và trạng thái chi tiết.
+  - Chọn **Tất cả chiến dịch** để nhìn toàn cảnh tất cả các đợt thi đua đang có trong công ty.
+- Badge trạng thái (`status-pill`):
+  - Chấm xanh (`Đang chạy`): Chiến dịch đang có hiệu lực.
+  - Chấm vàng (`Tạm dừng`): Tạm thời ngưng áp dụng điểm chiến dịch.
+  - Chấm xám (`Kết thúc`): Đã quá ngày kết thúc, hệ thống tự động ngưng áp dụng.
+
+#### d. Đổi tên, sửa ngày hoặc xóa chiến dịch:
+- Bấm **Đổi Tên / Thời Gian** để cập nhật ngày bắt đầu, ngày kết thúc hoặc trạng thái.
+- Bấm **Xóa Chiến Dịch** để xóa toàn bộ các dòng thuộc chiến dịch đang chọn.
+
+---
+
+### 4.5. Lưu Thay Đổi An Toàn
+
+- Khi có bất kỳ ô điểm nào được sửa hoặc có dòng mới được thêm, huy hiệu số lượng thay đổi chưa lưu (`Thay đổi chưa lưu: X ô/dòng`) sẽ hiển thị.
+- Nút **Lưu Thay Đổi** ở góc phải sẽ chuyển sang trạng thái sẵn sàng.
+- **Tính năng bảo vệ chống mất dữ liệu**: Nếu bạn vô tình đóng cửa sổ khi chưa lưu, một hộp thoại xác nhận sẽ hiện ra nhắc bạn lưu lại dữ liệu trước khi thoát.
+
+---
+
+## 5. CƠ CHẾ KHỚP & THỨ TỰ ƯU TIÊN TÍNH ĐIỂM
+
+Khi tính điểm cho một giao dịch trong sheet `DATA`, hệ thống duyệt theo thứ tự ưu tiên từ trên xuống dưới:
+
+```
+Ưu Tiên 1: ĐIỂM CHIẾN DỊCH (Nếu giao dịch nằm trong thời gian chiến dịch đang chạy)
+    └── Khớp: Mã DA + Sản Phẩm + Loại Căn + Khoảng Giá
+         └── Nếu KHỚP: Lấy điểm chiến dịch (BỎ QUA điểm tháng)
+
+Ưu Tiên 2: ĐIỂM THÁNG QUỸ NW (Bảng Tổng Hợp)
+    └── Khớp: Mã DA + Tháng giao dịch + 3 Tiêu Chí Khớp:
+         ├── Tiêu chí 1 (Sản phẩm): Khớp chính xác hoặc '*' (Tất cả)
+         ├── Tiêu chí 2 (Loại căn): Chuỗi loại căn chứa loại căn GD hoặc '*' (Tất cả)
+         └── Tiêu chí 3 (Khoảng giá): Giá GD nằm trong [Min, Max]. Nếu chọn giá đất, so khớp theo cột giá đất.
+              └── Quy tắc độ sâu: Dòng nào có điều kiện chi tiết hơn sẽ được ưu tiên trước dòng chung chung (*).
+
+Ưu Tiên 3: ĐIỂM THÁNG QUỸ CHÉO (Bảng Dự Án F2)
+    └── Khớp: Tên dự án F2 (tự động chuẩn hóa chữ hoa/thường, loại bỏ khoảng trắng thừa) + Tháng giao dịch.
+```
+
+> **Lưu ý**: Ký tự `*` hoặc chữ `Tất cả` đại diện cho giá trị đại diện (Wildcard), nghĩa là áp dụng cho mọi sản phẩm / loại căn / khoảng giá.
+
+---
+
+## 6. HỆ THỐNG TRIGGER TỰ ĐỘNG & MENU TIỆN ÍCH
+
+### 6.1. Tự Động Hóa 100% (Không cần bấm thủ công)
+1. **Trigger On-Edit (Ngay lập tức)**:
+   - Khi bạn nhập hoặc dán dòng dữ liệu mới vào sheet `DATA`, hệ thống nhận diện và tính điểm tức thì cho dòng đó.
+2. **Trigger Hàng Ngày (Chạy lúc 1:00 AM)**:
+   - Mỗi đêm, hệ thống kiểm tra chu kỳ tháng. Nếu bước sang tháng mới, hệ thống tự động chèn cột tháng và sao chép điểm từ tháng trước sang.
+
+### 6.2. Menu Tiện Ích Trên Thanh Công Cụ Google Sheets
+Nếu cần tính lại theo yêu cầu đột xuất, bạn vào menu **Cấu Hình Điểm**:
+
+- **Tính điểm dòng chọn / mới**: Tính điểm cho các dòng đang được bôi đen bằng chuột bên sheet `DATA`.
+- **Tính lại toàn bộ điểm Data**: Quét và tính lại điểm cho toàn bộ hơn 5.000 dòng dữ liệu.
+- **Quét & tính dòng chưa có điểm**: Chỉ tìm các dòng chưa có điểm (cột điểm đang trống) để điền bù.
+- **Trình Tạo Biểu Đồ & Báo Cáo**: Mở công cụ trực quan hóa dữ liệu bán hàng.
+
+---
+
+## 7. CÂU HỎI THƯỜNG GẶP & XỬ LÝ SỰ CỐ (FAQ)
+
+### Q1: Tại sao một giao dịch không được tính điểm (điểm trả về 0 hoặc trống)?
+- **Nguyên nhân 1**: Cột **Loại Quỹ (Cột Z)** trên sheet `DATA` chưa được điền (`Quỹ NW` hoặc `Quỹ chéo`). Hãy điền loại quỹ để hệ thống biết tra cứu vào bảng nào.
+- **Nguyên nhân 2**: Mã dự án hoặc Tên dự án bị sai chính tả so với bảng cấu hình.
+- **Nguyên nhân 3**: Tháng của giao dịch chưa được tạo cột trong bảng cấu hình (hãy mở Bảng Cấu Hình để hệ thống tự động sinh cột tháng).
+
+### Q2: Điểm chiến dịch có tự động dừng khi hết hạn không?
+- **Có**. Khi ngày hiện tại vượt quá ngày **Đến Ngày**, trạng thái chiến dịch tự động chuyển sang `Kết thúc` và hệ thống tự động quay về áp dụng điểm tháng thông thường.
+
+### Q3: Tôi có thể nhập điểm trực tiếp vào Google Sheets thay vì mở Web UI không?
+- **Có**. Dữ liệu trên Web UI và các Sheet `Tổng hợp`, `Dự án F2`, `Điểm chiến dịch` là hoàn toàn đồng bộ 2 chiều. Tuy nhiên, khuyến khích sử dụng Web UI để được tự động chuẩn hóa định dạng số, kiểm tra trùng lặp và tránh làm lệch cấu trúc cột.
+
+---
+*Tài liệu được cập nhật tự động theo phiên bản Enterprise UI v2.0.*
