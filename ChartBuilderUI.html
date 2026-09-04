@@ -479,15 +479,15 @@
   <!-- Header -->
   <header class="app-header">
     <div class="app-title-group">
-      <h1 class="app-title">📊 Trình Tạo Biểu Đồ & Báo Cáo Phân Tích</h1>
+      <h1 class="app-title">Trình Tạo Biểu Đồ & Báo Cáo Phân Tích</h1>
       <span class="app-badge">No-Code BI Engine</span>
     </div>
     <div style="display: flex; gap: 8px;">
       <button type="button" class="btn btn-secondary" onclick="exportChartImage()">
-        🖼️ Tải Ảnh Chart (PNG)
+        Tải Ảnh Chart (PNG)
       </button>
       <button type="button" class="btn btn-success" onclick="insertNativeChartToSheet()">
-        ⚡ Chèn Biểu Đồ Vào Google Sheets
+        Chèn Biểu Đồ Vào Google Sheets
       </button>
     </div>
   </header>
@@ -501,7 +501,7 @@
     <!-- CỘT TRÁI: BẢNG ĐIỀU KHIỂN CẤU HÌNH BIỂU ĐỒ -->
     <aside class="card" aria-labelledby="configPanelTitle">
       <div class="card-header">
-        <h2 class="card-title" id="configPanelTitle">⚙️ Thiết Lập Chỉ Số</h2>
+        <h2 class="card-title" id="configPanelTitle">Thiết Lập Chỉ Số</h2>
         <button type="button" class="btn btn-sm btn-secondary" onclick="resetConfig()">Mặc định</button>
       </div>
 
@@ -509,7 +509,7 @@
       <div class="config-group">
         <label class="field-label" for="dimensionSelect">Trục Phân Tích (Dimension / Trục X)</label>
         <select id="dimensionSelect" onchange="runAggregation()">
-          <optgroup label="🏢 Dự Án & Sản Phẩm">
+          <optgroup label="Dự Án & Sản Phẩm">
             <option value="duAn" selected>Dự án (Cột F)</option>
             <option value="sanPham">Sản phẩm (Cao Tầng / Thấp Tầng - Cột O)</option>
             <option value="loaiCan">Loại căn (1PN, 2PN, Duplex... - Cột Q)</option>
@@ -518,13 +518,13 @@
             <option value="mien">Miền (Bắc / Nam - Cột E)</option>
             <option value="cdt">Chủ Đầu Tư (CĐT - Cột W)</option>
           </optgroup>
-          <optgroup label="👤 Nhân Sự & Phòng Ban">
+          <optgroup label="Nhân Sự & Phòng Ban">
             <option value="cvkd">Chuyên Viên Kinh Doanh (CVKD - Cột I)</option>
             <option value="pkd">Phòng Kinh Doanh (PKD - Cột H)</option>
             <option value="tpkd">Trưởng Phòng KD (TPKD - Cột S)</option>
             <option value="gdkd">Giám Đốc KD (GĐKD - Cột T)</option>
           </optgroup>
-          <optgroup label="📅 Thời Gian">
+          <optgroup label="Thời Gian">
             <option value="thang">Tháng (Cột C)</option>
             <option value="nam">Năm (Cột D)</option>
             <option value="ngayBc">Ngày Báo Cáo (Cột A)</option>
@@ -536,10 +536,10 @@
       <div class="config-group">
         <label class="field-label" for="metricSelect">Chỉ Số Đo Lường (Metric / Trục Y)</label>
         <select id="metricSelect" onchange="runAggregation()">
-          <option value="diem" selected>🎯 Điểm CVKD (Cột AA / X)</option>
-          <option value="count">🔢 Số Lượng Căn Đã Bán (Đếm giao dịch)</option>
-          <option value="giaVat">💰 Doanh Số Gồm VAT (Cột L)</option>
-          <option value="giaChuaVat">💵 Doanh Số Chưa VAT (Cột K)</option>
+          <option value="diem" selected>Điểm CVKD (Cột AA / X)</option>
+          <option value="count">Số Lượng Căn Đã Bán (Đếm giao dịch)</option>
+          <option value="giaVat">Doanh Số Gồm VAT (Cột L)</option>
+          <option value="giaChuaVat">Doanh Số Chưa VAT (Cột K)</option>
         </select>
       </div>
 
@@ -561,22 +561,22 @@
         <label class="field-label">Loại Biểu Đồ (Chart Type)</label>
         <div class="chart-type-grid">
           <button type="button" class="chart-type-btn active" data-type="bar_v" onclick="setChartType('bar_v', this)">
-            <span class="icon">📊</span> Cột đứng
+            Cột đứng
           </button>
           <button type="button" class="chart-type-btn" data-type="bar_h" onclick="setChartType('bar_h', this)">
-            <span class="icon">📑</span> Thanh ngang
+            Thanh ngang
           </button>
           <button type="button" class="chart-type-btn" data-type="line" onclick="setChartType('line', this)">
-            <span class="icon">📈</span> Đường
+            Đường
           </button>
           <button type="button" class="chart-type-btn" data-type="doughnut" onclick="setChartType('doughnut', this)">
-            <span class="icon">🍩</span> Donut
+            Donut
           </button>
           <button type="button" class="chart-type-btn" data-type="pie" onclick="setChartType('pie', this)">
-            <span class="icon">🥧</span> Tròn
+            Tròn
           </button>
           <button type="button" class="chart-type-btn" data-type="area" onclick="setChartType('area', this)">
-            <span class="icon">📉</span> Vùng
+            Vùng
           </button>
         </div>
       </div>
@@ -639,7 +639,7 @@
     <!-- CỘT PHẢI: LIVE CHART CANVAS & LEADERBOARD TABLE -->
     <main class="card" aria-labelledby="previewTitle" style="margin-bottom: 0;">
       <div class="card-header">
-        <h2 class="card-title" id="previewTitle">📈 Xem Trước Biểu Đồ (Live Preview)</h2>
+        <h2 class="card-title" id="previewTitle">Xem Trước Biểu Đồ (Live Preview)</h2>
         <span class="app-badge" id="dataPointsCount">0 mục</span>
       </div>
 
@@ -714,7 +714,7 @@
     function showToast(msg, isError) {
       const toast = document.getElementById('toast');
       toast.className = isError ? 'toast-error' : 'toast-success';
-      toast.innerText = (isError ? '⚠️ ' : '✅ ') + msg;
+      toast.innerText = msg;
       toast.style.display = 'block';
       setTimeout(function () { toast.style.display = 'none'; }, 3500);
     }

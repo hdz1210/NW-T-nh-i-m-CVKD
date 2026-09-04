@@ -6,7 +6,7 @@ function openChartBuilderUI() {
     .setWidth(1400)
     .setHeight(820)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  SpreadsheetApp.getUi().showModalDialog(html, '📊 Trình Tạo Biểu Đồ & Báo Cáo Phân Tích');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Trình Tạo Biểu Đồ & Báo Cáo Phân Tích');
 }
 
 /**
@@ -85,7 +85,7 @@ function fetchDataForChartBuilder() {
 function createNativeChartInSheet(payload) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const DASHBOARD_SHEET_NAME = '📊 Dashboard_BáoCáo';
+    const DASHBOARD_SHEET_NAME = 'Dashboard_BáoCáo';
     
     let sheet = ss.getSheetByName(DASHBOARD_SHEET_NAME);
     if (!sheet) {
@@ -103,7 +103,7 @@ function createNativeChartInSheet(payload) {
     }
 
     // 1. Ghi Tiêu đề Báo Cáo
-    sheet.getRange('A1').setValue('📊 BÁO CÁO PHÂN TÍCH: ' + payload.title.toUpperCase());
+    sheet.getRange('A1').setValue('BÁO CÁO PHÂN TÍCH: ' + payload.title.toUpperCase());
     sheet.getRange('A1:B1').merge()
       .setFontWeight('bold')
       .setFontSize(13)

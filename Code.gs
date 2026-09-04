@@ -218,17 +218,17 @@ function cleanScore(val) {
  */
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('🎯 Cấu Hình')
-    .addItem('⚙️ Bảng Cấu Hình Điểm', 'openConfigUI')
-    .addItem('📊 Trình Tạo Biểu Đồ & Báo Cáo', 'openChartBuilderUI')
+    .createMenu('Cấu Hình Điểm')
+    .addItem('Bảng Cấu Hình Điểm', 'openConfigUI')
+    .addItem('Trình Tạo Biểu Đồ & Báo Cáo', 'openChartBuilderUI')
     .addSeparator()
-    .addItem('📌 Tính điểm dòng chọn / mới', 'calculateSelectedRows')
-    .addItem('⚡ Tính lại toàn bộ điểm Data', 'calculateAllScoresWithRules')
-    .addItem('🔍 Quét & tính dòng chưa có điểm', 'autoTriggerOnDataChange')
+    .addItem('Tính điểm dòng chọn / mới', 'calculateSelectedRows')
+    .addItem('Tính lại toàn bộ điểm Data', 'calculateAllScoresWithRules')
+    .addItem('Quét & tính dòng chưa có điểm', 'autoTriggerOnDataChange')
     .addSeparator()
-    .addItem('📅 Đồng bộ / Thêm cột tháng', 'manualSyncCurrentMonth')
-    .addItem('🛠️ Khởi tạo cấu hình', 'initMonthlyConfigSheets')
-    .addItem('🔧 Cài đặt Trigger tự động', 'setupAutoTrigger')
+    .addItem('Đồng bộ / Thêm cột tháng', 'manualSyncCurrentMonth')
+    .addItem('Khởi tạo cấu hình', 'initMonthlyConfigSheets')
+    .addItem('Cài đặt Trigger tự động', 'setupAutoTrigger')
     .addToUi();
 }
 
@@ -239,8 +239,8 @@ function openConfigUI() {
   const html = HtmlService.createHtmlOutputFromFile('ConfigUI')
     .setWidth(1400)
     .setHeight(840)
-    .setTitle('⚙️ Bảng Cấu Hình Điểm');
-  SpreadsheetApp.getUi().showModalDialog(html, '⚙️ Bảng Cấu Hình Điểm');
+    .setTitle('Bảng Cấu Hình Điểm');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Bảng Cấu Hình Điểm');
 }
 
 /**
@@ -558,12 +558,12 @@ function manualSyncCurrentMonth() {
 
   if (res.updated) {
     SpreadsheetApp.getUi().alert(
-      '🎉 Đồng Bộ Tháng Thành Công',
+      'Đồng Bộ Tháng Thành Công',
       `Đã tự động tạo cột tháng mới ${res.monthDisplay}, sao chép điểm và chuẩn hóa số điểm (.0 bỏ thập phân, .5 giữ nguyên)!`,
       SpreadsheetApp.getUi().ButtonSet.OK
     );
   } else {
-    SpreadsheetApp.getActiveSpreadsheet().toast(`✅ Đã chuẩn hóa định dạng điểm (.0 bỏ thập phân, .5 giữ nguyên) cho tất cả các tháng!`, 'Đã chuẩn hóa', 4);
+    SpreadsheetApp.getActiveSpreadsheet().toast(`Đã chuẩn hóa định dạng điểm (.0 bỏ thập phân, .5 giữ nguyên) cho tất cả các tháng!`, 'Đã chuẩn hóa', 4);
   }
 }
 
@@ -626,7 +626,7 @@ function initMonthlyConfigSheets() {
   f2Sheet.setFrozenColumns(2);
   f2Sheet.autoResizeColumns(1, 2);
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('✅ Đã tạo cấu trúc khung cho 2 sheet "Tổng hợp" và "Dự án F2"!', 'Khởi tạo hoàn tất', 5);
+  SpreadsheetApp.getActiveSpreadsheet().toast('Đã tạo cấu trúc khung cho 2 sheet "Tổng hợp" và "Dự án F2"!', 'Khởi tạo hoàn tất', 5);
 }
 
 /**
@@ -1125,7 +1125,7 @@ function saveCampaignData(payload) {
     // 1. Ghi Banner dòng 1: Tiêu đề lớn
     cdSheet.getRange(1, 1, 1, 15).merge();
     cdSheet.getRange(1, 1)
-      .setValue('🎯 BẢNG QUẢN LÝ ĐIỂM CÁC CHIẾN DỊCH BÁN HÀNG')
+      .setValue('BẢNG QUẢN LÝ ĐIỂM CÁC CHIẾN DỊCH BÁN HÀNG')
       .setFontFamily('Arial')
       .setFontSize(13)
       .setFontWeight('bold')
@@ -1138,7 +1138,7 @@ function saveCampaignData(payload) {
     // Dòng 2: Phụ đề hướng dẫn
     cdSheet.getRange(2, 1, 1, 15).merge();
     cdSheet.getRange(2, 1)
-      .setValue('💡 Điểm chiến dịch được tự động áp dụng cho các giao dịch trong khoảng thời gian diễn ra chiến dịch (Ưu tiên thay thế điểm tháng).')
+      .setValue('Điểm chiến dịch được tự động áp dụng cho các giao dịch trong khoảng thời gian diễn ra chiến dịch (Ưu tiên thay thế điểm tháng).')
       .setFontFamily('Arial')
       .setFontStyle('italic')
       .setFontSize(9)
@@ -1843,7 +1843,7 @@ function calculateAllScoresWithRules() {
       .setValues(outputScores)
       .setNumberFormat('0.##')
       .setHorizontalAlignment('center');
-    SpreadsheetApp.getActiveSpreadsheet().toast(`⚡ [Option 1] Đã tính lại toàn bộ ${rows.length} dòng!`, 'Thành công', 3);
+    SpreadsheetApp.getActiveSpreadsheet().toast(`[Option 1] Đã tính lại toàn bộ ${rows.length} dòng!`, 'Thành công', 3);
     return { success: true, count: rows.length };
   } catch (err) {
     Logger.log('Lỗi calculateAllScoresWithRules: ' + err.toString());
@@ -1885,7 +1885,7 @@ function calculateSelectedRows() {
 
     const res = calculateSpecificRows(rowNumbers);
     if (res.success) {
-      ss.toast(`📌 [Option 2] Đã tính điểm cho ${res.count} dòng được chọn (Dòng ${startRow} -> ${endRow})!`, 'Thành công', 3);
+      ss.toast(`[Option 2] Đã tính điểm cho ${res.count} dòng được chọn (Dòng ${startRow} -> ${endRow})!`, 'Thành công', 3);
     }
   } catch (err) {
     SpreadsheetApp.getUi().alert('Lỗi tính dòng được chọn: ' + err.toString());
@@ -2040,20 +2040,20 @@ function setupAutoTrigger() {
     const curMonthStr = formatMonthDisplay(getCurrentMonthDate(ss), ss);
     let msg = '';
     if (syncRes && syncRes.updated) {
-      msg += `🎉 ĐÃ TỰ ĐỘNG TẠO CỘT THÁNG MỚI (${syncRes.monthDisplay}) VÀ SAO CHÉP ĐIỂM TỪ THÁNG TRƯỚC SANG!\n\n`;
+      msg += `ĐÃ TỰ ĐỘNG TẠO CỘT THÁNG MỚI (${syncRes.monthDisplay}) VÀ SAO CHÉP ĐIỂM TỪ THÁNG TRƯỚC SANG!\n\n`;
     } else {
-      msg += `ℹ️ Cột tháng hiện tại (${curMonthStr}) đã sẵn sàng trong bảng cấu hình.\n\n`;
+      msg += `Cột tháng hiện tại (${curMonthStr}) đã sẵn sàng trong bảng cấu hình.\n\n`;
     }
 
     if (scoredCount > 0) {
-      msg += `⚡ ĐÃ TỰ ĐỘNG TÍNH ĐIỂM SIÊU TỐC CHO ${scoredCount} DÒNG TRONG SHEET "${APP_CONFIG.SHEET_DATA}"!\n\n`;
+      msg += `ĐÃ TỰ ĐỘNG TÍNH ĐIỂM SIÊU TỐC CHO ${scoredCount} DÒNG TRONG SHEET "${APP_CONFIG.SHEET_DATA}"!\n\n`;
     }
 
     msg += `Hệ thống đã thiết lập 2 Trigger tự động chạy ngầm:\n` +
       `1. [Trigger On-Edit]: Tự động tính điểm ngay lập tức khi bạn nhập hoặc dán dòng dữ liệu mới vào sheet "${APP_CONFIG.SHEET_DATA}".\n` +
       `2. [Trigger Hàng Ngày (1h sáng)]: Tự động kiểm tra và chèn cột tháng mới mỗi khi sang tháng mới (kèm copy điểm từ tháng trước sang) mà không cần phải mở bảng cấu hình!`;
 
-    SpreadsheetApp.getUi().alert('✅ Cài Đặt Trigger Tự Động Hoàn Tất', msg, SpreadsheetApp.getUi().ButtonSet.OK);
+    SpreadsheetApp.getUi().alert('Cài Đặt Trigger Tự Động Hoàn Tất', msg, SpreadsheetApp.getUi().ButtonSet.OK);
   } catch (err) {
     SpreadsheetApp.getUi().alert('Lỗi khi cài đặt trigger: ' + err.toString());
   }
@@ -2239,9 +2239,9 @@ function autoTriggerOnDataChange(e) {
     }
 
     if (unscoredRowNumbers.length === 0) {
-      let msg = 'ℹ️ Không có dòng nào cần tính điểm.';
+      let msg = 'Không có dòng nào cần tính điểm.';
       if (missingFundRows.length > 0) {
-        msg += '\n\n📌 Các dòng sau CHƯA ĐIỀN Loại Quỹ (Cột Z) nên chưa được tính:\n-> Dòng: ' + missingFundRows.join(', ');
+        msg += '\n\nCác dòng sau CHƯA ĐIỀN Loại Quỹ (Cột Z) nên chưa được tính:\n-> Dòng: ' + missingFundRows.join(', ');
       }
       SpreadsheetApp.getUi().alert(msg);
       return;
@@ -2253,7 +2253,7 @@ function autoTriggerOnDataChange(e) {
       return;
     }
 
-    SpreadsheetApp.getUi().alert(`✅ Thành công! Đã tính điểm cho ${unscoredRowNumbers.length} dòng:\n(Dòng: ${unscoredRowNumbers.slice(0, 15).join(', ')}${unscoredRowNumbers.length > 15 ? '...' : ''})`);
+    SpreadsheetApp.getUi().alert(`Thành công! Đã tính điểm cho ${unscoredRowNumbers.length} dòng:\n(Dòng: ${unscoredRowNumbers.slice(0, 15).join(', ')}${unscoredRowNumbers.length > 15 ? '...' : ''})`);
   } catch (error) {
     Logger.log('Lỗi: ' + (error.message || error));
     SpreadsheetApp.getUi().alert('Đã xảy ra lỗi: ' + (error.message || error));

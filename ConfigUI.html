@@ -4,7 +4,7 @@
   <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚙️ Bảng Cấu Hình Điểm</title>
+  <title>Bảng Cấu Hình Điểm</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -864,6 +864,48 @@
       color: #991b1b;
     }
 
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .status-pill::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .status-pill.running {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    .status-pill.running::before {
+      background: #10b981;
+    }
+    .status-pill.paused {
+      background: #fffbeb;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+    .status-pill.paused::before {
+      background: #f59e0b;
+    }
+    .status-pill.ended {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+    .status-pill.ended::before {
+      background: #94a3b8;
+    }
+
     /* Multi-select Droplist */
     .multi-select-container {
       position: relative;
@@ -1024,20 +1066,19 @@
     <header class="app-header">
       <div class="header-titles">
         <h1 class="app-title">
-          <span>⚙️</span>
           <span>Bảng Cấu Hình Điểm</span>
         </h1>
 
       </div>
       <div class="toolbar-actions">
         <button type="button" class="btn btn-secondary" onclick="manualSyncMonth()" title="Tạo cột tháng hiện tại nếu bước sang kỳ mới">
-          <span>📅</span> Đồng Bộ Tháng Mới
+          Đồng Bộ Tháng Mới
         </button>
         <button type="button" class="btn btn-secondary" onclick="confirmResetSheets()" title="Khởi tạo khung 2 sheet cấu hình (trống) để bắt đầu nhập">
-          <span>🛠️</span> Khởi Tạo Khung 2 Sheet
+          Khởi Tạo Khung 2 Sheet
         </button>
         <button type="button" class="btn btn-primary" id="btnSave" onclick="saveAllChanges()">
-          <span>💾</span> Lưu Thay Đổi
+          Lưu Thay Đổi
           <span class="btn-badge" id="saveBadge" style="display:none;">0</span>
         </button>
       </div>
@@ -1070,15 +1111,15 @@
     <!-- Tab Bar -->
     <nav class="tab-bar" aria-label="Chuyển đổi bảng cấu hình">
       <button type="button" class="tab-btn active" id="tabBtnTH" onclick="switchTab('th')">
-        <span>🏢</span> Bảng Tổng Hợp (Quỹ NW)
+        Bảng Tổng Hợp (Quỹ NW)
         <span class="tab-badge" id="badgeTHCount">106</span>
       </button>
       <button type="button" class="tab-btn" id="tabBtnF2" onclick="switchTab('f2')">
-        <span>🔄</span> Dự Án F2 (Quỹ Chéo)
+        Dự Án F2 (Quỹ Chéo)
         <span class="tab-badge" id="badgeF2Count">29</span>
       </button>
       <button type="button" class="tab-btn" id="tabBtnCampaign" onclick="switchTab('campaign')">
-        <span>🔥</span> Điểm Chiến Dịch
+        Điểm Chiến Dịch
         <span class="tab-badge" id="badgeCampaignCount">0</span>
       </button>
     </nav>
@@ -1087,21 +1128,20 @@
     <div class="campaign-control-card" id="campaignControlPanel" style="display: none;">
       <div class="campaign-control-header">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 24px; line-height: 1;">🔥</span>
           <div style="display: flex; align-items: center; gap: 10px;">
             <div style="font-size: 16px; font-weight: 800; color: #9a3412;">Cấu Hình Điểm Chiến Dịch</div>
-            <span id="campaignDirtyText" style="font-size: 12px; font-weight: 800; color: #c2410c; background: #ffedd5; padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid #fdba74; display: none;">⚠️ Có thay đổi chưa lưu</span>
+            <span id="campaignDirtyText" style="font-size: 12px; font-weight: 800; color: #c2410c; background: #ffedd5; padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid #fdba74; display: none;">Có thay đổi chưa lưu</span>
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <button type="button" class="btn btn-secondary" onclick="openAddCampaignRowModal()" style="border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Tạo mới một dòng cấu hình cho chiến dịch">
-            <span>➕</span> Tạo Dòng Mới
+            Tạo Dòng Mới
           </button>
           <button type="button" class="btn btn-secondary" onclick="openPickFromTongHopModal()" style="border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Chọn từng dòng từ Bảng Tổng Hợp để thêm vào Chiến Dịch">
-            <span>📥</span> Chọn Dòng Từ Tổng Hợp
+            Chọn Dòng Từ Tổng Hợp
           </button>
           <button type="button" class="btn btn-primary" onclick="saveCampaignChanges()" style="background-color: #ea580c; border-color: #c2410c;">
-            <span>💾</span> Lưu Bảng Chiến Dịch
+            Lưu Bảng Chiến Dịch
           </button>
         </div>
       </div>
@@ -1111,9 +1151,9 @@
         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px;">
           <!-- Dropdown chọn Chiến Dịch -->
           <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="color: #ea580c; font-weight: 700;">🎯 Chiến Dịch:</span>
+            <span style="color: #ea580c; font-weight: 700;">Chiến dịch:</span>
             <select id="campaignSelector" class="filter-select" onchange="onCampaignFilterChange(this.value)" style="border-color: #fdba74; font-weight: 800; color: #9a3412; background: #fff; padding: 3px 8px; height: 32px; border-radius: 6px; cursor: pointer; max-width: 280px;">
-              <option value="ALL">🌟 Tất cả chiến dịch</option>
+              <option value="ALL">Tất cả chiến dịch</option>
             </select>
           </div>
 
@@ -1121,7 +1161,7 @@
 
           <!-- Thời gian áp dụng -->
           <div id="campaignDateContainer" style="display: flex; align-items: center; gap: 6px;">
-            <span style="color: #ea580c; font-weight: 700;">🗓️ Thời Gian:</span>
+            <span style="color: #ea580c; font-weight: 700;">Thời gian:</span>
             <span id="dispCampaignDates" style="font-weight: 800; color: #15803d;">Chưa thiết lập</span>
           </div>
 
@@ -1129,8 +1169,8 @@
 
           <!-- Trạng thái chiến dịch -->
           <div id="campaignStatusContainer" style="display: flex; align-items: center; gap: 6px;">
-            <span style="color: #ea580c; font-weight: 700;">Trạng Thái:</span>
-            <span id="dispCampaignStatusBadge" class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;">🟢 Đang chạy</span>
+            <span style="color: #ea580c; font-weight: 700;">Trạng thái:</span>
+            <span id="dispCampaignStatusBadge" class="status-pill running">Đang chạy</span>
           </div>
 
           <!-- Tóm tắt tổng quan khi chọn Tất cả -->
@@ -1141,10 +1181,10 @@
 
         <div style="display: flex; align-items: center; gap: 8px;">
           <button type="button" id="btnEditCampaignMeta" class="btn btn-secondary" onclick="openEditCampaignMetaModal()" style="height: 28px; padding: 0 10px; font-size: 12px; border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Chỉnh sửa tên và thời gian chiến dịch">
-            ✏️ Đổi Tên / Thời Gian
+            Đổi Tên / Thời Gian
           </button>
           <button type="button" id="btnDeleteCampaign" class="btn btn-secondary" onclick="deleteSelectedCampaign()" style="height: 28px; padding: 0 8px; font-size: 12px; border-color: #fca5a5; color: #dc2626; background: #ffffff;" title="Xóa toàn bộ chiến dịch này">
-            🗑️ Xóa Chiến Dịch
+            Xóa Chiến Dịch
           </button>
         </div>
       </div>
@@ -1153,25 +1193,25 @@
     <!-- Toolbar Filters -->
     <div class="toolbar-card">
       <div class="toolbar-filters">
-        <input type="text" class="filter-input" id="searchInput" placeholder="🔍 Tìm mã dự án, tên dự án, chủ đầu tư..." oninput="applyFilters()" aria-label="Tìm kiếm dự án">
+        <input type="text" class="filter-input" id="searchInput" placeholder="Tìm mã dự án, tên dự án, chủ đầu tư..." oninput="applyFilters()" aria-label="Tìm kiếm dự án">
 
         <select class="filter-select" id="monthFilter" onchange="applyFilters()" aria-label="Lọc theo tháng">
-          <option value="ALL">🗓️ Xem tất cả các tháng (Ma trận)</option>
+          <option value="ALL">Xem tất cả các tháng (Ma trận)</option>
         </select>
 
         <select class="filter-select" id="cdtFilter" onchange="applyFilters()" aria-label="Lọc theo chủ đầu tư">
-          <option value="ALL">🏢 Tất cả CĐT</option>
+          <option value="ALL">Tất cả CĐT</option>
         </select>
 
         <select class="filter-select" id="regionFilter" onchange="applyFilters()" aria-label="Lọc theo miền">
-          <option value="ALL">🌐 Tất cả miền</option>
+          <option value="ALL">Tất cả miền</option>
           <option value="Miền Bắc">Miền Bắc</option>
           <option value="Miền Nam">Miền Nam</option>
           <option value="Miền Trung">Miền Trung</option>
         </select>
 
         <select class="filter-select" id="statusFilter" onchange="applyFilters()" aria-label="Lọc theo trạng thái">
-          <option value="ALL">📌 Tất cả trạng thái</option>
+          <option value="ALL">Tất cả trạng thái</option>
           <option value="Đang bán">Đang bán</option>
           <option value="Sold out">Sold out</option>
         </select>
@@ -1179,7 +1219,7 @@
 
       <div class="toolbar-actions">
         <button type="button" class="btn btn-secondary" onclick="openAddRowModal()">
-          <span>➕</span> Thêm Dòng Mới
+          Thêm Dòng Mới
         </button>
       </div>
     </div>
@@ -1200,11 +1240,11 @@
   <div class="modal-backdrop" id="pickTHRowModal">
     <div class="modal-content" style="max-width: 980px; width: 95%;">
       <div class="modal-header">
-        <h3 class="modal-title">📥 Chọn Dòng Từ Bảng Tổng Hợp Để Thêm Vào Chiến Dịch</h3>
+        <h3 class="modal-title">Chọn Dòng Từ Bảng Tổng Hợp Để Thêm Vào Chiến Dịch</h3>
         <button type="button" class="modal-close" onclick="closePickTHRowModal()">×</button>
       </div>
       <div class="modal-body" style="gap: 12px;">
-        <input type="text" class="filter-input" id="searchPickTH" placeholder="🔍 Tìm theo mã dự án, tên dự án, chủ đầu tư, loại căn, khoảng giá..." oninput="renderPickTHList()" style="width: 100%;">
+        <input type="text" class="filter-input" id="searchPickTH" placeholder="Tìm theo mã dự án, tên dự án, chủ đầu tư, loại căn, khoảng giá..." oninput="renderPickTHList()" style="width: 100%;">
         <div class="table-scroll-wrapper" style="max-height: 420px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md);">
           <table>
             <thead>
@@ -1251,7 +1291,7 @@
   <div class="modal-backdrop" id="editRowModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title" id="modalEditTitle">✏️ Chỉnh Sửa Dòng Cấu Hình</h3>
+        <h3 class="modal-title" id="modalEditTitle">Chỉnh Sửa Dòng Cấu Hình</h3>
         <button type="button" class="modal-close" onclick="closeEditRowModal()">×</button>
       </div>
       <div class="modal-body" id="modalEditBody">
@@ -1267,7 +1307,7 @@
   <!-- Modal Xác Nhận Đẹp (In-App Confirm thay thế browser confirm) -->
   <div class="modal-backdrop" id="customConfirmModal">
     <div class="modal-content" style="width: 440px; text-align: center; padding: 28px 24px; gap: 14px;">
-      <div id="confirmIcon" style="font-size: 44px; line-height: 1;">⚠️</div>
+      <div id="confirmIcon" style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #fef2f2; color: #dc2626; margin: 0 auto;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
       <div id="confirmTitle" style="font-size: 18px; font-weight: 800; color: var(--text-primary);">Xác Nhận</div>
       <div id="confirmMessage" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; white-space: pre-line;"></div>
       <div style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
@@ -1280,17 +1320,17 @@
   <!-- Modal Cảnh Báo Chưa Lưu Cấu Hình (Lưu - Vẫn Đóng) -->
   <div class="modal-backdrop" id="unsavedPromptModal" style="z-index: 1000;">
     <div class="modal-content" style="max-width: 440px; text-align: center; padding: 28px 24px; gap: 14px;">
-      <div style="font-size: 44px; line-height: 1;">⚠️</div>
+      <div style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #fef3c7; color: #d97706; margin: 0 auto;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
       <div style="font-size: 18px; font-weight: 800; color: var(--text-primary);">Bạn chưa lưu cấu hình!</div>
       <div id="unsavedPromptDesc" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; white-space: pre-line;">
         Các cấu hình vừa thực hiện chưa được lưu vào Google Sheets. Bạn có muốn lưu lại trước khi đóng không?
       </div>
       <div style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
         <button type="button" class="btn btn-primary" id="btnUnsavedPromptSave" onclick="onUnsavedPromptSave()" style="min-width: 110px; font-weight: 800; background: var(--brand);">
-          <span>💾</span> Lưu
+          Lưu
         </button>
         <button type="button" class="btn btn-secondary" id="btnUnsavedPromptDiscard" onclick="onUnsavedPromptDiscard()" style="min-width: 110px; font-weight: 700; color: var(--danger); border-color: #fca5a5; background: #fff;">
-          <span>✕</span> Vẫn đóng
+          Vẫn đóng
         </button>
       </div>
     </div>
@@ -1300,7 +1340,7 @@
   <div class="modal-backdrop" id="editCampaignMetaModal">
     <div class="modal-content" style="max-width: 520px;">
       <div class="modal-header">
-        <h3 class="modal-title">🔥 Thông Tin Chiến Dịch</h3>
+        <h3 class="modal-title">Thông Tin Chiến Dịch</h3>
         <button type="button" class="modal-close" onclick="closeEditCampaignMetaModal()">×</button>
       </div>
       <div class="modal-body">
@@ -1325,10 +1365,10 @@
         <div class="form-group">
           <label class="field-label" for="metaCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái Chiến Dịch</label>
           <select class="filter-select" id="metaCampaignStatus" style="width: 100%; border-color: #fdba74; font-weight: 700;">
-            <option value="Đang chạy">🟢 Đang chạy</option>
-            <option value="Tạm dừng">⏸️ Tạm dừng</option>
+            <option value="Đang chạy">Đang chạy</option>
+            <option value="Tạm dừng">Tạm dừng</option>
           </select>
-          <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">💡 Hệ thống tự động chuyển sang "Kết thúc" khi qua ngày Đến Ngày.</div>
+          <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">Hệ thống tự động chuyển sang "Kết thúc" khi qua ngày Đến Ngày.</div>
         </div>
       </div>
       <div class="modal-footer">
@@ -1339,6 +1379,14 @@
   </div>
 
   <script>
+    // Global SVG Icons
+    const SVG_ICONS = {
+      edit: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>',
+      delete: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>',
+      plus: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+      calendar: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>'
+    };
+
     // Global State
     let configData = {
       thMonths: [],
@@ -1372,7 +1420,7 @@
     function showToast(msg, isError) {
       const toast = document.getElementById('toastBox');
       toast.className = 'toast ' + (isError ? 'toast-error' : 'toast-success');
-      toast.innerText = (isError ? '⚠️ ' : '✅ ') + msg;
+      toast.innerText = msg;
       toast.style.display = 'block';
       setTimeout(() => { toast.style.display = 'none'; }, 3500);
     }
@@ -1380,7 +1428,7 @@
     let confirmCallback = null;
 
     function showConfirmModal(opts, onConfirm) {
-      document.getElementById('confirmIcon').innerText = opts.icon || '⚠️';
+      // SVG confirm icon
       document.getElementById('confirmTitle').innerText = opts.title || 'Xác Nhận';
       document.getElementById('confirmMessage').innerText = opts.message || '';
       const btnAccept = document.getElementById('btnConfirmAccept');
@@ -1531,9 +1579,9 @@
         if (list.length === 0) {
           statCampEl.innerHTML = `<span style="color:var(--text-tertiary);font-weight:700;">Chưa có</span>`;
         } else if (activeCamps > 0) {
-          statCampEl.innerHTML = `<span style="color:var(--success);font-weight:800;">🟢 ${activeCamps} đang chạy</span> <span style="font-size:12px;color:var(--text-tertiary);">(${totalCampRows} dòng)</span>`;
+          statCampEl.innerHTML = `<span style="color:var(--success);font-weight:800;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--success);margin-right:5px;vertical-align:middle;"></span>${activeCamps} đang chạy</span> <span style="font-size:12px;color:var(--text-tertiary);">(${totalCampRows} dòng)</span>`;
         } else {
-          statCampEl.innerHTML = `<span style="color:var(--warning);font-weight:800;">⏸️ Tạm dừng/Hết hạn</span> <span style="font-size:12px;color:var(--text-tertiary);">(${totalCampRows} dòng)</span>`;
+          statCampEl.innerHTML = `<span style="color:var(--warning);font-weight:800;"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warning);margin-right:5px;vertical-align:middle;"></span>Tạm dừng/Hết hạn</span> <span style="font-size:12px;color:var(--text-tertiary);">(${totalCampRows} dòng)</span>`;
         }
       }
 
@@ -1628,11 +1676,10 @@
       const list = configData.campaignsList || [];
 
       if (selectEl) {
-        let opts = `<option value="ALL">🌟 Tất cả chiến dịch (${totalRows} dòng)</option>`;
+        let opts = `<option value="ALL">Tất cả chiến dịch (${totalRows} dòng)</option>`;
         list.forEach(c => {
           const count = (configData.campaign?.rows || []).filter(r => (r.campaignName || '').trim().toLowerCase() === c.name.trim().toLowerCase()).length;
-          const emoji = getCampaignStatusEmoji(c.status);
-          opts += `<option value="${escapeHtml(c.name)}">${emoji} ${escapeHtml(c.name)} (${count} dòng)</option>`;
+          opts += `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)} (${count} dòng)</option>`;
         });
         selectEl.innerHTML = opts;
 
@@ -1651,7 +1698,7 @@
         if (allSummary) allSummary.style.display = 'flex';
         if (allSummaryText) {
           const activeCount = list.filter(c => getEffectiveCampaignStatus(c) === 'Đang chạy').length;
-          allSummaryText.innerHTML = `📊 Tổng cộng <b>${list.length}</b> chiến dịch (<b>${activeCount}</b> đang chạy)`;
+          allSummaryText.innerHTML = `Tổng cộng: <b>${list.length}</b> chiến dịch (<b>${activeCount}</b> đang chạy)`;
         }
         if (btnEdit) btnEdit.style.display = 'none';
         if (btnDelete) btnDelete.style.display = 'none';
@@ -1688,17 +1735,17 @@
           if (statusEl) {
             const st = getEffectiveCampaignStatus(campInfo);
             if (st === 'Đang chạy') {
-              statusEl.className = 'badge';
-              statusEl.style = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;';
-              statusEl.innerText = '🟢 Đang chạy';
+              statusEl.className = 'status-pill running';
+              statusEl.removeAttribute('style');
+              statusEl.innerText = 'Đang chạy';
             } else if (st === 'Tạm dừng') {
-              statusEl.className = 'badge';
-              statusEl.style = 'background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:700;';
-              statusEl.innerText = '⏸️ Tạm dừng';
+              statusEl.className = 'status-pill paused';
+              statusEl.removeAttribute('style');
+              statusEl.innerText = 'Tạm dừng';
             } else {
-              statusEl.className = 'badge';
-              statusEl.style = 'background:var(--bg-muted); color:var(--text-tertiary); border:1px solid var(--border-subtle); font-weight:700;';
-              statusEl.innerText = '⚪ Kết thúc (Hết hạn)';
+              statusEl.className = 'status-pill ended';
+              statusEl.removeAttribute('style');
+              statusEl.innerText = 'Kết thúc';
             }
           }
         }
@@ -1823,7 +1870,7 @@
       const months = (activeTab === 'th') ? configData.thMonths : (configData.f2Months || []);
 
       if (activeTab !== 'campaign') {
-        monthSelect.innerHTML = '<option value="ALL">🗓️ Xem tất cả các tháng (Ma trận)</option>';
+        monthSelect.innerHTML = '<option value="ALL">Xem tất cả các tháng (Ma trận)</option>';
         months.forEach(m => {
           monthSelect.innerHTML += `<option value="${m.dateStr}">Tháng ${m.display}</option>`;
         });
@@ -1838,7 +1885,7 @@
         const curCdt = cdtSelect.value;
         const sourceRows = (activeTab === 'th') ? configData.thRows : (configData.campaign?.rows || []);
         const cdts = Array.from(new Set(sourceRows.map(r => r.cdt).filter(Boolean))).sort();
-        cdtSelect.innerHTML = '<option value="ALL">🏢 Tất cả CĐT</option>';
+        cdtSelect.innerHTML = '<option value="ALL">Tất cả CĐT</option>';
         cdts.forEach(c => {
           cdtSelect.innerHTML += `<option value="${c}">${c}</option>`;
         });
@@ -1908,7 +1955,7 @@
       if (filtered.length === 0) {
         const isActuallyEmpty = configData.thRows.length === 0;
         const msg = isActuallyEmpty 
-          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án</div><div>Bấm <b>➕ Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"Tổng hợp"</b> để bắt đầu.</div>'
+          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án</div><div>Bấm <b>Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"Tổng hợp"</b> để bắt đầu.</div>'
           : 'Không tìm thấy dự án nào phù hợp với bộ lọc.';
         tbody.innerHTML = `<tr><td colspan="${10 + displayMonths.length}" style="text-align:center; padding:36px 16px; color:var(--text-tertiary);">${msg}</td></tr>`;
         return;
@@ -1937,9 +1984,9 @@
           <td class="freeze-col" style="color:var(--text-tertiary); font-size:11px;">${idx + 1}</td>
           <td class="freeze-col-actions">
             <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
-              <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('th', ${r.rowIdx})" title="Chỉnh sửa dòng này">✏️</button>
-              <button type="button" class="btn-action" style="color:#ea580c; border-color:#fdba74; background:#fff7ed;" onclick="pickThRowToCampaign(${r.rowIdx})" title="Thêm vào chiến dịch">🔥</button>
-              <button type="button" class="btn-action btn-action-del" onclick="deleteRow('th', ${r.rowIdx}, '${escapeHtml(r.code)} - ${escapeHtml(r.name)}')" title="Xóa dòng này">🗑️</button>
+              <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('th', ${r.rowIdx})" title="Chỉnh sửa dòng này">${SVG_ICONS.edit}</button>
+              <button type="button" class="btn-action" style="color:#ea580c; border-color:#fdba74; background:#fff7ed;" onclick="pickThRowToCampaign(${r.rowIdx})" title="Thêm vào chiến dịch">${SVG_ICONS.plus}</button>
+              <button type="button" class="btn-action btn-action-del" onclick="deleteRow('th', ${r.rowIdx}, '${escapeHtml(r.code)} - ${escapeHtml(r.name)}')" title="Xóa dòng này">${SVG_ICONS.delete}</button>
             </div>
           </td>
           <td class="freeze-col-2" style="font-weight:700; font-family:var(--font-mono); color:var(--brand);">${escapeHtml(r.code)}</td>
@@ -1996,7 +2043,7 @@
       if (filtered.length === 0) {
         const isActuallyEmpty = configData.f2Rows.length === 0;
         const msg = isActuallyEmpty 
-          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án F2</div><div>Bấm <b>➕ Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"Dự án F2"</b> để bắt đầu.</div>'
+          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án F2</div><div>Bấm <b>Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"Dự án F2"</b> để bắt đầu.</div>'
           : 'Không tìm thấy dự án F2 nào phù hợp với bộ lọc.';
         tbody.innerHTML = `<tr><td colspan="${4 + displayMonths.length}" style="text-align:center; padding:36px 16px; color:var(--text-tertiary);">${msg}</td></tr>`;
         return;
@@ -2008,8 +2055,8 @@
           <td class="freeze-col" style="color:var(--text-tertiary); font-size:11px;">${idx + 1}</td>
           <td class="freeze-col-actions">
             <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
-              <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('f2', ${r.rowIdx})" title="Chỉnh sửa tên dự án">✏️</button>
-              <button type="button" class="btn-action btn-action-del" onclick="deleteRow('f2', ${r.rowIdx}, '${escapeHtml(r.name)}')" title="Xóa dự án F2 này">🗑️</button>
+              <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('f2', ${r.rowIdx})" title="Chỉnh sửa tên dự án">${SVG_ICONS.edit}</button>
+              <button type="button" class="btn-action btn-action-del" onclick="deleteRow('f2', ${r.rowIdx}, '${escapeHtml(r.name)}')" title="Xóa dự án F2 này">${SVG_ICONS.delete}</button>
             </div>
           </td>
           <td class="freeze-col-2" style="font-weight:700;">${escapeHtml(r.name)}</td>
@@ -2050,7 +2097,7 @@
         <th style="width: 100px; text-align: center;">Sản Phẩm</th>
         <th style="min-width: 130px; text-align: center;">Loại Căn</th>
         <th style="min-width: 110px; text-align: center;">Khoảng Giá</th>
-        <th style="width: 135px; text-align: center; background: #ffedd5; color: #9a3412;">🔥 Điểm Chiến Dịch</th>
+        <th style="width: 135px; text-align: center; background: #ffedd5; color: #9a3412;">Điểm Chiến Dịch</th>
         <th style="min-width: 120px;">Ghi Chú</th>
       </tr>`;
       thead.innerHTML = headHtml;
@@ -2072,10 +2119,10 @@
 
       if (filtered.length === 0) {
         const msg = (rows.length === 0)
-          ? 'Chưa có cấu hình điểm chiến dịch nào. Bấm <b>"➕ Tạo Dòng Mới"</b> hoặc <b>"📥 Chọn Dòng Từ Tổng Hợp"</b> để thêm dự án vào chiến dịch!'
+          ? 'Chưa có cấu hình điểm chiến dịch nào. Bấm <b>"Tạo Dòng Mới"</b> hoặc <b>"Chọn Dòng Từ Tổng Hợp"</b> để thêm dự án vào chiến dịch!'
           : (isViewingAllCampaigns 
               ? 'Không tìm thấy dòng chiến dịch phù hợp với bộ lọc.'
-              : `Chiến dịch <b>"${escapeHtml(selectedCampaignFilter)}"</b> chưa có cấu hình dự án nào. Bấm <b>"➕ Tạo Dòng Mới"</b> để thêm!`);
+              : `Chiến dịch <b>"${escapeHtml(selectedCampaignFilter)}"</b> chưa có cấu hình dự án nào. Bấm <b>"Tạo Dòng Mới"</b> để thêm!`);
         tbody.innerHTML = `<tr><td colspan="${isViewingAllCampaigns ? 13 : 12}" class="empty-state">${msg}</td></tr>`;
         return;
       }
@@ -2107,22 +2154,22 @@
           const cSt = r.campaignStatus || 'Đang chạy';
           let statusPill = '';
           if (cSt === 'Đang chạy') {
-            statusPill = `<span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 12px; padding: 1px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">🟢 Đang chạy</span>`;
+            statusPill = `<span class="status-pill running"><span class="status-dot"></span>Đang chạy</span>`;
           } else if (cSt === 'Tạm dừng') {
-            statusPill = `<span style="background: #fffbeb; color: #92400e; border: 1px solid #fde68a; border-radius: 12px; padding: 1px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">⏸️ Tạm dừng</span>`;
+            statusPill = `<span class="status-pill paused"><span class="status-dot"></span>Tạm dừng</span>`;
           } else {
-            statusPill = `<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 12px; padding: 1px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">⚪ Kết thúc</span>`;
+            statusPill = `<span class="status-pill ended"><span class="status-dot"></span>Kết thúc</span>`;
           }
 
           campCellHtml = `<td style="min-width: 230px; vertical-align: middle; padding: 8px 10px;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
               <span style="font-weight: 800; color: #9a3412; font-size: 12px; letter-spacing: -0.1px;">
-                🎯 ${escapeHtml(r.campaignName || 'Chưa đặt tên')}
+                ${escapeHtml(r.campaignName || 'Chưa đặt tên')}
               </span>
               ${statusPill}
             </div>
             <div style="font-size: 11px; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-              <span style="color: #94a3b8; font-size: 10px;">📅</span>
+              <span style="color: #94a3b8; display: inline-flex; align-items: center;">${SVG_ICONS.calendar}</span>
               <span style="white-space: nowrap;">${formatCampaignDateRange(r.startDate, r.endDate)}</span>
             </div>
           </td>`;
@@ -2131,8 +2178,10 @@
         bodyHtml += `<tr>
           <td class="col-stt">${r.stt || (idx + 1)}</td>
           <td class="col-actions">
-            <button type="button" class="btn-icon" title="Sửa dòng này" onclick="openEditRowModal('campaign', ${r.rowIdx})">✏️</button>
-            <button type="button" class="btn-icon btn-icon-delete" title="Xóa dòng này" onclick="deleteRow('campaign', ${r.rowIdx}, '${escapeJs(r.code)}')">🗑️</button>
+            <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
+              <button type="button" class="btn-action btn-action-edit" title="Sửa dòng này" onclick="openEditRowModal('campaign', ${r.rowIdx})">${SVG_ICONS.edit}</button>
+              <button type="button" class="btn-action btn-action-del" title="Xóa dòng này" onclick="deleteRow('campaign', ${r.rowIdx}, '${escapeJs(r.code)}')">${SVG_ICONS.delete}</button>
+            </div>
           </td>
           ${campCellHtml}
           <td class="col-text" title="${escapeHtml(r.cdt)}">${escapeHtml(r.cdt)}</td>
@@ -2245,7 +2294,7 @@
           <td style="text-align:center; font-weight:700; font-family:var(--font-mono);">${formatScoreDisplay(baselineScore)}</td>
           <td style="text-align:center;">
             <button type="button" class="btn btn-secondary" style="height:28px; padding:0 8px; font-size:12px; border-color:#fdba74; color:#ea580c; background:#fff7ed;" onclick="pickThRowToCampaign(${r.rowIdx})">
-              ➕ Chọn & Sửa
+              Chọn & Sửa
             </button>
           </td>
         </tr>`;
@@ -2396,7 +2445,7 @@
 
     function confirmResetSheets() {
       showConfirmModal({
-        icon: '🛠️',
+        
         title: 'Khởi Tạo Khung 2 Sheet',
         message: 'Thao tác này sẽ tạo khung bảng chuẩn (chưa có dữ liệu dòng) cho 2 Sheet "Tổng hợp" và "Dự án F2" để bạn bắt đầu nhập dữ liệu mới từ đầu.\n\nBạn có chắc chắn muốn thực hiện?',
         confirmText: 'Khởi Tạo',
@@ -2619,7 +2668,7 @@
       let html = `
         <label class="multi-select-option" data-text="tất cả" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; margin-bottom: 4px; font-weight: 700;">
           <input type="checkbox" class="${prefix}-unit-cb" id="${prefix}UnitCbAll" value="Tất cả" ${isAll ? 'checked' : ''} onchange="onToggleAllUnits('${prefix}')">
-          <span>🌐 Tất cả</span>
+          <span>Tất cả</span>
         </label>
       `;
 
@@ -2888,16 +2937,16 @@
       const title = document.getElementById('modalAddTitle');
       const body = document.getElementById('modalAddBody');
 
-      title.innerText = '➕ Thêm Dự Án / Cấu Hình Điểm';
+      title.innerText = 'Thêm Dự Án / Cấu Hình Điểm';
       body.innerHTML = `
         <div class="form-group" style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px;">
           <label class="field-label" for="addFundType" style="color: var(--primary-600); font-weight: 800; font-size: 11px; margin-bottom: 6px;">
-            📂 BƯỚC 1: CHỌN LOẠI QUỸ DỰ ÁN (*)
+            BƯỚC 1: CHỌN LOẠI QUỸ DỰ ÁN (*)
           </label>
           <select class="filter-select" id="addFundType" style="width:100%; font-size: 13px; font-weight: 700; height: 38px; border-color: var(--primary-500); background: #ffffff;" onchange="onFundTypeChange()">
-            <option value="th" ${activeTab === 'th' ? 'selected' : ''}>🏢 Quỹ NW (Bảng Tổng Hợp - Tính Điểm Theo Dự Án & Điều Kiện)</option>
-            <option value="f2" ${activeTab === 'f2' ? 'selected' : ''}>🔄 Quỹ Chéo (Bảng Dự Án F2 - Điểm Quỹ Chéo Độc Lập)</option>
-            <option value="campaign" ${activeTab === 'campaign' ? 'selected' : ''}>🔥 Quỹ Chiến Dịch (Bảng Điểm Chiến Dịch Cột X)</option>
+            <option value="th" ${activeTab === 'th' ? 'selected' : ''}>Quỹ NW (Bảng Tổng Hợp - Tính Điểm Theo Dự Án & Điều Kiện)</option>
+            <option value="f2" ${activeTab === 'f2' ? 'selected' : ''}>Quỹ Chéo (Bảng Dự Án F2 - Điểm Quỹ Chéo Độc Lập)</option>
+            <option value="campaign" ${activeTab === 'campaign' ? 'selected' : ''}>Quỹ Chiến Dịch (Bảng Điểm Chiến Dịch Cột X)</option>
           </select>
         </div>
         <div id="fundFormContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
@@ -2920,7 +2969,7 @@
 
 
       if (fundType === 'campaign') {
-        if (title) title.innerText = '➕ Thêm Dự Án Vào Điểm Chiến Dịch';
+        if (title) title.innerText = 'Thêm Dự Án Vào Điểm Chiến Dịch';
         let campName = '';
         let campStart = '';
         let campEnd = '';
@@ -2931,7 +2980,7 @@
           <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">
             <div style="margin-bottom: 8px;">
               <span style="font-size: var(--text-xs); font-weight: 800; color: #9a3412; text-transform: uppercase;">
-                🔥 THÔNG TIN CHIẾN DỊCH ÁP DỤNG
+                THÔNG TIN CHIẾN DỊCH ÁP DỤNG
               </span>
             </div>
             <div class="form-row-2" style="margin-bottom: 8px;">
@@ -2946,8 +2995,8 @@
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="addCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
                 <select class="filter-select" id="addCampaignStatus" style="border-color: #fdba74; font-weight: 700;">
-                  <option value="Đang chạy" ${campStatus !== 'Tạm dừng' ? 'selected' : ''}>🟢 Đang chạy</option>
-                  <option value="Tạm dừng" ${campStatus === 'Tạm dừng' ? 'selected' : ''}>⏸️ Tạm dừng</option>
+                  <option value="Đang chạy" ${campStatus !== 'Tạm dừng' ? 'selected' : ''}>Đang chạy</option>
+                  <option value="Tạm dừng" ${campStatus === 'Tạm dừng' ? 'selected' : ''}>Tạm dừng</option>
                 </select>
               </div>
             </div>
@@ -3001,7 +3050,7 @@
           <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">
-                🎯 Cấu Hình 3 Tiêu Chí Khớp (Sản Phẩm - Loại Căn - Khoảng Giá)
+                Cấu Hình 3 Tiêu Chí Khớp (Sản Phẩm - Loại Căn - Khoảng Giá)
               </span>
               <span style="font-size: 11px; color: var(--text-tertiary);">
                 (* hoặc để trống = Áp dụng tất cả)
@@ -3030,7 +3079,7 @@
                   </div>
                   <div class="multi-select-dropdown" id="addLoaiCanDropdown">
                     <div class="multi-select-search-box">
-                      <input type="text" class="multi-select-search" id="addLoaiCanSearch" placeholder="🔍 Tìm loại căn..." oninput="filterMultiSelectOptions('add')">
+                      <input type="text" class="multi-select-search" id="addLoaiCanSearch" placeholder="Tìm loại căn..." oninput="filterMultiSelectOptions('add')">
                     </div>
                     <div class="multi-select-actions">
                       <span class="multi-select-btn-link" onclick="selectAllUnits('add')">Chọn tất cả</span>
@@ -3072,13 +3121,13 @@
           </div>
 
           <div class="form-group">
-            <label class="field-label" for="addScore" style="color: #9a3412; font-weight: 800;">🔥 Điểm Chiến Dịch (*)</label>
+            <label class="field-label" for="addScore" style="color: #9a3412; font-weight: 800;">Điểm Chiến Dịch (*)</label>
             <input type="number" step="0.5" class="filter-input" style="width:140px; font-weight: 800;" id="addScore" placeholder="Ví dụ: 8.0" value="8.0">
           </div>
         `;
         buildMultiSelectOptions('add', []);
       } else if (fundType === 'th') {
-        if (title) title.innerText = '➕ Thêm Dự Án / Điều Kiện (Quỹ NW)';
+        if (title) title.innerText = 'Thêm Dự Án / Điều Kiện (Quỹ NW)';
 
         container.innerHTML = `
           <div class="form-row-2">
@@ -3119,7 +3168,7 @@
           <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">
-                🎯 Cấu Hình 3 Tiêu Chí Khớp (Sản Phẩm - Loại Căn - Khoảng Giá)
+                Cấu Hình 3 Tiêu Chí Khớp (Sản Phẩm - Loại Căn - Khoảng Giá)
               </span>
               <span style="font-size: 11px; color: var(--text-tertiary);">
                 (* hoặc để trống = Áp dụng tất cả)
@@ -3148,7 +3197,7 @@
                   </div>
                   <div class="multi-select-dropdown" id="addLoaiCanDropdown">
                     <div class="multi-select-search-box">
-                      <input type="text" class="multi-select-search" id="addLoaiCanSearch" placeholder="🔍 Tìm loại căn..." oninput="filterMultiSelectOptions('add')">
+                      <input type="text" class="multi-select-search" id="addLoaiCanSearch" placeholder="Tìm loại căn..." oninput="filterMultiSelectOptions('add')">
                     </div>
                     <div class="multi-select-actions">
                       <span class="multi-select-btn-link" onclick="selectAllUnits('add')">Chọn tất cả</span>
@@ -3196,7 +3245,7 @@
         `;
         buildMultiSelectOptions('add', []);
       } else {
-        if (title) title.innerText = '➕ Thêm Dự Án Quỹ Chéo (Bảng Dự Án F2)';
+        if (title) title.innerText = 'Thêm Dự Án Quỹ Chéo (Bảng Dự Án F2)';
         container.innerHTML = `
           <div class="form-group">
             <label class="field-label" for="addNameF2">Tên Dự Án F2 (*)</label>
@@ -3405,11 +3454,7 @@
     }
 
     function getCampaignStatusEmoji(status) {
-      if (!status) return '🟢';
-      const s = status.trim().toLowerCase();
-      if (s === 'tạm dừng') return '⏸️';
-      if (s === 'kết thúc') return '🔴';
-      return '🟢';
+      return '';
     }
 
     function formatCampaignDateRange(startDate, endDate) {
@@ -3433,7 +3478,7 @@
       let html = '';
       // "Create new" option always first
       html += '<div class="campaign-dd-item campaign-dd-item-new" onclick="selectCampaignNew(\'' + prefix + '\')">';
-      html += '➕ Nhập chiến dịch mới...';
+      html += '+ Nhập chiến dịch mới...';
       html += '</div>';
       
       // Filter and render existing campaigns
@@ -3458,7 +3503,7 @@
         html += '<div class="campaign-dd-name">' + escapedName + '</div>';
         html += '<div class="campaign-dd-meta">' + dateRange + '</div>';
         html += '</div>';
-        html += '<span class="campaign-dd-badge ' + badgeClass + '">' + emoji + ' ' + escapeHtml(c.status || 'Đang chạy') + '</span>';
+        html += '<span class="campaign-dd-badge ' + badgeClass + '">' + escapeHtml(c.status || 'Đang chạy') + '</span>';
         html += '</div>';
       });
       
@@ -3609,9 +3654,9 @@
           campStatus = (row.campaignStatus === 'Tạm dừng') ? 'Tạm dừng' : 'Đang chạy';
         }
 
-        title.innerText = isCopy ? `🔥 Thêm Vào Chiến Dịch: ${row.code} (${row.name})` : `✏️ Sửa Dự Án Chiến Dịch: ${row.code} (${row.name})`;
+        title.innerText = isCopy ? `Thêm Vào Chiến Dịch: ${row.code} (${row.name})` : `Sửa Dự Án Chiến Dịch: ${row.code} (${row.name})`;
         const submitBtn = document.getElementById('btnEditRowSubmit');
-        if (submitBtn) submitBtn.innerText = isCopy ? '🔥 Thêm Vào Chiến Dịch' : 'Lưu Cập Nhật';
+        if (submitBtn) submitBtn.innerText = isCopy ? 'Thêm Vào Chiến Dịch' : 'Lưu Cập Nhật';
         body.innerHTML = `
           <input type="hidden" id="editRowIdx" value="${rowIdx}">
           <input type="hidden" id="editTab" value="${tab}">
@@ -3620,7 +3665,7 @@
           <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">
             <div style="margin-bottom: 8px;">
               <span style="font-size: var(--text-xs); font-weight: 800; color: #9a3412; text-transform: uppercase;">
-                🔥 THÔNG TIN CHIẾN DỊCH ÁP DỤNG
+                THÔNG TIN CHIẾN DỊCH ÁP DỤNG
               </span>
             </div>
             <div class="form-row-2" style="margin-bottom: 8px;">
@@ -3635,8 +3680,8 @@
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="editCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
                 <select class="filter-select" id="editCampaignStatus" style="border-color: #fdba74; font-weight: 700;">
-                  <option value="Đang chạy" ${campStatus !== 'Tạm dừng' ? 'selected' : ''}>🟢 Đang chạy</option>
-                  <option value="Tạm dừng" ${campStatus === 'Tạm dừng' ? 'selected' : ''}>⏸️ Tạm dừng</option>
+                  <option value="Đang chạy" ${campStatus !== 'Tạm dừng' ? 'selected' : ''}>Đang chạy</option>
+                  <option value="Tạm dừng" ${campStatus === 'Tạm dừng' ? 'selected' : ''}>Tạm dừng</option>
                 </select>
               </div>
             </div>
@@ -3697,7 +3742,7 @@
           <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">
-                🎯 Cập Nhật 3 Tiêu Chí Khớp (Sản Phẩm - Loại Căn - Khoảng Giá)
+                Cập Nhật 3 Tiêu Chí Khớp (Sản Phẩm - Loại Căn - Khoảng Giá)
               </span>
             </div>
 
@@ -3720,7 +3765,7 @@
                   </div>
                   <div class="multi-select-dropdown" id="editLoaiCanDropdown">
                     <div class="multi-select-search-box">
-                      <input type="text" class="multi-select-search" id="editLoaiCanSearch" placeholder="🔍 Tìm loại căn..." oninput="filterMultiSelectOptions('edit')">
+                      <input type="text" class="multi-select-search" id="editLoaiCanSearch" placeholder="Tìm loại căn..." oninput="filterMultiSelectOptions('edit')">
                     </div>
                     <div class="multi-select-actions">
                       <span class="multi-select-btn-link" onclick="selectAllUnits('edit')">Chọn tất cả</span>
@@ -3765,7 +3810,7 @@
             </div>
 
             <div class="form-group" style="margin-top: 4px;">
-              <label class="field-label" for="editScoreCampaign" style="color: #9a3412; font-weight: 800;">🔥 Điểm Chiến Dịch (*)</label>
+              <label class="field-label" for="editScoreCampaign" style="color: #9a3412; font-weight: 800;">Điểm Chiến Dịch (*)</label>
               <input type="number" step="0.01" min="0" class="filter-input cell-score-campaign" style="width: 140px; font-weight: 800;" id="editScoreCampaign" value="${row.score !== undefined ? row.score : 0}">
             </div>
           </div>
@@ -3796,7 +3841,7 @@
           return re.test(lcVal);
         });
 
-        title.innerText = `✏️ Sửa Dự Án: ${row.code} (${row.name})`;
+        title.innerText = `Sửa Dự Án: ${row.code} (${row.name})`;
         const submitBtnTH = document.getElementById('btnEditRowSubmit');
         if (submitBtnTH) submitBtnTH.innerText = 'Lưu Cập Nhật';
         body.innerHTML = `
@@ -3848,7 +3893,7 @@
           <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">
-                🎯 Cập Nhật 3 Tiêu Chí Khớp (Sản Phẩm - Loại Căn - Khoảng Giá)
+                Cập Nhật 3 Tiêu Chí Khớp (Sản Phẩm - Loại Căn - Khoảng Giá)
               </span>
               <span style="font-size: 11px; color: var(--text-tertiary);">
                 (* hoặc để trống = Áp dụng tất cả)
@@ -3877,7 +3922,7 @@
                   </div>
                   <div class="multi-select-dropdown" id="editLoaiCanDropdown">
                     <div class="multi-select-search-box">
-                      <input type="text" class="multi-select-search" id="editLoaiCanSearch" placeholder="🔍 Tìm loại căn..." oninput="filterMultiSelectOptions('edit')">
+                      <input type="text" class="multi-select-search" id="editLoaiCanSearch" placeholder="Tìm loại căn..." oninput="filterMultiSelectOptions('edit')">
                     </div>
                     <div class="multi-select-actions">
                       <span class="multi-select-btn-link" onclick="selectAllUnits('edit')">Chọn tất cả</span>
@@ -3923,7 +3968,7 @@
         const row = configData.f2Rows.find(r => r.rowIdx === rowIdx);
         if (!row) { showToast('Không tìm thấy dòng F2!', true); return; }
 
-        title.innerText = `✏️ Sửa Dự Án Quỹ Chéo: ${row.name}`;
+        title.innerText = `Sửa Dự Án Quỹ Chéo: ${row.name}`;
         const submitBtnF2 = document.getElementById('btnEditRowSubmit');
         if (submitBtnF2) submitBtnF2.innerText = 'Lưu Cập Nhật';
         body.innerHTML = `
@@ -4165,7 +4210,7 @@
     function deleteRow(tab, rowIdx, displayName) {
       if (tab === 'campaign') {
         showConfirmModal({
-          icon: '🗑️',
+          
           title: 'Xóa Dòng Cấu Hình Chiến Dịch',
           message: `Bạn có chắc muốn xóa dòng "${displayName}" khỏi bảng Chiến Dịch?`
         }, function() {
@@ -4188,7 +4233,7 @@
       }
 
       showConfirmModal({
-        icon: '🗑️',
+        
         title: 'Xác Nhận Xóa Dòng Cấu Hình',
         message: `Bạn có chắc muốn xóa dự án "${displayName}" khỏi bảng cấu hình không?\n\nDòng dữ liệu này sẽ được xóa vĩnh viễn trong Google Sheet.`,
         confirmText: 'Xóa Ngay',
