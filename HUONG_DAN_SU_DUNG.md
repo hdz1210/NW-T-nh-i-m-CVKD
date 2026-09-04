@@ -292,12 +292,25 @@ Khi tính điểm cho một giao dịch trong sheet `DATA`, hệ thống duyệt
    - Mỗi đêm, hệ thống kiểm tra chu kỳ tháng. Nếu bước sang tháng mới, hệ thống tự động chèn cột tháng và sao chép điểm từ tháng trước sang.
 
 ### 6.2. Menu Tiện Ích Trên Thanh Công Cụ Google Sheets
-Nếu cần tính lại theo yêu cầu đột xuất, bạn vào menu **Cấu Hình Điểm**:
 
-- **Tính điểm dòng chọn / mới**: Tính điểm cho các dòng đang được bôi đen bằng chuột bên sheet `DATA`.
-- **Tính lại toàn bộ điểm Data**: Quét và tính lại điểm cho toàn bộ hơn 5.000 dòng dữ liệu.
-- **Quét & tính dòng chưa có điểm**: Chỉ tìm các dòng chưa có điểm (cột điểm đang trống) để điền bù.
-- **Trình Tạo Biểu Đồ & Báo Cáo**: Mở công cụ trực quan hóa dữ liệu bán hàng.
+Hệ thống tích hợp sẵn menu **Cấu Hình Điểm** trực tiếp trên thanh công cụ của Google Sheets, giúp bạn kích hoạt nhanh các giao diện và tác vụ tính toán khi cần thao tác đột xuất:
+
+![Menu Cấu Hình Điểm Trên Google Sheets](docs/images/menu_cau_hinh.png)
+
+*Menu Cấu Hình Điểm: Cung cấp đầy đủ các lối tắt mở giao diện, công cụ tính điểm thủ công và các tiện ích quản trị hệ thống.*
+
+#### Chi tiết các mục trong Menu:
+
+| Nhóm Chức Năng | Tên Mục | Tác Vụ Thực Hiện |
+| :--- | :--- | :--- |
+| **Giao diện Web App** | **Bảng Cấu Hình Điểm** | Mở ứng dụng Web UI quản trị ma trận điểm đa tháng, dự án F2 và điểm chiến dịch. |
+| | **Trình Tạo Biểu Đồ & Báo Cáo** | Mở công cụ vẽ biểu đồ phân tích trực quan hóa dữ liệu theo dự án, nhân sự, phòng ban. |
+| **Tính toán theo yêu cầu** | **Tính điểm dòng chọn / mới** | Chỉ quét và tính điểm cho các dòng đang được bôi đen bằng chuột trong sheet `DATA`. |
+| | **Tính lại toàn bộ điểm Data** | Quét và tính lại điểm hàng loạt cho toàn bộ hơn 5.000 dòng dữ liệu từ đầu đến cuối. |
+| | **Quét & tính dòng chưa có điểm** | Tự động dò tìm các dòng dữ liệu mà cột điểm đang còn trống để tính bù điểm nhanh chóng. |
+| **Tiện ích Quản trị viên** | **Đồng bộ / Thêm cột tháng** | Kiểm tra và chèn thêm cột tháng mới (nếu chưa có) kèm sao chép điểm từ tháng trước. |
+| | **Khởi tạo cấu hình** | Khởi tạo cấu trúc bảng trắng ban đầu cho 2 sheet `Tổng hợp` và `Dự án F2` (chỉ dùng khi lập file mới). |
+| | **Cài đặt Trigger tự động** | Kiểm tra và tái thiết lập hệ thống trigger tự động chạy ngầm (Trigger On-Edit & Trigger Hàng Ngày). |
 
 ---
 
