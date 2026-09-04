@@ -1571,16 +1571,23 @@
     ];
 
     function buildMultiSelectOptions(prefix, selectedList) {
+      const isAll = (!selectedList || selectedList.length === 0 || selectedList.some(s => isConditionAll(s)));
       const selectedSet = new Set((selectedList || []).map(s => s.toLowerCase()));
       const container = document.getElementById(prefix + 'LoaiCanOptions');
       if (!container) return;
 
-      let html = '';
+      let html = `
+        <label class="multi-select-option" data-text="tất cả" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; margin-bottom: 4px; font-weight: 700;">
+          <input type="checkbox" class="${prefix}-unit-cb" id="${prefix}UnitCbAll" value="Tất cả" ${isAll ? 'checked' : ''} onchange="onToggleAllUnits('${prefix}')">
+          <span>🌐 Tất cả</span>
+        </label>
+      `;
+
       ALL_UNIT_TYPES.forEach(unit => {
-        const isChecked = selectedSet.has(unit.toLowerCase());
+        const isChecked = !isAll && selectedSet.has(unit.toLowerCase());
         html += `
           <label class="multi-select-option" data-text="${unit.toLowerCase()}">
-            <input type="checkbox" class="${prefix}-unit-cb" value="${unit}" ${isChecked ? 'checked' : ''} onchange="updateConditionCombined('${prefix}')">
+            <input type="checkbox" class="${prefix}-unit-cb ${prefix}-specific-unit-cb" value="${unit}" ${isChecked ? 'checked' : ''} onchange="onSpecificUnitChange('${prefix}')">
             <span>${unit}</span>
           </label>
         `;
@@ -1589,80 +1596,75 @@
       updateUnitTriggerLabel(prefix);
     }
 
-    function toggleMultiSelect(prefix, forceClose) {
-      const dropdown = document.getElementById(prefix + 'LoaiCanDropdown');
-      if (!dropdown) return;
-      if (forceClose === true) {
-        dropdown.style.display = 'none';
-        return;
-      }
-      const isVisible = (dropdown.style.display === 'flex');
-      const otherPrefix = (prefix === 'add') ? 'edit' : 'add';
-      const otherDropdown = document.getElementById(otherPrefix + 'LoaiCanDropdown');
-      if (otherDropdown) otherDropdown.style.display = 'none';
+    function onToggleAllUnits(prefix) {
+      const cbAll = document.getElementById(prefix + 'UnitCbAll');
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-unit-cb`);
+      if (!cbAll) return;
 
-      dropdown.style.display = isVisible ? 'none' : 'flex';
-      if (!isVisible) {
-        const searchInput = document.getElementById(prefix + 'LoaiCanSearch');
-        if (searchInput) {
-          searchInput.value = '';
-          filterMultiSelectOptions(prefix);
-          searchInput.focus();
+      if (cbAll.checked) {
+        specificCbs.forEach(cb => cb.checked = false);
+      } else {
+        const anyChecked = Array.from(specificCbs).some(cb => cb.checked);
+        if (!anyChecked) {
+          cbAll.checked = true;
         }
       }
+      updateUnitTriggerLabel(prefix);
     }
 
-    function filterMultiSelectOptions(prefix) {
-      const q = (document.getElementById(prefix + 'LoaiCanSearch').value || '').trim().toLowerCase();
-      const options = document.querySelectorAll(`#${prefix}LoaiCanOptions .multi-select-option`);
-      options.forEach(opt => {
-        const text = opt.getAttribute('data-text');
-        opt.style.display = text.includes(q) ? 'flex' : 'none';
-      });
+    function onSpecificUnitChange(prefix) {
+      const cbAll = document.getElementById(prefix + 'UnitCbAll');
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-unit-cb:checked`);
+      if (cbAll) {
+        if (specificCbs.length > 0) {
+          cbAll.checked = false;
+        } else {
+          cbAll.checked = true;
+        }
+      }
+      updateUnitTriggerLabel(prefix);
     }
 
     function selectAllUnits(prefix) {
-      const checkboxes = document.querySelectorAll(`.${prefix}-unit-cb`);
-      checkboxes.forEach(cb => {
+      const cbAll = document.getElementById(prefix + 'UnitCbAll');
+      if (cbAll) cbAll.checked = false;
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-unit-cb`);
+      specificCbs.forEach(cb => {
         if (cb.closest('.multi-select-option').style.display !== 'none') {
           cb.checked = true;
         }
       });
-      updateConditionCombined(prefix);
+      updateUnitTriggerLabel(prefix);
     }
 
     function clearAllUnits(prefix) {
-      const checkboxes = document.querySelectorAll(`.${prefix}-unit-cb`);
-      checkboxes.forEach(cb => {
-        cb.checked = false;
-      });
-      updateConditionCombined(prefix);
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-unit-cb`);
+      specificCbs.forEach(cb => cb.checked = false);
+      const cbAll = document.getElementById(prefix + 'UnitCbAll');
+      if (cbAll) cbAll.checked = true;
+      updateUnitTriggerLabel(prefix);
     }
 
     function updateUnitTriggerLabel(prefix) {
-      const checkboxes = document.querySelectorAll(`.${prefix}-unit-cb:checked`);
-      const selectedUnits = Array.from(checkboxes).map(cb => cb.value);
+      const cbAll = document.getElementById(prefix + 'UnitCbAll');
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-unit-cb:checked`);
       const labelEl = document.getElementById(prefix + 'LoaiCanLabel');
+      const inputEl = document.getElementById(prefix + 'LoaiCanInput');
       if (!labelEl) return;
 
-      if (selectedUnits.length === 0) {
-        labelEl.innerText = '(Tất cả loại căn)';
+      if (!cbAll || cbAll.checked || specificCbs.length === 0) {
+        labelEl.innerText = 'Tất cả';
         labelEl.style.color = 'var(--text-tertiary)';
-      } else if (selectedUnits.length <= 2) {
-        labelEl.innerText = selectedUnits.join(', ');
-        labelEl.style.color = 'var(--brand)';
+        if (inputEl) inputEl.value = 'Tất cả';
       } else {
-        labelEl.innerText = `Đã chọn (${selectedUnits.length}): ${selectedUnits.slice(0, 2).join(', ')}...`;
+        const selectedUnits = Array.from(specificCbs).map(cb => cb.value);
+        if (selectedUnits.length <= 2) {
+          labelEl.innerText = selectedUnits.join(', ');
+        } else {
+          labelEl.innerText = `Đã chọn (${selectedUnits.length}): ${selectedUnits.slice(0, 2).join(', ')}...`;
+        }
         labelEl.style.color = 'var(--brand)';
-      }
-    }
-
-    function onManualUnitInput(prefix) {
-      const manualVal = (document.getElementById(prefix + 'LoaiCanInput').value || '').trim();
-      const labelEl = document.getElementById(prefix + 'LoaiCanLabel');
-      if (labelEl) {
-        labelEl.innerText = (manualVal && manualVal !== '*' && manualVal !== 'Tất cả') ? manualVal : 'Tất cả loại căn';
-        labelEl.style.color = (manualVal && manualVal !== '*' && manualVal !== 'Tất cả') ? 'var(--brand)' : 'var(--text-tertiary)';
+        if (inputEl) inputEl.value = selectedUnits.join(', ');
       }
     }
 
@@ -1959,10 +1961,10 @@
 
               <!-- 2. Loại Căn Multi-select Droplist -->
               <div class="form-group" style="position: relative;">
-                <label class="field-label">2. Loại Căn (Chọn hoặc gõ tay)</label>
+                <label class="field-label">2. Loại Căn</label>
                 <div class="multi-select-container" id="addLoaiCanContainer">
                   <div class="multi-select-trigger" id="addLoaiCanTrigger" onclick="toggleMultiSelect('add')">
-                    <span class="multi-select-label" id="addLoaiCanLabel">Tất cả loại căn</span>
+                    <span class="multi-select-label" id="addLoaiCanLabel">Tất cả</span>
                     <span class="multi-select-arrow">▼</span>
                   </div>
                   <div class="multi-select-dropdown" id="addLoaiCanDropdown">
@@ -1976,7 +1978,7 @@
                     <div class="multi-select-options" id="addLoaiCanOptions"></div>
                   </div>
                 </div>
-                <input type="text" class="filter-input" style="width:100%; margin-top:4px; font-size:12px;" id="addLoaiCanInput" placeholder="Ví dụ: Studio, 1PN, 2PN..." value="Tất cả" oninput="onManualUnitInput('add')">
+                <input type="hidden" id="addLoaiCanInput" value="Tất cả">
               </div>
 
               <!-- 3. Khoảng Giá (Toán học: >= 10, < 10, 10 - 20...) -->
@@ -1986,16 +1988,16 @@
                   <span id="addKhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">Tất cả</span>
                 </label>
                 <select class="filter-select" id="addKhoangGiaPreset" style="width:100%; font-size:12px; height:32px; margin-bottom:6px;" onchange="onKhoangGiaPresetChange('add')">
-                  <option value="all" selected>🌐 Mọi mức giá (Min: 0, Max: 999)</option>
-                  <option value="lt10">🔻 &lt; 10 (Dưới 10 tỷ)</option>
-                  <option value="10-20">↔️ 10 - 20 (Từ 10 đến 20 tỷ)</option>
-                  <option value="lt20">🔻 &lt; 20 (Dưới 20 tỷ)</option>
-                  <option value="20-30">↔️ 20 - 30 (Từ 20 đến 30 tỷ)</option>
-                  <option value="gte30">🔺 &gt;= 30 (Trên 30 tỷ)</option>
-                  <option value="gte10">🔺 &gt;= 10 (Trên 10 tỷ)</option>
-                  <option value="dat_lt10">🏞️ Giá đất &lt; 10 (VHHVB)</option>
-                  <option value="dat_gte10">🏞️ Giá đất &gt;= 10 (VHHVB)</option>
-                  <option value="custom">✏️ Tùy chỉnh (Nhập Min - Max bên dưới)...</option>
+                  <option value="all" selected>🌐 Tất cả</option>
+                  <option value="lt10">🔻 &lt; 10</option>
+                  <option value="10-20">↔️ 10 - 20</option>
+                  <option value="lt20">🔻 &lt; 20</option>
+                  <option value="20-30">↔️ 20 - 30</option>
+                  <option value="gte30">🔺 &gt;= 30</option>
+                  <option value="gte10">🔺 &gt;= 10</option>
+                  <option value="dat_lt10">🏞️ Giá đất &lt; 10</option>
+                  <option value="dat_gte10">🏞️ Giá đất &gt;= 10</option>
+                  <option value="custom">✏️ Tùy chỉnh...</option>
                 </select>
                 <div style="display: flex; align-items: center; gap: 4px;">
                   <div style="flex:1;">
@@ -2013,9 +2015,6 @@
                     <input type="checkbox" id="addIsDat" onchange="onPriceInputChange('add')"> Chỉ tính tiền đất (VHHVB)
                   </label>
                   <input type="hidden" id="addKhoangGiaInput" value="Tất cả">
-                </div>
-                <div style="font-size:10px; color:var(--text-tertiary); margin-top:2px;">
-                  💡 Tự động so khớp với Cột L (Giá gồm VAT + KPBT) sheet Data.
                 </div>
               </div>
             </div>
@@ -2225,7 +2224,7 @@
 
               <!-- 2. Loại Căn Multi-select Droplist -->
               <div class="form-group" style="position: relative;">
-                <label class="field-label">2. Loại Căn (Chọn hoặc gõ tay)</label>
+                <label class="field-label">2. Loại Căn</label>
                 <div class="multi-select-container" id="editLoaiCanContainer">
                   <div class="multi-select-trigger" id="editLoaiCanTrigger" onclick="toggleMultiSelect('edit')">
                     <span class="multi-select-label" id="editLoaiCanLabel">${escapeHtml(lcVal)}</span>
@@ -2242,7 +2241,7 @@
                     <div class="multi-select-options" id="editLoaiCanOptions"></div>
                   </div>
                 </div>
-                <input type="text" class="filter-input" style="width:100%; margin-top:4px; font-size:12px;" id="editLoaiCanInput" placeholder="Ví dụ: Studio hoặc Từ 1PN trở lên..." value="${escapeHtml(lcVal)}" oninput="onManualUnitInput('edit')">
+                <input type="hidden" id="editLoaiCanInput" value="${escapeHtml(lcVal)}">
               </div>
 
               <!-- 3. Khoảng Giá (Toán học: >= 10, < 10, 10 - 20...) -->
@@ -2252,16 +2251,16 @@
                   <span id="editKhoangGiaPreview" style="font-size:11px; font-weight:800; color:${parsedPrice.label === 'Tất cả' ? 'var(--text-tertiary)' : '#92400e'}; background:${parsedPrice.label === 'Tất cả' ? 'var(--bg-muted)' : '#fef3c7'}; padding:2px 8px; border-radius:4px; border:1px solid ${parsedPrice.label === 'Tất cả' ? 'var(--border-subtle)' : '#fde68a'};">${escapeHtml(parsedPrice.label)}</span>
                 </label>
                 <select class="filter-select" id="editKhoangGiaPreset" style="width:100%; font-size:12px; height:32px; margin-bottom:6px;" onchange="onKhoangGiaPresetChange('edit')">
-                  <option value="all" ${parsedPrice.preset === 'all' ? 'selected' : ''}>🌐 Mọi mức giá (Min: 0, Max: 999)</option>
-                  <option value="lt10" ${parsedPrice.preset === 'lt10' ? 'selected' : ''}>🔻 &lt; 10 (Dưới 10 tỷ)</option>
-                  <option value="10-20" ${parsedPrice.preset === '10-20' ? 'selected' : ''}>↔️ 10 - 20 (Từ 10 đến 20 tỷ)</option>
-                  <option value="lt20" ${parsedPrice.preset === 'lt20' ? 'selected' : ''}>🔻 &lt; 20 (Dưới 20 tỷ)</option>
-                  <option value="20-30" ${parsedPrice.preset === '20-30' ? 'selected' : ''}>↔️ 20 - 30 (Từ 20 đến 30 tỷ)</option>
-                  <option value="gte30" ${parsedPrice.preset === 'gte30' ? 'selected' : ''}>🔺 &gt;= 30 (Trên 30 tỷ)</option>
-                  <option value="gte10" ${parsedPrice.preset === 'gte10' ? 'selected' : ''}>🔺 &gt;= 10 (Trên 10 tỷ)</option>
-                  <option value="dat_lt10" ${parsedPrice.preset === 'dat_lt10' ? 'selected' : ''}>🏞️ Giá đất &lt; 10 (VHHVB)</option>
-                  <option value="dat_gte10" ${parsedPrice.preset === 'dat_gte10' ? 'selected' : ''}>🏞️ Giá đất &gt;= 10 (VHHVB)</option>
-                  <option value="custom" ${parsedPrice.preset === 'custom' ? 'selected' : ''}>✏️ Tùy chỉnh (Nhập Min - Max bên dưới)...</option>
+                  <option value="all" ${parsedPrice.preset === 'all' ? 'selected' : ''}>🌐 Tất cả</option>
+                  <option value="lt10" ${parsedPrice.preset === 'lt10' ? 'selected' : ''}>🔻 &lt; 10</option>
+                  <option value="10-20" ${parsedPrice.preset === '10-20' ? 'selected' : ''}>↔️ 10 - 20</option>
+                  <option value="lt20" ${parsedPrice.preset === 'lt20' ? 'selected' : ''}>🔻 &lt; 20</option>
+                  <option value="20-30" ${parsedPrice.preset === '20-30' ? 'selected' : ''}>↔️ 20 - 30</option>
+                  <option value="gte30" ${parsedPrice.preset === 'gte30' ? 'selected' : ''}>🔺 &gt;= 30</option>
+                  <option value="gte10" ${parsedPrice.preset === 'gte10' ? 'selected' : ''}>🔺 &gt;= 10</option>
+                  <option value="dat_lt10" ${parsedPrice.preset === 'dat_lt10' ? 'selected' : ''}>🏞️ Giá đất &lt; 10</option>
+                  <option value="dat_gte10" ${parsedPrice.preset === 'dat_gte10' ? 'selected' : ''}>🏞️ Giá đất &gt;= 10</option>
+                  <option value="custom" ${parsedPrice.preset === 'custom' ? 'selected' : ''}>✏️ Tùy chỉnh...</option>
                 </select>
                 <div style="display: flex; align-items: center; gap: 4px;">
                   <div style="flex:1;">
@@ -2279,9 +2278,6 @@
                     <input type="checkbox" id="editIsDat" ${parsedPrice.isDat ? 'checked' : ''} onchange="onPriceInputChange('edit')"> Chỉ tính tiền đất (VHHVB)
                   </label>
                   <input type="hidden" id="editKhoangGiaInput" value="${escapeHtml(parsedPrice.label)}">
-                </div>
-                <div style="font-size:10px; color:var(--text-tertiary); margin-top:2px;">
-                  💡 Tự động so khớp với Cột L (Giá gồm VAT + KPBT) sheet Data.
                 </div>
               </div>
             </div>
