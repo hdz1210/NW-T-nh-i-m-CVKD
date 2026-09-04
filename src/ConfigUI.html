@@ -1091,27 +1091,47 @@
         </div>
       </div>
 
-      <!-- Thông tin chiến dịch hiện tại (Thay thế form nhập rườm rà) -->
+      <!-- Thông tin & Bộ lọc Đa Chiến Dịch (Multi-Campaign Bar) -->
       <div id="campaignMetaBar" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--radius-md); padding: 8px 14px; margin-top: 4px;">
-        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 13px;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px;">
+          <!-- Dropdown chọn Chiến Dịch -->
           <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="color: #ea580c; font-weight: 700;">🎯 Tên Chiến Dịch:</span>
-            <span id="dispCampaignName" style="font-weight: 800; color: #9a3412;">(Chưa đặt tên)</span>
+            <span style="color: #ea580c; font-weight: 700;">🎯 Chiến Dịch:</span>
+            <select id="campaignSelector" class="filter-select" onchange="onCampaignFilterChange(this.value)" style="border-color: #fdba74; font-weight: 800; color: #9a3412; background: #fff; padding: 3px 8px; height: 32px; border-radius: 6px; cursor: pointer; max-width: 280px;">
+              <option value="ALL">🌟 Tất cả chiến dịch</option>
+            </select>
           </div>
-          <span style="color: #fed7aa;">|</span>
-          <div style="display: flex; align-items: center; gap: 6px;">
+
+          <span id="campaignDividerDate" style="color: #fed7aa;">|</span>
+
+          <!-- Thời gian áp dụng -->
+          <div id="campaignDateContainer" style="display: flex; align-items: center; gap: 6px;">
             <span style="color: #ea580c; font-weight: 700;">🗓️ Thời Gian:</span>
             <span id="dispCampaignDates" style="font-weight: 800; color: #15803d;">Chưa thiết lập</span>
           </div>
-          <span style="color: #fed7aa;">|</span>
-          <div style="display: flex; align-items: center; gap: 6px;">
+
+          <span id="campaignDividerStatus" style="color: #fed7aa;">|</span>
+
+          <!-- Trạng thái chiến dịch -->
+          <div id="campaignStatusContainer" style="display: flex; align-items: center; gap: 6px;">
             <span style="color: #ea580c; font-weight: 700;">Trạng Thái:</span>
             <span id="dispCampaignStatusBadge" class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;">🟢 Đang chạy</span>
           </div>
+
+          <!-- Tóm tắt tổng quan khi chọn Tất cả -->
+          <div id="campaignAllSummary" style="display: none; align-items: center; gap: 6px; font-weight: 700; color: #9a3412;">
+            <span id="dispCampaignAllSummaryText">Đang hiển thị toàn bộ chiến dịch</span>
+          </div>
         </div>
-        <button type="button" class="btn btn-secondary" onclick="openEditCampaignMetaModal()" style="height: 28px; padding: 0 10px; font-size: 12px; border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Chỉnh sửa tên và thời gian chiến dịch">
-          ✏️ Đổi Tên / Thời Gian
-        </button>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" id="btnEditCampaignMeta" class="btn btn-secondary" onclick="openEditCampaignMetaModal()" style="height: 28px; padding: 0 10px; font-size: 12px; border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Chỉnh sửa tên và thời gian chiến dịch">
+            ✏️ Đổi Tên / Thời Gian
+          </button>
+          <button type="button" id="btnDeleteCampaign" class="btn btn-secondary" onclick="deleteSelectedCampaign()" style="height: 28px; padding: 0 8px; font-size: 12px; border-color: #fca5a5; color: #dc2626; background: #ffffff;" title="Xóa toàn bộ chiến dịch này">
+            🗑️ Xóa CĐ
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1383,8 +1403,15 @@
           if (res && res.success) {
             configData = res;
             if (!configData.campaign) {
-              configData.campaign = { name: '', startDate: '', endDate: '', status: 'Tạm dừng', rows: [] };
+              configData.campaign = { rows: [] };
             }
+            if (!configData.campaign.rows) {
+              configData.campaign.rows = [];
+            }
+            if (!configData.campaignsList) {
+              configData.campaignsList = [];
+            }
+            syncCampaignsListFromRows();
             modifiedCellsTH.clear();
             modifiedCellsF2.clear();
             newRowsTH = [];
@@ -1408,6 +1435,84 @@
         .fetchMonthlyConfigData();
     }
 
+    let selectedCampaignFilter = 'ALL';
+    let editingCampaignOriginalName = '';
+
+    function syncCampaignsListFromRows() {
+      if (!configData) return;
+      if (!configData.campaignsList) configData.campaignsList = [];
+      const campMap = new Map();
+
+      const rows = (configData.campaign && configData.campaign.rows) ? configData.campaign.rows : [];
+      rows.forEach(r => {
+        const cName = (r.campaignName || '').trim();
+        if (!cName) return;
+        const key = cName.toLowerCase();
+        if (!campMap.has(key)) {
+          campMap.set(key, {
+            name: cName,
+            startDate: r.startDate || '',
+            endDate: r.endDate || '',
+            status: r.campaignStatus || 'Đang chạy',
+            rowCount: 0
+          });
+        }
+        campMap.get(key).rowCount++;
+      });
+
+      configData.campaignsList.forEach(c => {
+        if (!c || !c.name) return;
+        const key = c.name.trim().toLowerCase();
+        if (!campMap.has(key)) {
+          campMap.set(key, {
+            name: c.name.trim(),
+            startDate: c.startDate || '',
+            endDate: c.endDate || '',
+            status: c.status || 'Đang chạy',
+            rowCount: 0
+          });
+        }
+      });
+
+      configData.campaignsList = Array.from(campMap.values());
+    }
+
+    function onCampaignFilterChange(val) {
+      selectedCampaignFilter = val || 'ALL';
+      updateCampaignBanner();
+      renderTable();
+    }
+
+    function deleteSelectedCampaign() {
+      const campName = selectedCampaignFilter;
+      if (!campName || campName === 'ALL') return;
+
+      const rows = configData.campaign?.rows || [];
+      const count = rows.filter(r => (r.campaignName || '').trim().toLowerCase() === campName.trim().toLowerCase()).length;
+      if (!confirm(`Bạn có chắc chắn muốn xóa toàn bộ chiến dịch "${campName}" (${count} dòng cấu hình)?\n\nHành động này sẽ xóa toàn bộ các dòng thuộc chiến dịch này.`)) {
+        return;
+      }
+
+      configData.campaign.rows = rows.filter(r => (r.campaignName || '').trim().toLowerCase() !== campName.trim().toLowerCase());
+      configData.campaign.rows.forEach((r, idx) => {
+        r.rowIdx = idx;
+        r.stt = idx + 1;
+      });
+
+      if (configData.campaignsList) {
+        configData.campaignsList = configData.campaignsList.filter(c => c.name.trim().toLowerCase() !== campName.trim().toLowerCase());
+      }
+
+      selectedCampaignFilter = 'ALL';
+      syncCampaignsListFromRows();
+      updateCampaignBanner();
+      renderStats();
+      renderTable();
+      markCampaignDirty();
+      showToast(`Đã xóa chiến dịch "${campName}". Đang lưu vào Sheet...`);
+      saveCampaignChanges();
+    }
+
     function renderStats() {
       document.getElementById('statTHCount').innerText = `${configData.thRows.length} dòng`;
       document.getElementById('statF2Count').innerText = `${configData.f2Rows.length} dự án`;
@@ -1415,23 +1520,24 @@
       document.getElementById('badgeTHCount').innerText = configData.thRows.length;
       document.getElementById('badgeF2Count').innerText = configData.f2Rows.length;
 
-      const camp = configData.campaign;
-      const campStatus = getEffectiveCampaignStatus(camp);
-      const campRowsCount = (camp && camp.rows) ? camp.rows.length : 0;
+      const totalCampRows = (configData.campaign && configData.campaign.rows) ? configData.campaign.rows.length : 0;
+      const list = configData.campaignsList || [];
+      const activeCamps = list.filter(c => getEffectiveCampaignStatus(c) === 'Đang chạy').length;
+
       const statCampEl = document.getElementById('statCampaignCount');
       if (statCampEl) {
-        if (campStatus === 'Đang chạy') {
-          statCampEl.innerHTML = `<span style="color:var(--success);font-weight:800;">🟢 Đang chạy</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
-        } else if (campStatus === 'Tạm dừng') {
-          statCampEl.innerHTML = `<span style="color:var(--warning);font-weight:800;">⏸️ Tạm dừng</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
+        if (list.length === 0) {
+          statCampEl.innerHTML = `<span style="color:var(--text-tertiary);font-weight:700;">Chưa có</span>`;
+        } else if (activeCamps > 0) {
+          statCampEl.innerHTML = `<span style="color:var(--success);font-weight:800;">🟢 ${activeCamps} đang chạy</span> <span style="font-size:12px;color:var(--text-tertiary);">(${totalCampRows} dòng)</span>`;
         } else {
-          statCampEl.innerHTML = `<span style="color:var(--text-tertiary);font-weight:700;">⚪ Kết thúc</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
+          statCampEl.innerHTML = `<span style="color:var(--warning);font-weight:800;">⏸️ Tạm dừng/Hết hạn</span> <span style="font-size:12px;color:var(--text-tertiary);">(${totalCampRows} dòng)</span>`;
         }
       }
 
       const badgeCamp = document.getElementById('badgeCampaignCount');
       if (badgeCamp) {
-        badgeCamp.innerText = campRowsCount;
+        badgeCamp.innerText = totalCampRows;
       }
     }
 
@@ -1504,41 +1610,95 @@
     }
 
     function updateCampaignBanner() {
-      const camp = configData.campaign || {};
-      const nameEl = document.getElementById('dispCampaignName');
+      const selectEl = document.getElementById('campaignSelector');
       const datesEl = document.getElementById('dispCampaignDates');
       const statusEl = document.getElementById('dispCampaignStatusBadge');
+      const dateContainer = document.getElementById('campaignDateContainer');
+      const statusContainer = document.getElementById('campaignStatusContainer');
+      const dividerDate = document.getElementById('campaignDividerDate');
+      const dividerStatus = document.getElementById('campaignDividerStatus');
+      const allSummary = document.getElementById('campaignAllSummary');
+      const allSummaryText = document.getElementById('dispCampaignAllSummaryText');
+      const btnEdit = document.getElementById('btnEditCampaignMeta');
+      const btnDelete = document.getElementById('btnDeleteCampaign');
 
-      if (nameEl) {
-        nameEl.innerText = camp.name || '(Chưa đặt tên)';
-        nameEl.style.color = camp.name ? '#9a3412' : 'var(--text-tertiary)';
-      }
-      if (datesEl) {
-        if (camp.startDate && camp.endDate) {
-          datesEl.innerText = `${formatDateVn(camp.startDate)} → ${formatDateVn(camp.endDate)}`;
-          datesEl.style.color = '#15803d';
-        } else if (camp.startDate) {
-          datesEl.innerText = `Từ ${formatDateVn(camp.startDate)}`;
-          datesEl.style.color = '#15803d';
-        } else {
-          datesEl.innerText = 'Chưa thiết lập';
-          datesEl.style.color = 'var(--text-tertiary)';
+      const totalRows = (configData.campaign?.rows || []).length;
+      const list = configData.campaignsList || [];
+
+      if (selectEl) {
+        let opts = `<option value="ALL">🌟 Tất cả chiến dịch (${totalRows} dòng)</option>`;
+        list.forEach(c => {
+          const count = (configData.campaign?.rows || []).filter(r => (r.campaignName || '').trim().toLowerCase() === c.name.trim().toLowerCase()).length;
+          const emoji = getCampaignStatusEmoji(c.status);
+          opts += `<option value="${escapeHtml(c.name)}">${emoji} ${escapeHtml(c.name)} (${count} dòng)</option>`;
+        });
+        selectEl.innerHTML = opts;
+
+        if (selectedCampaignFilter !== 'ALL') {
+          const exists = list.some(c => c.name.trim().toLowerCase() === selectedCampaignFilter.trim().toLowerCase());
+          if (!exists) selectedCampaignFilter = 'ALL';
         }
+        selectEl.value = selectedCampaignFilter;
       }
-      if (statusEl) {
-        const st = getEffectiveCampaignStatus(camp);
-        if (st === 'Đang chạy') {
-          statusEl.className = 'badge';
-          statusEl.style = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;';
-          statusEl.innerText = '🟢 Đang chạy';
-        } else if (st === 'Tạm dừng') {
-          statusEl.className = 'badge';
-          statusEl.style = 'background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:700;';
-          statusEl.innerText = '⏸️ Tạm dừng';
-        } else {
-          statusEl.className = 'badge';
-          statusEl.style = 'background:var(--bg-muted); color:var(--text-tertiary); border:1px solid var(--border-subtle); font-weight:700;';
-          statusEl.innerText = '⚪ Kết thúc (Hết hạn)';
+
+      if (selectedCampaignFilter === 'ALL') {
+        if (dateContainer) dateContainer.style.display = 'none';
+        if (statusContainer) statusContainer.style.display = 'none';
+        if (dividerDate) dividerDate.style.display = 'none';
+        if (dividerStatus) dividerStatus.style.display = 'none';
+        if (allSummary) allSummary.style.display = 'flex';
+        if (allSummaryText) {
+          const activeCount = list.filter(c => getEffectiveCampaignStatus(c) === 'Đang chạy').length;
+          allSummaryText.innerHTML = `📊 Tổng cộng <b>${list.length}</b> chiến dịch (<b>${activeCount}</b> đang chạy)`;
+        }
+        if (btnEdit) btnEdit.style.display = 'none';
+        if (btnDelete) btnDelete.style.display = 'none';
+      } else {
+        if (dateContainer) dateContainer.style.display = 'flex';
+        if (statusContainer) statusContainer.style.display = 'flex';
+        if (dividerDate) dividerDate.style.display = 'inline';
+        if (dividerStatus) dividerStatus.style.display = 'inline';
+        if (allSummary) allSummary.style.display = 'none';
+        if (btnEdit) btnEdit.style.display = 'inline-flex';
+        if (btnDelete) btnDelete.style.display = 'inline-flex';
+
+        let campInfo = list.find(c => c.name.trim().toLowerCase() === selectedCampaignFilter.trim().toLowerCase());
+        if (!campInfo) {
+          const r = configData.campaign?.rows?.find(r => (r.campaignName || '').trim().toLowerCase() === selectedCampaignFilter.trim().toLowerCase());
+          if (r) {
+            campInfo = { name: r.campaignName, startDate: r.startDate, endDate: r.endDate, status: r.campaignStatus };
+          }
+        }
+
+        if (campInfo) {
+          if (datesEl) {
+            if (campInfo.startDate && campInfo.endDate) {
+              datesEl.innerText = `${formatDateVn(campInfo.startDate)} → ${formatDateVn(campInfo.endDate)}`;
+              datesEl.style.color = '#15803d';
+            } else if (campInfo.startDate) {
+              datesEl.innerText = `Từ ${formatDateVn(campInfo.startDate)}`;
+              datesEl.style.color = '#15803d';
+            } else {
+              datesEl.innerText = 'Chưa thiết lập';
+              datesEl.style.color = 'var(--text-tertiary)';
+            }
+          }
+          if (statusEl) {
+            const st = getEffectiveCampaignStatus(campInfo);
+            if (st === 'Đang chạy') {
+              statusEl.className = 'badge';
+              statusEl.style = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;';
+              statusEl.innerText = '🟢 Đang chạy';
+            } else if (st === 'Tạm dừng') {
+              statusEl.className = 'badge';
+              statusEl.style = 'background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:700;';
+              statusEl.innerText = '⏸️ Tạm dừng';
+            } else {
+              statusEl.className = 'badge';
+              statusEl.style = 'background:var(--bg-muted); color:var(--text-tertiary); border:1px solid var(--border-subtle); font-weight:700;';
+              statusEl.innerText = '⚪ Kết thúc (Hết hạn)';
+            }
+          }
         }
       }
     }
@@ -1547,14 +1707,28 @@
       updateCampaignBanner();
     }
 
-    function openEditCampaignMetaModal() {
-      const camp = configData.campaign || { name: '', startDate: '', endDate: '', status: 'Đang chạy' };
+    function openEditCampaignMetaModal(campNameToEdit) {
+      const campName = campNameToEdit || (selectedCampaignFilter !== 'ALL' ? selectedCampaignFilter : '');
+      editingCampaignOriginalName = campName;
+
       const modal = document.getElementById('editCampaignMetaModal');
       if (!modal) return;
-      document.getElementById('metaCampaignName').value = camp.name || '';
-      document.getElementById('metaCampaignStartDate').value = camp.startDate || '';
-      document.getElementById('metaCampaignEndDate').value = camp.endDate || '';
-      document.getElementById('metaCampaignStatus').value = 'Đang chạy';
+
+      let cInfo = configData.campaignsList?.find(c => c.name.trim().toLowerCase() === campName.trim().toLowerCase());
+      if (!cInfo && campName) {
+        const r = configData.campaign?.rows?.find(r => (r.campaignName || '').trim().toLowerCase() === campName.trim().toLowerCase());
+        if (r) {
+          cInfo = { name: r.campaignName, startDate: r.startDate, endDate: r.endDate, status: r.campaignStatus };
+        }
+      }
+      if (!cInfo) {
+        cInfo = { name: campName, startDate: '', endDate: '', status: 'Đang chạy' };
+      }
+
+      document.getElementById('metaCampaignName').value = cInfo.name || '';
+      document.getElementById('metaCampaignStartDate').value = cInfo.startDate || '';
+      document.getElementById('metaCampaignEndDate').value = cInfo.endDate || '';
+      document.getElementById('metaCampaignStatus').value = (cInfo.status === 'Tạm dừng') ? 'Tạm dừng' : 'Đang chạy';
       modal.style.display = 'flex';
     }
 
@@ -1596,15 +1770,40 @@
       }
 
       if (!configData.campaign) configData.campaign = { rows: [] };
-      configData.campaign.name = name;
-      configData.campaign.startDate = start;
-      configData.campaign.endDate = end;
-      configData.campaign.status = status;
+      if (!configData.campaign.rows) configData.campaign.rows = [];
+
+      const origName = (editingCampaignOriginalName || '').trim().toLowerCase();
+      let updatedCount = 0;
+
+      if (origName) {
+        configData.campaign.rows.forEach(r => {
+          if ((r.campaignName || '').trim().toLowerCase() === origName) {
+            r.campaignName = name;
+            r.startDate = start;
+            r.endDate = end;
+            r.campaignStatus = status;
+            updatedCount++;
+          }
+        });
+      }
+
+      selectedCampaignFilter = name;
+      syncCampaignsListFromRows();
+      const existIdx = configData.campaignsList.findIndex(c => c.name.trim().toLowerCase() === name.toLowerCase());
+      if (existIdx >= 0) {
+        configData.campaignsList[existIdx].name = name;
+        configData.campaignsList[existIdx].startDate = start;
+        configData.campaignsList[existIdx].endDate = end;
+        configData.campaignsList[existIdx].status = status;
+      } else {
+        configData.campaignsList.unshift({ name, startDate: start, endDate: end, status, rowCount: updatedCount });
+      }
 
       closeEditCampaignMetaModal(true);
       updateCampaignBanner();
       renderStats();
-      showToast('Đang tự động lưu thông tin Chiến Dịch vào Sheet...');
+      renderTable();
+      showToast(`Đang tự động lưu chiến dịch "${name}" vào Sheet Điểm Chiến Dịch...`);
       saveCampaignChanges();
     }
 
@@ -1835,9 +2034,12 @@
     }
 
     function renderTableCampaign(thead, tbody, searchQ, selCdt, selRegion, selStatus) {
+      const isViewingAllCampaigns = (selectedCampaignFilter === 'ALL');
+
       let headHtml = `<tr>
         <th style="width: 44px; text-align: center;">STT</th>
         <th style="width: 72px; text-align: center;">Thao Tác</th>
+        ${isViewingAllCampaigns ? '<th style="min-width: 170px; text-align: left;">Chiến Dịch</th>' : ''}
         <th style="width: 120px;">CĐT</th>
         <th style="width: 90px;">Mã DA</th>
         <th style="min-width: 170px;">Tên Dự Án</th>
@@ -1853,8 +2055,11 @@
 
       const rows = configData.campaign?.rows || [];
       const filtered = rows.filter(r => {
+        if (!isViewingAllCampaigns && (r.campaignName || '').trim().toLowerCase() !== selectedCampaignFilter.trim().toLowerCase()) {
+          return false;
+        }
         if (searchQ) {
-          const matchStr = `${r.code} ${r.name} ${r.cdt} ${r.sanPham} ${r.loaiCan} ${r.khoangGia}`.toLowerCase();
+          const matchStr = `${r.campaignName || ''} ${r.code} ${r.name} ${r.cdt} ${r.sanPham} ${r.loaiCan} ${r.khoangGia}`.toLowerCase();
           if (!matchStr.includes(searchQ)) return false;
         }
         if (selCdt !== 'ALL' && r.cdt !== selCdt) return false;
@@ -1865,9 +2070,11 @@
 
       if (filtered.length === 0) {
         const msg = (rows.length === 0)
-          ? 'Chưa có cấu hình điểm chiến dịch. Bấm <b>"➕ Tạo Dòng Mới"</b> hoặc <b>"📥 Chọn Dòng Từ Tổng Hợp"</b> để thêm dự án vào chiến dịch!'
-          : 'Không tìm thấy dòng chiến dịch phù hợp với bộ lọc.';
-        tbody.innerHTML = `<tr><td colspan="12" class="empty-state">${msg}</td></tr>`;
+          ? 'Chưa có cấu hình điểm chiến dịch nào. Bấm <b>"➕ Tạo Dòng Mới"</b> hoặc <b>"📥 Chọn Dòng Từ Tổng Hợp"</b> để thêm dự án vào chiến dịch!'
+          : (isViewingAllCampaigns 
+              ? 'Không tìm thấy dòng chiến dịch phù hợp với bộ lọc.'
+              : `Chiến dịch <b>"${escapeHtml(selectedCampaignFilter)}"</b> chưa có cấu hình dự án nào. Bấm <b>"➕ Tạo Dòng Mới"</b> để thêm!`);
+        tbody.innerHTML = `<tr><td colspan="${isViewingAllCampaigns ? 13 : 12}" class="empty-state">${msg}</td></tr>`;
         return;
       }
 
@@ -1893,12 +2100,30 @@
         const scoreVal = (r.score !== undefined && r.score !== null) ? r.score : 0;
         const noteVal = r.note || '';
 
+        let campCellHtml = '';
+        if (isViewingAllCampaigns) {
+          const cSt = r.campaignStatus || 'Đang chạy';
+          const cBadge = (cSt === 'Đang chạy')
+            ? '<span style="color:#15803d;font-size:10px;font-weight:700;">🟢 Đang chạy</span>'
+            : (cSt === 'Tạm dừng' ? '<span style="color:#92400e;font-size:10px;font-weight:700;">⏸️ Tạm dừng</span>' : '<span style="color:#64748b;font-size:10px;font-weight:700;">⚪ Kết thúc</span>');
+
+          campCellHtml = `<td class="col-text" style="line-height: 1.3;">
+            <div style="font-weight: 700; color: #9a3412; font-size: 12px;">🎯 ${escapeHtml(r.campaignName || 'Chưa đặt tên')}</div>
+            <div style="font-size: 11px; color: #64748b; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+              <span>${formatCampaignDateRange(r.startDate, r.endDate)}</span>
+              <span>•</span>
+              ${cBadge}
+            </div>
+          </td>`;
+        }
+
         bodyHtml += `<tr>
           <td class="col-stt">${r.stt || (idx + 1)}</td>
           <td class="col-actions">
             <button type="button" class="btn-icon" title="Sửa dòng này" onclick="openEditRowModal('campaign', ${r.rowIdx})">✏️</button>
             <button type="button" class="btn-icon btn-icon-delete" title="Xóa dòng này" onclick="deleteRow('campaign', ${r.rowIdx}, '${escapeJs(r.code)}')">🗑️</button>
           </td>
+          ${campCellHtml}
           <td class="col-text" title="${escapeHtml(r.cdt)}">${escapeHtml(r.cdt)}</td>
           <td class="col-code">${escapeHtml(r.code)}</td>
           <td class="col-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}</td>
@@ -2049,61 +2274,23 @@
       });
     }
 
-    function saveCampaignChanges() {
-      const camp = configData.campaign || {};
-      const name = (camp.name || '').trim();
-      const startDate = camp.startDate || '';
-      const endDate = camp.endDate || '';
-      const status = camp.status || 'Đang chạy';
-
-      if (!name) {
-        showToast('Chưa có thông tin Tên Chiến Dịch! Vui lòng nhập thông tin chiến dịch.', true);
-        openEditCampaignMetaModal();
-        return;
-      }
-
-      if (status === 'Đang chạy') {
-        if (!startDate || !endDate) {
-          showToast('Chiến dịch Đang chạy bắt buộc phải có Từ Ngày và Đến Ngày!', true);
-          openEditCampaignMetaModal();
-          return;
-        }
-        if (new Date(startDate) > new Date(endDate)) {
-          showToast('Từ Ngày không được lớn hơn Đến Ngày!', true);
-          openEditCampaignMetaModal();
-          return;
-        }
-      }
+    function saveCampaignChanges(isAuto, callback) {
+      const rows = configData.campaign?.rows || [];
 
       const payload = {
-        name: name,
-        startDate: startDate,
-        endDate: endDate,
-        status: status,
-        rows: configData.campaign?.rows || []
+        rows: rows
       };
 
-      showLoading('Đang lưu bảng Điểm Chiến Dịch vào Google Sheets...');
+      if (!isAuto) {
+        showLoading('Đang lưu bảng Điểm Chiến Dịch vào Google Sheets...');
+      }
 
       google.script.run
         .withSuccessHandler(function(res) {
-          hideLoading();
+          if (!isAuto) hideLoading();
           if (res && res.success) {
             isCampaignDirty = false;
-            configData.campaign.name = name;
-            configData.campaign.startDate = startDate;
-            configData.campaign.endDate = endDate;
-            configData.campaign.status = status;
-
-            // Cập nhật campaignsList local để combobox luôn đồng bộ
-            if (!configData.campaignsList) configData.campaignsList = [];
-            const existIdx = configData.campaignsList.findIndex(c => c.name.trim().toLowerCase() === name.trim().toLowerCase());
-            const entry = { name: name, startDate: startDate, endDate: endDate, status: status };
-            if (existIdx >= 0) {
-              configData.campaignsList[existIdx] = entry;
-            } else {
-              configData.campaignsList.unshift(entry);
-            }
+            syncCampaignsListFromRows();
 
             const txt = document.getElementById('campaignDirtyText');
             if (txt) txt.style.display = 'none';
@@ -2111,13 +2298,14 @@
             updateCampaignBanner();
             renderStats();
             updateUnsavedBadge();
-            showToast(`Đã lưu thành công chiến dịch "${name}" với ${res.rowCount || configData.campaign.rows.length} dòng!`);
+            showToast(`Đã lưu thành công ${res.rowCount || rows.length} cấu hình Điểm Chiến Dịch!`);
+            if (typeof callback === 'function') callback();
           } else {
             showToast('Lỗi khi lưu chiến dịch: ' + ((res && res.error) || 'Không rõ'), true);
           }
         })
         .withFailureHandler(function(err) {
-          hideLoading();
+          if (!isAuto) hideLoading();
           showToast('Lỗi kết nối khi lưu chiến dịch: ' + (err.message || err), true);
         })
         .saveCampaignData(payload);
@@ -2722,11 +2910,20 @@
 
       if (fundType === 'campaign') {
         if (title) title.innerText = '➕ Thêm Dự Án Vào Điểm Chiến Dịch';
-        const camp = configData.campaign || { name: '', startDate: '', endDate: '', status: 'Đang chạy' };
-        const campName = camp.name || '';
-        const campStart = camp.startDate || '';
-        const campEnd = camp.endDate || '';
-        const campStatus = 'Đang chạy';
+        let campName = '';
+        let campStart = '';
+        let campEnd = '';
+        let campStatus = 'Đang chạy';
+
+        if (selectedCampaignFilter && selectedCampaignFilter !== 'ALL') {
+          const matched = configData.campaignsList?.find(c => c.name.trim().toLowerCase() === selectedCampaignFilter.trim().toLowerCase());
+          if (matched) {
+            campName = matched.name;
+            campStart = matched.startDate || '';
+            campEnd = matched.endDate || '';
+            campStatus = (matched.status === 'Tạm dừng') ? 'Tạm dừng' : 'Đang chạy';
+          }
+        }
 
         container.innerHTML = `
           <!-- Khối Cấu Hình Chiến Dịch (Tên & Date Range) -->
@@ -2751,8 +2948,8 @@
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="addCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
                 <select class="filter-select" id="addCampaignStatus" style="border-color: #fdba74; font-weight: 700;">
-                  <option value="Đang chạy" selected>🟢 Đang chạy</option>
-                  <option value="Tạm dừng">⏸️ Tạm dừng</option>
+                  <option value="Đang chạy" ${campStatus !== 'Tạm dừng' ? 'selected' : ''}>🟢 Đang chạy</option>
+                  <option value="Tạm dừng" ${campStatus === 'Tạm dừng' ? 'selected' : ''}>⏸️ Tạm dừng</option>
                 </select>
               </div>
             </div>
@@ -3077,15 +3274,15 @@
         const score = parseFloat(document.getElementById('addScore').value) || 0;
 
         if (!configData.campaign) configData.campaign = { rows: [] };
-        configData.campaign.name = campName;
-        configData.campaign.startDate = campStart;
-        configData.campaign.endDate = campEnd;
-        configData.campaign.status = campStatus;
         if (!configData.campaign.rows) configData.campaign.rows = [];
 
         const newRow = {
           rowIdx: configData.campaign.rows.length,
           stt: configData.campaign.rows.length + 1,
+          campaignName: campName,
+          startDate: campStart,
+          endDate: campEnd,
+          campaignStatus: campStatus,
           cdt: cdt,
           code: code,
           name: name,
@@ -3099,6 +3296,8 @@
         };
 
         configData.campaign.rows.push(newRow);
+        selectedCampaignFilter = campName;
+        syncCampaignsListFromRows();
         closeAddRowModal(true);
         updateCampaignBanner();
         renderStats();
@@ -3107,7 +3306,7 @@
         } else {
           switchTab('campaign');
         }
-        showToast(`Đang tự động lưu dự án "${code}" vào Sheet Điểm Chiến Dịch...`);
+        showToast(`Đang tự động lưu dự án "${code}" vào Chiến dịch "${campName}"...`);
         saveCampaignChanges();
         return;
       }
@@ -3391,11 +3590,27 @@
         const giaVal = (row.khoangGia && row.khoangGia !== '*' && row.khoangGia !== 'Tất cả') ? row.khoangGia : 'Tất cả';
         const parsedPrice = parseKhoangGiaToMinMax(row.khoangGia);
 
-        const camp = configData.campaign || { name: '', startDate: '', endDate: '', status: 'Đang chạy' };
-        const campName = isCopy ? '' : (camp.name || '');
-        const campStart = isCopy ? '' : (camp.startDate || '');
-        const campEnd = isCopy ? '' : (camp.endDate || '');
-        const campStatus = 'Đang chạy';
+        let campName = '';
+        let campStart = '';
+        let campEnd = '';
+        let campStatus = 'Đang chạy';
+
+        if (isCopy) {
+          if (selectedCampaignFilter && selectedCampaignFilter !== 'ALL') {
+            const matched = configData.campaignsList?.find(c => c.name.trim().toLowerCase() === selectedCampaignFilter.trim().toLowerCase());
+            if (matched) {
+              campName = matched.name;
+              campStart = matched.startDate || '';
+              campEnd = matched.endDate || '';
+              campStatus = (matched.status === 'Tạm dừng') ? 'Tạm dừng' : 'Đang chạy';
+            }
+          }
+        } else {
+          campName = row.campaignName || '';
+          campStart = row.startDate || '';
+          campEnd = row.endDate || '';
+          campStatus = (row.campaignStatus === 'Tạm dừng') ? 'Tạm dừng' : 'Đang chạy';
+        }
 
         title.innerText = isCopy ? `🔥 Thêm Vào Chiến Dịch: ${row.code} (${row.name})` : `✏️ Sửa Dự Án Chiến Dịch: ${row.code} (${row.name})`;
         const submitBtn = document.getElementById('btnEditRowSubmit');
@@ -3426,8 +3641,8 @@
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="editCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
                 <select class="filter-select" id="editCampaignStatus" style="border-color: #fdba74; font-weight: 700;">
-                  <option value="Đang chạy" selected>🟢 Đang chạy</option>
-                  <option value="Tạm dừng">⏸️ Tạm dừng</option>
+                  <option value="Đang chạy" ${campStatus !== 'Tạm dừng' ? 'selected' : ''}>🟢 Đang chạy</option>
+                  <option value="Tạm dừng" ${campStatus === 'Tạm dừng' ? 'selected' : ''}>⏸️ Tạm dừng</option>
                 </select>
               </div>
             </div>
@@ -3795,15 +4010,15 @@
         const score = scoreEl ? (parseFloat(scoreEl.value) || 0) : 0;
 
         if (!configData.campaign) configData.campaign = { rows: [] };
-        configData.campaign.name = campName;
-        configData.campaign.startDate = campStart;
-        configData.campaign.endDate = campEnd;
-        configData.campaign.status = campStatus;
         if (!configData.campaign.rows) configData.campaign.rows = [];
 
         const newRow = {
           rowIdx: configData.campaign.rows.length,
           stt: configData.campaign.rows.length + 1,
+          campaignName: campName,
+          startDate: campStart,
+          endDate: campEnd,
+          campaignStatus: campStatus,
           cdt: cdt,
           code: code,
           name: name,
@@ -3817,6 +4032,8 @@
         };
 
         configData.campaign.rows.push(newRow);
+        selectedCampaignFilter = campName;
+        syncCampaignsListFromRows();
         closeEditRowModal(true);
         updateCampaignBanner();
         renderStats();
@@ -3825,7 +4042,7 @@
         } else {
           switchTab('campaign');
         }
-        showToast(`Đang tự động lưu dự án "${code}" vào Sheet Điểm Chiến Dịch...`);
+        showToast(`Đang tự động lưu dự án "${code}" vào Chiến dịch "${campName}"...`);
         saveCampaignChanges();
         return;
       }
@@ -3869,11 +4086,10 @@
         const vals = getThreeFieldValues('edit');
         const scoreEl = document.getElementById('editScoreCampaign');
 
-        configData.campaign.name = campName;
-        configData.campaign.startDate = campStart;
-        configData.campaign.endDate = campEnd;
-        configData.campaign.status = campStatus;
-
+        row.campaignName = campName;
+        row.startDate = campStart;
+        row.endDate = campEnd;
+        row.campaignStatus = campStatus;
         row.code = code;
         row.name = name;
         row.cdt = cdt;
@@ -3884,11 +4100,13 @@
         row.khoangGia = vals.khoangGia;
         if (scoreEl) row.score = parseFloat(scoreEl.value) || 0;
 
+        selectedCampaignFilter = campName;
+        syncCampaignsListFromRows();
         closeEditRowModal(true);
         updateCampaignBanner();
         renderStats();
         renderTable();
-        showToast('Đang tự động lưu cập nhật vào Sheet Điểm Chiến Dịch...');
+        showToast(`Đang tự động lưu cập nhật vào Sheet Điểm Chiến Dịch...`);
         saveCampaignChanges();
         return;
       }
@@ -3964,10 +4182,13 @@
               r.stt = idx + 1;
             });
           }
+          syncCampaignsListFromRows();
           markCampaignDirty();
+          updateCampaignBanner();
           renderStats();
           renderTable();
-          showToast('Đã xóa dòng cấu hình khỏi chiến dịch!');
+          showToast('Đang tự động cập nhật và lưu thay đổi vào Sheet Điểm Chiến Dịch...');
+          saveCampaignChanges();
         });
         return;
       }
@@ -4079,32 +4300,20 @@
 
       const doSaveCampaign = (next) => {
         if (isCampaignDirty && configData.campaign) {
-          const camp = configData.campaign;
-          const name = (camp.name || '').trim();
-          const startDate = camp.startDate || '';
-          const endDate = camp.endDate || '';
-          const status = camp.status || 'Đang chạy';
-
-          if (name) {
-            const payload = {
-              name: name,
-              startDate: startDate,
-              endDate: endDate,
-              status: status,
-              rows: configData.campaign.rows || []
-            };
-            google.script.run
-              .withSuccessHandler(function() {
-                isCampaignDirty = false;
-                next();
-              })
-              .withFailureHandler(function(err) {
-                hideLoading();
-                showToast('Lỗi khi lưu chiến dịch: ' + (err.message || err), true);
-              })
-              .saveCampaignData(payload);
-            return;
-          }
+          const payload = {
+            rows: configData.campaign.rows || []
+          };
+          google.script.run
+            .withSuccessHandler(function() {
+              isCampaignDirty = false;
+              next();
+            })
+            .withFailureHandler(function(err) {
+              hideLoading();
+              showToast('Lỗi khi lưu chiến dịch: ' + (err.message || err), true);
+            })
+            .saveCampaignData(payload);
+          return;
         }
         next();
       };

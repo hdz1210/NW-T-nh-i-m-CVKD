@@ -750,33 +750,7 @@ function fetchMonthlyConfigData() {
     }
 
     const campaign = fetchCampaignDataInternal(ss);
-
-    // Đọc danh sách chiến dịch đã cấu hình từ PropertiesService
-    let campaignsList = [];
-    try {
-      const props = PropertiesService.getDocumentProperties();
-      const raw = props.getProperty('CONFIGURED_CAMPAIGNS_LIST');
-      if (raw) {
-        campaignsList = JSON.parse(raw);
-      }
-    } catch (e) {
-      Logger.log('Lỗi đọc CONFIGURED_CAMPAIGNS_LIST: ' + e.toString());
-    }
-    // Đảm bảo chiến dịch hiện tại (nếu có) luôn nằm trong list
-    if (campaign && campaign.exists && campaign.name) {
-      const existIdx = campaignsList.findIndex(c => c.name.trim().toLowerCase() === campaign.name.trim().toLowerCase());
-      const entry = {
-        name: campaign.name,
-        startDate: campaign.startDate || '',
-        endDate: campaign.endDate || '',
-        status: campaign.status || 'Đang chạy'
-      };
-      if (existIdx >= 0) {
-        campaignsList[existIdx] = entry;
-      } else {
-        campaignsList.unshift(entry);
-      }
-    }
+    const campaignsList = (campaign && campaign.campaignsList) ? campaign.campaignsList : [];
 
     return {
       success: true,
@@ -925,6 +899,7 @@ function updateMonthlyConfigRow(tab, rowIdx, data) {
 
 /**
  * Đọc dữ liệu cấu hình chiến dịch từ sheet 'Điểm Chiến Dịch'
+ * Hỗ trợ cả định dạng mới 15 cột (Multi-Campaign) và tự động tương thích ngược định dạng cũ 11 cột
  */
 function fetchCampaignDataInternal(ss) {
   try {
@@ -937,77 +912,202 @@ function fetchCampaignDataInternal(ss) {
         startDate: '',
         endDate: '',
         status: 'Tạm dừng',
+        campaignsList: [],
         rows: []
       };
     }
 
-    // Đọc metadata dòng 1
-    const metaVals = cdSheet.getRange(1, 1, 1, Math.max(8, cdSheet.getLastColumn())).getValues()[0];
-    const name = String(metaVals[1] || '').trim();
-    const rawStart = metaVals[3];
-    const rawEnd = metaVals[5];
-    let status = String(metaVals[7] || 'Đang chạy').trim();
+    const lastRow = cdSheet.getLastRow();
+    const lastCol = Math.max(cdSheet.getLastColumn(), 15);
+    const headerRow = cdSheet.getRange(3, 1, 1, Math.min(lastCol, 15)).getValues()[0];
+    const isNew15ColFormat = String(headerRow[1] || '').trim().toLowerCase().includes('chiến dịch');
 
-    let startDateStr = '';
-    const dStart = parseDateSafe(rawStart);
-    if (dStart) startDateStr = formatDateSafe(dStart, ss);
-
-    let endDateStr = '';
-    const dEnd = parseDateSafe(rawEnd);
-    if (dEnd) endDateStr = formatDateSafe(dEnd, ss);
-
-    // Tự động kiểm tra ngày: Nếu ngày hiện tại vượt quá ngày kết thúc -> Tự động chuyển trạng thái thành Kết thúc!
+    const rows = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (dEnd) {
-      const endCmp = new Date(dEnd);
-      endCmp.setHours(23, 59, 59, 999);
-      if (today > endCmp && status !== 'Tạm dừng') {
-        status = 'Kết thúc';
+
+    if (isNew15ColFormat) {
+      // Đọc theo định dạng 15 cột
+      const dataRows = cdSheet.getRange(4, 1, lastRow - 3, 15).getValues();
+      for (let i = 0; i < dataRows.length; i++) {
+        const r = dataRows[i];
+        const rowNumber = i + 4;
+        const campName = String(r[1] || '').trim();
+        const rawStart = r[2];
+        const rawEnd = r[3];
+        let campStatus = String(r[4] || 'Đang chạy').trim();
+
+        let startDateStr = '';
+        const dStart = parseDateSafe(rawStart);
+        if (dStart) startDateStr = formatDateSafe(dStart, ss);
+
+        let endDateStr = '';
+        const dEnd = parseDateSafe(rawEnd);
+        if (dEnd) {
+          endDateStr = formatDateSafe(dEnd, ss);
+          const endCmp = new Date(dEnd);
+          endCmp.setHours(23, 59, 59, 999);
+          if (today > endCmp && campStatus !== 'Tạm dừng') {
+            campStatus = 'Kết thúc';
+          }
+        }
+
+        const cdt = String(r[5] || '').trim();
+        const code = String(r[6] || '').trim();
+        const projName = String(r[7] || '').trim();
+        const region = String(r[8] || '').trim();
+        const rowStatus = String(r[9] || 'Đang bán').trim();
+        const sanPham = isConditionAll(r[10]) ? 'Tất cả' : String(r[10]).trim();
+        const loaiCan = isConditionAll(r[11]) ? 'Tất cả' : String(r[11]).trim();
+        const khoangGia = isConditionAll(r[12]) ? 'Tất cả' : canonicalKhoangGia(r[12]);
+        const scoreVal = r[13];
+        const score = (scoreVal !== '' && scoreVal !== null && !isNaN(scoreVal)) ? Number(scoreVal) : '';
+        const note = String(r[14] || '').trim();
+
+        rows.push({
+          rowIdx: rowNumber,
+          stt: i + 1,
+          campaignName: campName,
+          startDate: startDateStr,
+          endDate: endDateStr,
+          campaignStatus: campStatus,
+          cdt,
+          code,
+          name: projName,
+          region,
+          status: rowStatus,
+          sanPham,
+          loaiCan,
+          khoangGia,
+          score,
+          note
+        });
+      }
+    } else {
+      // Đọc theo định dạng cũ 11 cột (Dòng 1 là metadata, Dòng 4+ là data)
+      const metaVals = cdSheet.getRange(1, 1, 1, Math.max(8, cdSheet.getLastColumn())).getValues()[0];
+      const campName = String(metaVals[1] || '').trim();
+      const rawStart = metaVals[3];
+      const rawEnd = metaVals[5];
+      let campStatus = String(metaVals[7] || 'Đang chạy').trim();
+
+      let startDateStr = '';
+      const dStart = parseDateSafe(rawStart);
+      if (dStart) startDateStr = formatDateSafe(dStart, ss);
+
+      let endDateStr = '';
+      const dEnd = parseDateSafe(rawEnd);
+      if (dEnd) {
+        endDateStr = formatDateSafe(dEnd, ss);
+        const endCmp = new Date(dEnd);
+        endCmp.setHours(23, 59, 59, 999);
+        if (today > endCmp && campStatus !== 'Tạm dừng') {
+          campStatus = 'Kết thúc';
+        }
+      }
+
+      const dataRows = cdSheet.getRange(4, 1, lastRow - 3, 11).getValues();
+      for (let i = 0; i < dataRows.length; i++) {
+        const r = dataRows[i];
+        const rowNumber = i + 4;
+        const cdt = String(r[1] || '').trim();
+        const code = String(r[2] || '').trim();
+        const projName = String(r[3] || '').trim();
+        const region = String(r[4] || '').trim();
+        const rowStatus = String(r[5] || 'Đang bán').trim();
+        const sanPham = isConditionAll(r[6]) ? 'Tất cả' : String(r[6]).trim();
+        const loaiCan = isConditionAll(r[7]) ? 'Tất cả' : String(r[7]).trim();
+        const khoangGia = isConditionAll(r[8]) ? 'Tất cả' : canonicalKhoangGia(r[8]);
+        const scoreVal = r[9];
+        const score = (scoreVal !== '' && scoreVal !== null && !isNaN(scoreVal)) ? Number(scoreVal) : '';
+        const note = String(r[10] || '').trim();
+
+        rows.push({
+          rowIdx: rowNumber,
+          stt: i + 1,
+          campaignName: campName,
+          startDate: startDateStr,
+          endDate: endDateStr,
+          campaignStatus: campStatus,
+          cdt,
+          code,
+          name: projName,
+          region,
+          status: rowStatus,
+          sanPham,
+          loaiCan,
+          khoangGia,
+          score,
+          note
+        });
       }
     }
 
-    const lastRow = cdSheet.getLastRow();
-    const dataRows = cdSheet.getRange(4, 1, lastRow - 3, 11).getValues();
-    const rows = [];
+    // Tổng hợp danh sách chiến dịch duy nhất từ các dòng
+    const campMap = new Map();
+    rows.forEach(r => {
+      const cName = (r.campaignName || '').trim();
+      if (!cName) return;
+      const key = cName.toLowerCase();
+      if (!campMap.has(key)) {
+        campMap.set(key, {
+          name: cName,
+          startDate: r.startDate || '',
+          endDate: r.endDate || '',
+          status: r.campaignStatus || 'Đang chạy',
+          rowCount: 0
+        });
+      }
+      campMap.get(key).rowCount++;
+    });
 
-    for (let i = 0; i < dataRows.length; i++) {
-      const r = dataRows[i];
-      const rowNumber = i + 4;
-      const cdt = String(r[1] || '').trim();
-      const code = String(r[2] || '').trim();
-      const projName = String(r[3] || '').trim();
-      const region = String(r[4] || '').trim();
-      const rowStatus = String(r[5] || 'Đang bán').trim();
-      const sanPham = isConditionAll(r[6]) ? 'Tất cả' : String(r[6]).trim();
-      const loaiCan = isConditionAll(r[7]) ? 'Tất cả' : String(r[7]).trim();
-      const khoangGia = isConditionAll(r[8]) ? 'Tất cả' : canonicalKhoangGia(r[8]);
-      const scoreVal = r[9];
-      const score = (scoreVal !== '' && scoreVal !== null && !isNaN(scoreVal)) ? Number(scoreVal) : '';
-      const note = String(r[10] || '').trim();
-
-      rows.push({
-        rowIdx: rowNumber,
-        cdt,
-        code,
-        name: projName,
-        region,
-        status: rowStatus,
-        sanPham,
-        loaiCan,
-        khoangGia,
-        score,
-        note
-      });
+    // Bổ sung các chiến dịch đã lưu trong PropertiesService
+    try {
+      const props = PropertiesService.getDocumentProperties();
+      const raw = props.getProperty('CONFIGURED_CAMPAIGNS_LIST');
+      if (raw) {
+        const savedList = JSON.parse(raw);
+        if (Array.isArray(savedList)) {
+          savedList.forEach(sc => {
+            if (!sc || !sc.name) return;
+            const key = sc.name.trim().toLowerCase();
+            if (!campMap.has(key)) {
+              let scStatus = sc.status || 'Đang chạy';
+              if (sc.endDate) {
+                const scEnd = parseDateSafe(sc.endDate);
+                if (scEnd) {
+                  scEnd.setHours(23, 59, 59, 999);
+                  if (today > scEnd && scStatus !== 'Tạm dừng') {
+                    scStatus = 'Kết thúc';
+                  }
+                }
+              }
+              campMap.set(key, {
+                name: sc.name.trim(),
+                startDate: sc.startDate || '',
+                endDate: sc.endDate || '',
+                status: scStatus,
+                rowCount: 0
+              });
+            }
+          });
+        }
+      }
+    } catch (e) {
+      Logger.log('Lỗi đọc CONFIGURED_CAMPAIGNS_LIST trong fetchCampaignDataInternal: ' + e.toString());
     }
 
+    const campaignsList = Array.from(campMap.values());
+    const firstCamp = campaignsList.length > 0 ? campaignsList[0] : null;
+
     return {
-      exists: true,
-      name,
-      startDate: startDateStr,
-      endDate: endDateStr,
-      status,
-      rows
+      exists: rows.length > 0,
+      name: firstCamp ? firstCamp.name : '',
+      startDate: firstCamp ? firstCamp.startDate : '',
+      endDate: firstCamp ? firstCamp.endDate : '',
+      status: firstCamp ? firstCamp.status : 'Tạm dừng',
+      campaignsList: campaignsList,
+      rows: rows
     };
   } catch (err) {
     Logger.log('Lỗi fetchCampaignDataInternal: ' + err.toString());
@@ -1017,6 +1117,7 @@ function fetchCampaignDataInternal(ss) {
       startDate: '',
       endDate: '',
       status: 'Tạm dừng',
+      campaignsList: [],
       rows: [],
       error: err.toString()
     };
@@ -1031,7 +1132,7 @@ function fetchCampaignData() {
 }
 
 /**
- * Lưu toàn bộ cấu hình chiến dịch vào sheet 'Điểm Chiến Dịch'
+ * Lưu toàn bộ cấu hình chiến dịch vào sheet 'Điểm Chiến Dịch' (15 cột chuẩn hóa)
  */
 function saveCampaignData(payload) {
   try {
@@ -1045,59 +1146,72 @@ function saveCampaignData(payload) {
     // Xóa sạch dữ liệu cũ
     cdSheet.clear();
 
-    const name = String(payload.name || '').trim();
-    const startDate = String(payload.startDate || '').trim();
-    const endDate = String(payload.endDate || '').trim();
-    let status = String(payload.status || 'Đang chạy').trim();
-    if (status !== 'Tạm dừng' && endDate) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const dEnd = parseDateSafe(endDate);
-      if (dEnd) {
-        dEnd.setHours(23, 59, 59, 999);
-        if (today > dEnd) {
-          status = 'Kết thúc';
-        }
-      }
-    }
     const rows = payload.rows || [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // 1. Ghi Metadata dòng 1
-    const metaHeaders = [
-      ['TÊN CHIẾN DỊCH:', name, 'TỪ NGÀY:', startDate, 'ĐẾN NGÀY:', endDate, 'TRẠNG THÁI:', status]
-    ];
-    cdSheet.getRange(1, 1, 1, 8).setValues(metaHeaders);
-
-    const metaRange = cdSheet.getRange(1, 1, 1, 8);
-    metaRange.setFontFamily('Arial').setFontSize(10);
-    [1, 3, 5, 7].forEach(col => {
-      cdSheet.getRange(1, col).setFontWeight('bold').setBackground('#eff6ff').setFontColor('#1d4ed8');
-    });
-    [2, 4, 6, 8].forEach(col => {
-      cdSheet.getRange(1, col).setFontWeight('bold').setHorizontalAlignment('center');
-    });
-
-    // Dòng 2: Phụ đề ghi chú
-    cdSheet.getRange(2, 1, 1, 11).merge();
-    cdSheet.getRange(2, 1).setValue('💡 Bảng Điểm Chiến Dịch áp dụng tự động cho các giao dịch trong khoảng thời gian trên (Ưu tiên thay thế điểm tháng).')
-      .setFontStyle('italic').setFontSize(9).setFontColor('#64748b').setBackground('#f8fafc');
-
-    // 2. Ghi Header bảng ở dòng 3
-    const headers = [
-      ['STT', 'Chủ đầu tư', 'Mã DA', 'Tên Dự Án', 'Miền', 'Trạng Thái', 'Sản Phẩm', 'Loại Căn', 'Khoảng Giá', 'Điểm Chiến Dịch', 'Ghi Chú']
-    ];
-    cdSheet.getRange(3, 1, 1, 11).setValues(headers)
+    // 1. Ghi Banner dòng 1: Tiêu đề lớn
+    cdSheet.getRange(1, 1, 1, 15).merge();
+    cdSheet.getRange(1, 1)
+      .setValue('🎯 BẢNG QUẢN LÝ ĐIỂM CÁC CHIẾN DỊCH BÁN HÀNG')
+      .setFontFamily('Arial')
+      .setFontSize(13)
       .setFontWeight('bold')
+      .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle')
+      .setBackground('#1e3a8a')
+      .setFontColor('#ffffff');
+    cdSheet.setRowHeight(1, 36);
+
+    // Dòng 2: Phụ đề hướng dẫn
+    cdSheet.getRange(2, 1, 1, 15).merge();
+    cdSheet.getRange(2, 1)
+      .setValue('💡 Điểm chiến dịch được tự động áp dụng cho các giao dịch trong khoảng thời gian diễn ra chiến dịch (Ưu tiên thay thế điểm tháng).')
+      .setFontFamily('Arial')
+      .setFontStyle('italic')
+      .setFontSize(9)
+      .setFontColor('#475569')
       .setBackground('#f1f5f9')
       .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle');
+    cdSheet.setRowHeight(2, 24);
+
+    // 2. Ghi Header bảng ở dòng 3 (15 cột)
+    const headers = [
+      ['STT', 'Tên Chiến Dịch', 'Từ Ngày', 'Đến Ngày', 'Trạng Thái CĐ', 'Chủ đầu tư', 'Mã DA', 'Tên Dự Án', 'Miền', 'Trạng Thái DA', 'Sản Phẩm', 'Loại Căn', 'Khoảng Giá', 'Điểm Chiến Dịch', 'Ghi Chú']
+    ];
+    cdSheet.getRange(3, 1, 1, 15).setValues(headers)
+      .setFontFamily('Arial')
+      .setFontWeight('bold')
+      .setBackground('#e2e8f0')
+      .setFontColor('#0f172a')
+      .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle')
       .setFontSize(10)
       .setBorder(true, true, true, true, true, true, '#cbd5e1', SpreadsheetApp.BorderStyle.SOLID);
+    cdSheet.setRowHeight(3, 28);
 
     // 3. Ghi các dòng cấu hình từ dòng 4
     if (rows.length > 0) {
       const dataRows = rows.map((r, idx) => {
+        let campStatus = String(r.campaignStatus || r.status || 'Đang chạy').trim();
+        const rawEnd = r.endDate;
+        if (rawEnd && campStatus !== 'Tạm dừng') {
+          const dEnd = parseDateSafe(rawEnd);
+          if (dEnd) {
+            dEnd.setHours(23, 59, 59, 999);
+            if (today > dEnd) {
+              campStatus = 'Kết thúc';
+            }
+          }
+        }
+
         return [
           idx + 1,
+          r.campaignName || payload.name || '',
+          r.startDate || payload.startDate || '',
+          r.endDate || payload.endDate || '',
+          campStatus,
           r.cdt || '',
           r.code || '',
           r.name || '',
@@ -1111,41 +1225,81 @@ function saveCampaignData(payload) {
         ];
       });
 
-      const dataRange = cdSheet.getRange(4, 1, dataRows.length, 11);
+      const dataRange = cdSheet.getRange(4, 1, dataRows.length, 15);
       dataRange.setValues(dataRows);
       dataRange.setFontFamily('Arial').setFontSize(10);
       dataRange.setBorder(true, true, true, true, true, true, '#e2e8f0', SpreadsheetApp.BorderStyle.SOLID);
 
       cdSheet.getRange(4, 1, dataRows.length, 1).setHorizontalAlignment('center'); // STT
-      cdSheet.getRange(4, 3, dataRows.length, 1).setHorizontalAlignment('center'); // Mã DA
-      cdSheet.getRange(4, 5, dataRows.length, 2).setHorizontalAlignment('center'); // Miền, Trạng thái
-      cdSheet.getRange(4, 7, dataRows.length, 3).setHorizontalAlignment('center'); // SP, LC, KG
-      cdSheet.getRange(4, 10, dataRows.length, 1).setNumberFormat('0.##').setHorizontalAlignment('center').setFontWeight('bold'); // Điểm
+      cdSheet.getRange(4, 2, dataRows.length, 1).setFontWeight('bold').setFontColor('#9a3412'); // Tên CĐ
+      cdSheet.getRange(4, 3, dataRows.length, 3).setHorizontalAlignment('center'); // Từ Ngày, Đến Ngày, Trạng Thái CĐ
+      cdSheet.getRange(4, 7, dataRows.length, 1).setHorizontalAlignment('center'); // Mã DA
+      cdSheet.getRange(4, 9, dataRows.length, 2).setHorizontalAlignment('center'); // Miền, Trạng thái DA
+      cdSheet.getRange(4, 11, dataRows.length, 3).setHorizontalAlignment('center'); // SP, LC, KG
+      cdSheet.getRange(4, 14, dataRows.length, 1).setNumberFormat('0.##').setHorizontalAlignment('center').setFontWeight('bold').setFontColor('#ea580c'); // Điểm CĐ
     }
 
     // Tự động căn chỉnh độ rộng cột
-    for (let col = 1; col <= 11; col++) {
+    for (let col = 1; col <= 15; col++) {
       cdSheet.autoResizeColumn(col);
       const w = cdSheet.getColumnWidth(col);
-      if (w < 80) cdSheet.setColumnWidth(col, 80);
+      if (w < 70) cdSheet.setColumnWidth(col, 70);
       if (w > 260) cdSheet.setColumnWidth(col, 260);
     }
 
-    // Lưu chiến dịch vào danh sách lịch sử (PropertiesService)
+    // Cập nhật danh sách chiến dịch vào PropertiesService
     try {
+      const campMap = new Map();
+      rows.forEach(r => {
+        const cName = String(r.campaignName || payload.name || '').trim();
+        if (!cName) return;
+        const key = cName.toLowerCase();
+        let cStatus = r.campaignStatus || payload.status || 'Đang chạy';
+        const rawEnd = r.endDate || payload.endDate;
+        if (rawEnd && cStatus !== 'Tạm dừng') {
+          const dEnd = parseDateSafe(rawEnd);
+          if (dEnd) {
+            dEnd.setHours(23, 59, 59, 999);
+            if (today > dEnd) cStatus = 'Kết thúc';
+          }
+        }
+        campMap.set(key, {
+          name: cName,
+          startDate: r.startDate || payload.startDate || '',
+          endDate: r.endDate || payload.endDate || '',
+          status: cStatus
+        });
+      });
+
+      // Nếu payload có name cụ thể mà chưa có trong rows:
+      if (payload.name && payload.name.trim()) {
+        const pKey = payload.name.trim().toLowerCase();
+        if (!campMap.has(pKey)) {
+          campMap.set(pKey, {
+            name: payload.name.trim(),
+            startDate: payload.startDate || '',
+            endDate: payload.endDate || '',
+            status: payload.status || 'Đang chạy'
+          });
+        }
+      }
+
       const props = PropertiesService.getDocumentProperties();
       let campaignsList = [];
       const raw = props.getProperty('CONFIGURED_CAMPAIGNS_LIST');
       if (raw) {
-        campaignsList = JSON.parse(raw);
+        try {
+          const prev = JSON.parse(raw);
+          if (Array.isArray(prev)) {
+            prev.forEach(p => {
+              if (p && p.name && !campMap.has(p.name.trim().toLowerCase())) {
+                campMap.set(p.name.trim().toLowerCase(), p);
+              }
+            });
+          }
+        } catch (pe) {}
       }
-      const entry = { name: name, startDate: startDate, endDate: endDate, status: status };
-      const existIdx = campaignsList.findIndex(c => c.name.trim().toLowerCase() === name.trim().toLowerCase());
-      if (existIdx >= 0) {
-        campaignsList[existIdx] = entry;
-      } else {
-        campaignsList.unshift(entry);
-      }
+      campaignsList = Array.from(campMap.values());
       props.setProperty('CONFIGURED_CAMPAIGNS_LIST', JSON.stringify(campaignsList));
     } catch (propErr) {
       Logger.log('Lỗi lưu CONFIGURED_CAMPAIGNS_LIST: ' + propErr.toString());
@@ -1270,53 +1424,111 @@ function getRuleEngineContext(ss) {
       .forEach(r => { if (r[0]) cbnvMap.set(String(r[0]).trim().toUpperCase(), String(r[1]).trim().toUpperCase()); });
   }
 
-  // 4. Tải cấu hình Điểm Chiến Dịch (nếu có và đang chạy)
-  let campaignConfig = null;
+  // 4. Tải cấu hình Điểm Chiến Dịch (hỗ trợ nhiều chiến dịch đồng thời)
+  const activeCampaigns = [];
   const cdSheet = ss.getSheetByName(APP_CONFIG.SHEET_CHIEN_DICH);
   if (cdSheet && cdSheet.getLastRow() >= 4) {
-    const metaVals = cdSheet.getRange(1, 1, 1, Math.max(8, cdSheet.getLastColumn())).getValues()[0];
-    const cdName = String(metaVals[1] || '').trim();
-    const rawStart = metaVals[3];
-    const rawEnd = metaVals[5];
-    const cdStatus = String(metaVals[7] || '').trim();
+    const lastRow = cdSheet.getLastRow();
+    const lastCol = Math.max(cdSheet.getLastColumn(), 15);
+    const headerRow = cdSheet.getRange(3, 1, 1, Math.min(lastCol, 15)).getValues()[0];
+    const isNew15Col = String(headerRow[1] || '').trim().toLowerCase().includes('chiến dịch');
 
-    const startDate = parseDateSafe(rawStart);
-    const endDate = parseDateSafe(rawEnd);
+    const campGroupMap = new Map();
 
-    if (cdStatus !== 'Tạm dừng' && startDate && endDate) {
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
+    if (isNew15Col) {
+      const dataRows = cdSheet.getRange(4, 1, lastRow - 3, 15).getValues();
+      dataRows.forEach(r => {
+        const campName = String(r[1] || '').trim();
+        const rawStart = r[2];
+        const rawEnd = r[3];
+        const campStatus = String(r[4] || 'Đang chạy').trim();
 
-      const cdMap = new Map();
-      const lastRow = cdSheet.getLastRow();
-      const cdDataRows = cdSheet.getRange(4, 1, lastRow - 3, 11).getValues();
+        if (campStatus === 'Tạm dừng' || !campName) return;
 
-      let currentCode = '';
-      cdDataRows.forEach(r => {
-        if (r[2]) currentCode = String(r[2]).trim().toLowerCase();
+        const startDate = parseDateSafe(rawStart);
+        const endDate = parseDateSafe(rawEnd);
+        if (!startDate || !endDate) return;
+
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+
+        const key = campName.toLowerCase();
+        if (!campGroupMap.has(key)) {
+          campGroupMap.set(key, {
+            name: campName,
+            startDate: startDate,
+            endDate: endDate,
+            map: new Map()
+          });
+        }
+
+        const currentCode = String(r[6] || '').trim().toLowerCase();
         if (!currentCode) return;
 
-        const sanPham = String(r[6] || '*').trim();
-        const loaiCan = String(r[7] || '*').trim();
-        const khoangGia = String(r[8] || '*').trim();
-        const rawScore = r[9];
+        const sanPham = String(r[10] || '*').trim();
+        const loaiCan = String(r[11] || '*').trim();
+        const khoangGia = String(r[12] || '*').trim();
+        const rawScore = r[13];
         const score = (rawScore !== '' && rawScore !== null && !isNaN(rawScore)) ? Number(rawScore) : 0;
 
-        if (!cdMap.has(currentCode)) cdMap.set(currentCode, []);
-        cdMap.get(currentCode).push({ sanPham, loaiCan, khoangGia, score });
+        const cGroup = campGroupMap.get(key);
+        if (!cGroup.map.has(currentCode)) cGroup.map.set(currentCode, []);
+        cGroup.map.get(currentCode).push({ sanPham, loaiCan, khoangGia, score });
       });
+    } else {
+      // Định dạng cũ 11 cột
+      const metaVals = cdSheet.getRange(1, 1, 1, Math.max(8, cdSheet.getLastColumn())).getValues()[0];
+      const cdName = String(metaVals[1] || '').trim();
+      const rawStart = metaVals[3];
+      const rawEnd = metaVals[5];
+      const cdStatus = String(metaVals[7] || '').trim();
 
-      campaignConfig = {
-        active: true,
-        name: cdName,
-        startDate: startDate,
-        endDate: endDate,
-        map: cdMap
-      };
+      const startDate = parseDateSafe(rawStart);
+      const endDate = parseDateSafe(rawEnd);
+
+      if (cdStatus !== 'Tạm dừng' && startDate && endDate && cdName) {
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+
+        const cdMap = new Map();
+        const cdDataRows = cdSheet.getRange(4, 1, lastRow - 3, 11).getValues();
+
+        let currentCode = '';
+        cdDataRows.forEach(r => {
+          if (r[2]) currentCode = String(r[2]).trim().toLowerCase();
+          if (!currentCode) return;
+
+          const sanPham = String(r[6] || '*').trim();
+          const loaiCan = String(r[7] || '*').trim();
+          const khoangGia = String(r[8] || '*').trim();
+          const rawScore = r[9];
+          const score = (rawScore !== '' && rawScore !== null && !isNaN(rawScore)) ? Number(rawScore) : 0;
+
+          if (!cdMap.has(currentCode)) cdMap.set(currentCode, []);
+          cdMap.get(currentCode).push({ sanPham, loaiCan, khoangGia, score });
+        });
+
+        campGroupMap.set(cdName.toLowerCase(), {
+          name: cdName,
+          startDate: startDate,
+          endDate: endDate,
+          map: cdMap
+        });
+      }
     }
+
+    campGroupMap.forEach(c => activeCampaigns.push(c));
   }
 
-  return { f2Map, f2MonthsList, thMap, thMonthsList, masVCGSet, gianXayMap, cbnvMap, campaignConfig };
+  const campaignConfig = activeCampaigns.length > 0 ? {
+    active: true,
+    name: activeCampaigns[0].name,
+    startDate: activeCampaigns[0].startDate,
+    endDate: activeCampaigns[0].endDate,
+    map: activeCampaigns[0].map
+  } : null;
+
+  return { f2Map, f2MonthsList, thMap, thMonthsList, masVCGSet, gianXayMap, cbnvMap, campaignConfig, activeCampaigns };
 }
 
 /**
@@ -1489,40 +1701,47 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
 
   let baseScore = 0;
 
-  // 3. ƯU TIÊN HÀNG ĐẦU: Khớp điểm theo Chiến Dịch (nếu ngày báo cáo nằm trong thời gian chiến dịch)
+  // 3. ƯU TIÊN HÀNG ĐẦU: Khớp điểm theo Chiến Dịch (duyệt qua tất cả các chiến dịch đang hoạt động)
   let isCampaignMatched = false;
-  if (ctx.campaignConfig && ctx.campaignConfig.active) {
-    if (dateBC >= ctx.campaignConfig.startDate && dateBC <= ctx.campaignConfig.endDate) {
-      const duAnKey = duAn.toLowerCase();
-      let candidates = ctx.campaignConfig.map.get(duAnKey) || [];
-      if (candidates.length === 0) {
-        for (const [code, list] of ctx.campaignConfig.map.entries()) {
-          if (duAnKey.includes(code) || code.includes(duAnKey)) {
-            candidates = list;
-            break;
+  const campaignsToCheck = (ctx.activeCampaigns && ctx.activeCampaigns.length > 0)
+    ? ctx.activeCampaigns
+    : (ctx.campaignConfig && ctx.campaignConfig.active ? [ctx.campaignConfig] : []);
+
+  if (campaignsToCheck.length > 0) {
+    for (const camp of campaignsToCheck) {
+      if (dateBC >= camp.startDate && dateBC <= camp.endDate) {
+        const duAnKey = duAn.toLowerCase();
+        let candidates = camp.map.get(duAnKey) || [];
+        if (candidates.length === 0) {
+          for (const [code, list] of camp.map.entries()) {
+            if (duAnKey.includes(code) || code.includes(duAnKey)) {
+              candidates = list;
+              break;
+            }
           }
         }
-      }
 
-      if (candidates.length > 0) {
-        let matchedRow = null;
-        for (const cand of candidates) {
-          if (matchRules(cand.sanPham, cand.loaiCan, cand.khoangGia, sanPham, loaiCan, valInBillion)) {
-            matchedRow = cand;
+        if (candidates.length > 0) {
+          let matchedRow = null;
+          for (const cand of candidates) {
+            if (matchRules(cand.sanPham, cand.loaiCan, cand.khoangGia, sanPham, loaiCan, valInBillion)) {
+              matchedRow = cand;
+              break;
+            }
+          }
+          if (!matchedRow) {
+            matchedRow = candidates.find(c => 
+              isConditionAll(c.sanPham) && 
+              isConditionAll(c.loaiCan) && 
+              isConditionAll(c.khoangGia)
+            ) || candidates[0];
+          }
+
+          if (matchedRow && matchedRow.score !== '' && matchedRow.score !== null && !isNaN(matchedRow.score) && Number(matchedRow.score) > 0) {
+            baseScore = Number(matchedRow.score);
+            isCampaignMatched = true;
             break;
           }
-        }
-        if (!matchedRow) {
-          matchedRow = candidates.find(c => 
-            isConditionAll(c.sanPham) && 
-            isConditionAll(c.loaiCan) && 
-            isConditionAll(c.khoangGia)
-          ) || candidates[0];
-        }
-
-        if (matchedRow && matchedRow.score !== '' && matchedRow.score !== null && !isNaN(matchedRow.score) && Number(matchedRow.score) > 0) {
-          baseScore = Number(matchedRow.score);
-          isCampaignMatched = true;
         }
       }
     }
