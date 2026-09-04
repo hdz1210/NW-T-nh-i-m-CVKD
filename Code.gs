@@ -1150,7 +1150,7 @@ function saveCampaignData(payload) {
 
     // 2. Ghi Header bảng ở dòng 3 (15 cột)
     const headers = [
-      ['STT', 'Tên Chiến Dịch', 'Từ Ngày', 'Đến Ngày', 'Trạng Thái CĐ', 'Chủ đầu tư', 'Mã DA', 'Tên Dự Án', 'Miền', 'Trạng Thái DA', 'Sản Phẩm', 'Loại Căn', 'Khoảng Giá', 'Điểm Chiến Dịch', 'Ghi Chú']
+      ['STT', 'Tên Chiến Dịch', 'Từ Ngày', 'Đến Ngày', 'Trạng Thái Chiến Dịch', 'Chủ đầu tư', 'Mã Dự Án', 'Tên Dự Án', 'Miền', 'Trạng Thái Dự Án', 'Sản Phẩm', 'Loại Căn', 'Khoảng Giá', 'Điểm Chiến Dịch', 'Ghi Chú']
     ];
     cdSheet.getRange(3, 1, 1, 15).setValues(headers)
       .setFontFamily('Arial')
