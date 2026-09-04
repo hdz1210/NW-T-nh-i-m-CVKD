@@ -227,7 +227,6 @@ function onOpen() {
     .addItem('Quét & tính dòng chưa có điểm', 'autoTriggerOnDataChange')
     .addSeparator()
     .addItem('Đồng bộ / Thêm cột tháng', 'manualSyncCurrentMonth')
-    .addItem('Khởi tạo cấu hình', 'initMonthlyConfigSheets')
     .addItem('Cài đặt Trigger tự động', 'setupAutoTrigger')
     .addToUi();
 }

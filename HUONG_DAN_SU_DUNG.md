@@ -369,7 +369,6 @@ Hệ thống tích hợp sẵn menu **Cấu Hình Điểm** trực tiếp trên 
 | | **Tính lại toàn bộ điểm Data** | Quét và tính lại điểm hàng loạt cho toàn bộ hơn 5.000 dòng dữ liệu từ đầu đến cuối. |
 | | **Quét & tính dòng chưa có điểm** | Tự động dò tìm các dòng dữ liệu mà cột điểm đang còn trống để tính bù điểm nhanh chóng. |
 | **Tiện ích Quản trị viên** | **Đồng bộ / Thêm cột tháng** | Kiểm tra và chèn thêm cột tháng mới (nếu chưa có) kèm sao chép điểm từ tháng trước. |
-| | **Khởi tạo cấu hình** | Khởi tạo cấu trúc bảng trắng ban đầu cho 2 sheet `Tổng hợp` và `Dự án F2` (chỉ dùng khi lập file mới). |
 | | **Cài đặt Trigger tự động** | Kiểm tra và tái thiết lập hệ thống trigger tự động chạy ngầm (Trigger On-Edit & Trigger Hàng Ngày). |
 
 ---

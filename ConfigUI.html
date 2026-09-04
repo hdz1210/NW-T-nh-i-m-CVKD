@@ -2448,28 +2448,6 @@
         .manualSyncCurrentMonth();
     }
 
-    function confirmResetSheets() {
-      showConfirmModal({
-        
-        title: 'Khởi Tạo Khung 2 Sheet',
-        message: 'Thao tác này sẽ tạo khung bảng chuẩn (chưa có dữ liệu dòng) cho 2 Sheet "Tổng hợp" và "Dự án F2" để bạn bắt đầu nhập dữ liệu mới từ đầu.\n\nBạn có chắc chắn muốn thực hiện?',
-        confirmText: 'Khởi Tạo',
-        danger: false
-      }, function() {
-        showLoading('Đang tạo khung 2 sheet cấu hình...');
-        google.script.run
-          .withSuccessHandler(function() {
-            hideLoading();
-            showToast('Đã tạo khung 2 sheet cấu hình thành công!', false);
-            fetchData();
-          })
-          .withFailureHandler(function(err) {
-            hideLoading();
-            showToast('Lỗi khởi tạo sheet: ' + (err.message || err), true);
-          })
-          .initMonthlyConfigSheets();
-      });
-    }
 
     // ==========================================
     // CUSTOM AUTOCOMPLETE DROPLIST CHO MÃ DA, TÊN DA, CĐT
