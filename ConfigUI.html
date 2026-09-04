@@ -1112,7 +1112,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeEditRowModal()">Hủy</button>
-        <button type="button" class="btn btn-primary" onclick="submitEditRow()">Lưu Cập Nhật</button>
+        <button type="button" class="btn btn-primary" id="btnEditRowSubmit" onclick="submitEditRow()">Lưu Cập Nhật</button>
       </div>
     </div>
   </div>
@@ -1444,7 +1444,7 @@
           <td class="freeze-col-actions">
             <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
               <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('th', ${r.rowIdx})" title="Chỉnh sửa dòng này">✏️</button>
-              <button type="button" class="btn-action" style="color:#ea580c; border-color:#fdba74; background:#fff7ed;" onclick="pickThRowToCampaign(${r.rowIdx})" title="Sao chép dòng này sang Điểm Chiến Dịch">🔥</button>
+              <button type="button" class="btn-action" style="color:#ea580c; border-color:#fdba74; background:#fff7ed;" onclick="pickThRowToCampaign(${r.rowIdx})" title="Thêm vào chiến dịch">🔥</button>
               <button type="button" class="btn-action btn-action-del" onclick="deleteRow('th', ${r.rowIdx}, '${escapeHtml(r.code)} - ${escapeHtml(r.name)}')" title="Xóa dòng này">🗑️</button>
             </div>
           </td>
@@ -2699,7 +2699,9 @@
         const giaVal = (row.khoangGia && row.khoangGia !== '*' && row.khoangGia !== 'Tất cả') ? row.khoangGia : 'Tất cả';
         const parsedPrice = parseKhoangGiaToMinMax(row.khoangGia);
 
-        title.innerText = isCopy ? `🔥 Sao Chép Vào Chiến Dịch: ${row.code} (${row.name})` : `✏️ Sửa Dự Án Chiến Dịch: ${row.code} (${row.name})`;
+        title.innerText = isCopy ? `🔥 Thêm Vào Chiến Dịch: ${row.code} (${row.name})` : `✏️ Sửa Dự Án Chiến Dịch: ${row.code} (${row.name})`;
+        const submitBtn = document.getElementById('btnEditRowSubmit');
+        if (submitBtn) submitBtn.innerText = isCopy ? '🔥 Thêm Vào Chiến Dịch' : 'Lưu Cập Nhật';
         body.innerHTML = `
           <input type="hidden" id="editRowIdx" value="${rowIdx}">
           <input type="hidden" id="editTab" value="${tab}">
@@ -2849,6 +2851,8 @@
         });
 
         title.innerText = `✏️ Sửa Dự Án: ${row.code} (${row.name})`;
+        const submitBtnTH = document.getElementById('btnEditRowSubmit');
+        if (submitBtnTH) submitBtnTH.innerText = 'Lưu Cập Nhật';
         body.innerHTML = `
           <input type="hidden" id="editRowIdx" value="${rowIdx}">
           <input type="hidden" id="editTab" value="th">
@@ -2974,6 +2978,8 @@
         if (!row) { showToast('Không tìm thấy dòng F2!', true); return; }
 
         title.innerText = `✏️ Sửa Dự Án Quỹ Chéo: ${row.name}`;
+        const submitBtnF2 = document.getElementById('btnEditRowSubmit');
+        if (submitBtnF2) submitBtnF2.innerText = 'Lưu Cập Nhật';
         body.innerHTML = `
           <input type="hidden" id="editRowIdx" value="${rowIdx}">
           <input type="hidden" id="editTab" value="f2">
