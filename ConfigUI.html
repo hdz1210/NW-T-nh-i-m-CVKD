@@ -910,6 +910,9 @@
           <span>💾</span> Lưu Thay Đổi
           <span class="btn-badge" id="saveBadge" style="display:none;">0</span>
         </button>
+        <button type="button" class="btn btn-secondary" onclick="attemptCloseApp()" style="color: var(--danger); border-color: #fca5a5; background: #fff; font-weight: 700;" title="Đóng cửa sổ Bảng Cấu Hình">
+          <span>✕</span> Đóng
+        </button>
       </div>
     </header>
 
@@ -1123,6 +1126,25 @@
       <div style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
         <button type="button" class="btn btn-secondary" style="min-width: 100px;" onclick="closeCustomConfirm(false)">Hủy</button>
         <button type="button" class="btn btn-primary" id="btnConfirmAccept" style="min-width: 100px;" onclick="closeCustomConfirm(true)">Đồng Ý</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cảnh Báo Chưa Lưu Cấu Hình (Lưu - Vẫn Đóng) -->
+  <div class="modal-backdrop" id="unsavedPromptModal" style="z-index: 1000;">
+    <div class="modal-content" style="max-width: 440px; text-align: center; padding: 28px 24px; gap: 14px;">
+      <div style="font-size: 44px; line-height: 1;">⚠️</div>
+      <div style="font-size: 18px; font-weight: 800; color: var(--text-primary);">Bạn chưa lưu cấu hình!</div>
+      <div id="unsavedPromptDesc" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; white-space: pre-line;">
+        Các cấu hình vừa thực hiện chưa được lưu vào Google Sheets. Bạn có muốn lưu lại trước khi đóng không?
+      </div>
+      <div style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
+        <button type="button" class="btn btn-primary" id="btnUnsavedPromptSave" onclick="onUnsavedPromptSave()" style="min-width: 110px; font-weight: 800; background: var(--brand);">
+          <span>💾</span> Lưu
+        </button>
+        <button type="button" class="btn btn-secondary" id="btnUnsavedPromptDiscard" onclick="onUnsavedPromptDiscard()" style="min-width: 110px; font-weight: 700; color: var(--danger); border-color: #fca5a5; background: #fff;">
+          <span>✕</span> Vẫn đóng
+        </button>
       </div>
     </div>
   </div>
@@ -1416,11 +1438,23 @@
       document.getElementById('metaCampaignName').value = camp.name || '';
       document.getElementById('metaCampaignStartDate').value = camp.startDate || '';
       document.getElementById('metaCampaignEndDate').value = camp.endDate || '';
-      document.getElementById('metaCampaignStatus').value = (camp.status === 'Tạm dừng') ? 'Tạm dừng' : 'Đang chạy';
+      document.getElementById('metaCampaignStatus').value = 'Đang chạy';
       modal.style.display = 'flex';
     }
 
-    function closeEditCampaignMetaModal() {
+    function closeEditCampaignMetaModal(force) {
+      if (!force) {
+        showUnsavedPrompt({
+          desc: 'Bạn chưa lưu thông tin chiến dịch vừa chỉnh sửa. Bạn có muốn lưu lại trước khi đóng không?',
+          onSave: function() {
+            submitCampaignMetaModal();
+          },
+          onDiscard: function() {
+            closeEditCampaignMetaModal(true);
+          }
+        });
+        return;
+      }
       const modal = document.getElementById('editCampaignMetaModal');
       if (modal) modal.style.display = 'none';
     }
@@ -1451,7 +1485,7 @@
       configData.campaign.endDate = end;
       configData.campaign.status = status;
 
-      closeEditCampaignMetaModal();
+      closeEditCampaignMetaModal(true);
       markCampaignDirty();
       updateCampaignBanner();
       renderStats();
@@ -2566,7 +2600,7 @@
         const campName = camp.name || '';
         const campStart = camp.startDate || '';
         const campEnd = camp.endDate || '';
-        const campStatus = camp.status || 'Đang chạy';
+        const campStatus = 'Đang chạy';
 
         container.innerHTML = `
           <!-- Khối Cấu Hình Chiến Dịch (Tên & Date Range) -->
@@ -2587,8 +2621,8 @@
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="addCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
                 <select class="filter-select" id="addCampaignStatus" style="border-color: #fdba74; font-weight: 700;">
-                  <option value="Đang chạy" ${campStatus !== 'Tạm dừng' ? 'selected' : ''}>🟢 Đang chạy</option>
-                  <option value="Tạm dừng" ${campStatus === 'Tạm dừng' ? 'selected' : ''}>⏸️ Tạm dừng</option>
+                  <option value="Đang chạy" selected>🟢 Đang chạy</option>
+                  <option value="Tạm dừng">⏸️ Tạm dừng</option>
                 </select>
               </div>
             </div>
@@ -2854,7 +2888,22 @@
       }
     }
 
-    function closeAddRowModal() {
+    function closeAddRowModal(force) {
+      if (!force) {
+        const fundType = document.getElementById('addFundType') ? document.getElementById('addFundType').value : activeTab;
+        if (fundType === 'campaign') {
+          showUnsavedPrompt({
+            desc: 'Bạn đang tạo dòng cấu hình chiến dịch mới và chưa bấm lưu. Bạn có muốn lưu trước khi đóng không?',
+            onSave: function() {
+              submitAddRow();
+            },
+            onDiscard: function() {
+              closeAddRowModal(true);
+            }
+          });
+          return;
+        }
+      }
       document.getElementById('addRowModal').style.display = 'none';
     }
 
@@ -2920,7 +2969,7 @@
         };
 
         configData.campaign.rows.push(newRow);
-        closeAddRowModal();
+        closeAddRowModal(true);
         markCampaignDirty();
         updateCampaignBanner();
         renderStats();
@@ -3008,7 +3057,7 @@
         }
       }
 
-      closeAddRowModal();
+      closeAddRowModal(true);
       updateUnsavedBadge();
       renderStats();
       renderTable();
@@ -3039,7 +3088,7 @@
         const campName = camp.name || '';
         const campStart = camp.startDate || '';
         const campEnd = camp.endDate || '';
-        const campStatus = camp.status || 'Đang chạy';
+        const campStatus = 'Đang chạy';
 
         title.innerText = isCopy ? `🔥 Thêm Vào Chiến Dịch: ${row.code} (${row.name})` : `✏️ Sửa Dự Án Chiến Dịch: ${row.code} (${row.name})`;
         const submitBtn = document.getElementById('btnEditRowSubmit');
@@ -3066,8 +3115,8 @@
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="editCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
                 <select class="filter-select" id="editCampaignStatus" style="border-color: #fdba74; font-weight: 700;">
-                  <option value="Đang chạy" ${campStatus !== 'Tạm dừng' ? 'selected' : ''}>🟢 Đang chạy</option>
-                  <option value="Tạm dừng" ${campStatus === 'Tạm dừng' ? 'selected' : ''}>⏸️ Tạm dừng</option>
+                  <option value="Đang chạy" selected>🟢 Đang chạy</option>
+                  <option value="Tạm dừng">⏸️ Tạm dừng</option>
                 </select>
               </div>
             </div>
@@ -3374,7 +3423,22 @@
       modal.style.display = 'flex';
     }
 
-    function closeEditRowModal() {
+    function closeEditRowModal(force) {
+      if (!force) {
+        const tab = document.getElementById('editTab') ? document.getElementById('editTab').value : '';
+        if (tab === 'campaign-copy' || tab === 'campaign') {
+          showUnsavedPrompt({
+            desc: 'Bạn đang thiết lập cấu hình dòng chiến dịch và chưa bấm lưu. Bạn có muốn lưu trước khi đóng không?',
+            onSave: function() {
+              submitEditRow();
+            },
+            onDiscard: function() {
+              closeEditRowModal(true);
+            }
+          });
+          return;
+        }
+      }
       document.getElementById('editRowModal').style.display = 'none';
     }
 
@@ -3442,7 +3506,7 @@
         };
 
         configData.campaign.rows.push(newRow);
-        closeEditRowModal();
+        closeEditRowModal(true);
         markCampaignDirty();
         updateCampaignBanner();
         renderStats();
@@ -3509,7 +3573,7 @@
         row.khoangGia = vals.khoangGia;
         if (scoreEl) row.score = parseFloat(scoreEl.value) || 0;
 
-        closeEditRowModal();
+        closeEditRowModal(true);
         markCampaignDirty();
         updateCampaignBanner();
         renderStats();
@@ -3534,7 +3598,7 @@
             hideLoading();
             if (res && res.success) {
               showToast('Đã cập nhật dự án thành công!', false);
-              closeEditRowModal();
+              closeEditRowModal(true);
               fetchData();
             } else {
               showToast('Lỗi cập nhật: ' + (res ? res.error : ''), true);
@@ -3561,7 +3625,7 @@
             hideLoading();
             if (res && res.success) {
               showToast('Đã cập nhật dự án F2 thành công!', false);
-              closeEditRowModal();
+              closeEditRowModal(true);
               fetchData();
             } else {
               showToast('Lỗi cập nhật: ' + (res ? res.error : ''), true);
@@ -3632,6 +3696,153 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
     }
+
+    // =========================================================================
+    // XỬ LÝ CẢNH BÁO CHƯA LƯU CẤU HÌNH & ĐÓNG APP SCRIPT
+    // =========================================================================
+    let pendingUnsavedAction = null;
+
+    function showUnsavedPrompt(options) {
+      pendingUnsavedAction = options || {};
+      const modal = document.getElementById('unsavedPromptModal');
+      const descEl = document.getElementById('unsavedPromptDesc');
+      if (descEl && options && options.desc) {
+        descEl.innerText = options.desc;
+      }
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeUnsavedPrompt() {
+      const modal = document.getElementById('unsavedPromptModal');
+      if (modal) modal.style.display = 'none';
+      pendingUnsavedAction = null;
+    }
+
+    function onUnsavedPromptSave() {
+      if (pendingUnsavedAction && typeof pendingUnsavedAction.onSave === 'function') {
+        const fn = pendingUnsavedAction.onSave;
+        closeUnsavedPrompt();
+        fn();
+      } else {
+        closeUnsavedPrompt();
+      }
+    }
+
+    function onUnsavedPromptDiscard() {
+      if (pendingUnsavedAction && typeof pendingUnsavedAction.onDiscard === 'function') {
+        const fn = pendingUnsavedAction.onDiscard;
+        closeUnsavedPrompt();
+        fn();
+      } else {
+        closeUnsavedPrompt();
+      }
+    }
+
+    function hasUnsavedChanges() {
+      const campDirty = (typeof isCampaignDirty !== 'undefined' && isCampaignDirty === true);
+      const dataDirty = (typeof modifiedCellsTH !== 'undefined' && modifiedCellsTH.size > 0) ||
+                        (typeof modifiedCellsF2 !== 'undefined' && modifiedCellsF2.size > 0) ||
+                        (typeof newRowsTH !== 'undefined' && newRowsTH.length > 0) ||
+                        (typeof newRowsF2 !== 'undefined' && newRowsF2.length > 0);
+      return campDirty || dataDirty;
+    }
+
+    function attemptCloseApp() {
+      if (hasUnsavedChanges()) {
+        showUnsavedPrompt({
+          desc: 'Các thay đổi cấu hình điểm chưa được lưu vào Google Sheets. Bạn có muốn lưu lại trước khi đóng App Script không?',
+          onSave: function() {
+            saveEverythingAndClose();
+          },
+          onDiscard: function() {
+            google.script.host.close();
+          }
+        });
+      } else {
+        google.script.host.close();
+      }
+    }
+
+    function saveEverythingAndClose() {
+      showLoading('Đang lưu cấu hình trước khi đóng App Script...');
+
+      const doSaveCampaign = (next) => {
+        if (isCampaignDirty && configData.campaign) {
+          const camp = configData.campaign;
+          const name = (camp.name || '').trim();
+          const startDate = camp.startDate || '';
+          const endDate = camp.endDate || '';
+          const status = camp.status || 'Đang chạy';
+
+          if (name) {
+            const payload = {
+              name: name,
+              startDate: startDate,
+              endDate: endDate,
+              status: status,
+              rows: configData.campaign.rows || []
+            };
+            google.script.run
+              .withSuccessHandler(function() {
+                isCampaignDirty = false;
+                next();
+              })
+              .withFailureHandler(function(err) {
+                hideLoading();
+                showToast('Lỗi khi lưu chiến dịch: ' + (err.message || err), true);
+              })
+              .saveCampaignData(payload);
+            return;
+          }
+        }
+        next();
+      };
+
+      const doSaveMonthly = (next) => {
+        const thUpdates = Array.from(modifiedCellsTH.values());
+        const f2Updates = Array.from(modifiedCellsF2.values());
+        if (thUpdates.length > 0 || f2Updates.length > 0 || newRowsTH.length > 0 || newRowsF2.length > 0) {
+          const payload = {
+            thCellUpdates: thUpdates,
+            f2CellUpdates: f2Updates,
+            newRowsTH: newRowsTH,
+            newRowsF2: newRowsF2,
+            thMonths: configData.thMonths,
+            f2Months: configData.f2Months
+          };
+          google.script.run
+            .withSuccessHandler(function() {
+              modifiedCellsTH.clear();
+              modifiedCellsF2.clear();
+              newRowsTH.length = 0;
+              newRowsF2.length = 0;
+              next();
+            })
+            .withFailureHandler(function(err) {
+              hideLoading();
+              showToast('Lỗi khi lưu bảng Tổng hợp / F2: ' + (err.message || err), true);
+            })
+            .saveMonthlyConfigData(payload);
+          return;
+        }
+        next();
+      };
+
+      doSaveCampaign(function() {
+        doSaveMonthly(function() {
+          hideLoading();
+          google.script.host.close();
+        });
+      });
+    }
+
+    window.addEventListener('beforeunload', function(e) {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = 'Bạn chưa lưu cấu hình!';
+        return 'Bạn chưa lưu cấu hình!';
+      }
+    });
   </script>
 </body>
 </html>
