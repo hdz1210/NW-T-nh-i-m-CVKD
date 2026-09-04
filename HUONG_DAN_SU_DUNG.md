@@ -66,33 +66,33 @@ Sơ đồ thể hiện cách bộ máy tính điểm xử lý từng dòng dữ 
 
 ```mermaid
 flowchart TD
-    Start([Dòng giao dịch mới trong sheet DATA]) --> CheckFund{Kiểm tra Loại Quỹ\nCột Z}
+    Start(["Dòng giao dịch mới trong sheet DATA"]) --> CheckFund{"Kiểm tra Loại Quỹ (Cột Z)"}
     
-    CheckFund -- Trống / Chưa điền --> NoScore[Bỏ qua, không tính điểm]
+    CheckFund -- "Trống / Chưa điền" --> NoScore["Bỏ qua, không tính điểm"]
     
-    CheckFund -- Quỹ NW hoặc Quỹ chéo --> CheckCampaign{1. Kiểm tra Điểm Chiến Dịch\n- Có chiến dịch 'Đang chạy'?\n- Ngày GD thuộc [Từ ngày - Đến ngày]?\n- Khớp Mã DA & 3 Tiêu chí?}
+    CheckFund -- "Quỹ NW hoặc Quỹ chéo" --> CheckCampaign{"1. Kiểm tra Điểm Chiến Dịch:<br/>- Có chiến dịch Đang chạy?<br/>- Ngày GD trong thời gian chiến dịch?<br/>- Khớp Mã DA và 3 Tiêu chí?"}
     
-    CheckCampaign -- Khớp Chiến Dịch --> ApplyCampScore[LẤY ĐIỂM CHIẾN DỊCH\nƯu tiên số 1 - Đè điểm tháng]
+    CheckCampaign -- "Khớp Chiến Dịch" --> ApplyCampScore["LẤY ĐIỂM CHIẾN DỊCH<br/>(Ưu tiên số 1 - Đè điểm tháng)"]
     
-    CheckCampaign -- Không khớp --> CheckFundType{2. Tra cứu theo Loại Quỹ & Tháng GD}
+    CheckCampaign -- "Không khớp" --> CheckFundType{"2. Tra cứu theo Loại Quỹ và Tháng GD"}
     
-    CheckFundType -- Quỹ NW --> MatchTH{Khớp Bảng Tổng Hợp:\n1. Mã Dự Án\n2. Sản Phẩm: Cao tầng/Thấp tầng/*\n3. Loại Căn: Studio/1PN/2PN/*\n4. Khoảng Giá: Min-Max, Tiền đất\n5. Cột Tháng tương ứng}
+    CheckFundType -- "Quỹ NW" --> MatchTH{"Khớp Bảng Tổng Hợp:<br/>1. Mã Dự Án<br/>2. Sản Phẩm: Cao tầng, Thấp tầng, Tất cả<br/>3. Loại Căn: Studio, 1PN, 2PN...<br/>4. Khoảng Giá: Min-Max, Tiền đất<br/>5. Cột Tháng tương ứng"}
     
-    MatchTH -- Khớp dòng cấu hình --> ApplyTHScore[LẤY ĐIỂM QUỸ NW\nTheo tháng giao dịch]
-    MatchTH -- Không khớp dòng nào --> DefaultTH[Lấy điểm cơ sở mặc định / 0]
+    MatchTH -- "Khớp dòng cấu hình" --> ApplyTHScore["LẤY ĐIỂM QUỸ NW<br/>(Theo tháng giao dịch)"]
+    MatchTH -- "Không khớp dòng nào" --> DefaultTH["Lấy điểm cơ sở mặc định hoặc 0"]
     
-    CheckFundType -- Quỹ chéo --> MatchF2{Khớp Bảng Dự Án F2:\n1. Tên Dự Án F2\n2. Cột Tháng tương ứng}
+    CheckFundType -- "Quỹ chéo" --> MatchF2{"Khớp Bảng Dự Án F2:<br/>1. Tên Dự Án F2<br/>2. Cột Tháng tương ứng"}
     
-    MatchF2 -- Khớp tên dự án --> ApplyF2Score[LẤY ĐIỂM QUỸ CHÉO\nTheo tháng giao dịch]
-    MatchF2 -- Không khớp --> DefaultF2[Điểm = 0]
+    MatchF2 -- "Khớp tên dự án" --> ApplyF2Score["LẤY ĐIỂM QUỸ CHÉO<br/>(Theo tháng giao dịch)"]
+    MatchF2 -- "Không khớp" --> DefaultF2["Điểm = 0"]
     
-    ApplyCampScore --> WriteScore[Ghi điểm vào Cột X / AA trên sheet DATA]
+    ApplyCampScore --> WriteScore["Ghi điểm vào Cột X / AA trên sheet DATA"]
     ApplyTHScore --> WriteScore
     DefaultTH --> WriteScore
     ApplyF2Score --> WriteScore
     DefaultF2 --> WriteScore
     
-    WriteScore --> End([Hoàn tất tính điểm])
+    WriteScore --> End(["Hoàn tất tính điểm"])
 ```
 
 ---
@@ -103,22 +103,22 @@ Sơ đồ thao tác người dùng khi quản lý và chỉnh sửa điểm số
 
 ```mermaid
 flowchart TD
-    OpenUI[Bấm Menu: Cấu Hình Điểm -> Bảng Cấu Hình Điểm] --> LoadData[Hệ thống tải dữ liệu 3 bảng & tự đồng bộ tháng mới]
-    LoadData --> ViewTab{Chọn Tab Quản Lý}
+    OpenUI["Mở Bảng Cấu Hình Điểm từ Menu Google Sheets"] --> LoadData["Hệ thống tải dữ liệu 3 bảng và tự đồng bộ tháng mới"]
+    LoadData --> ViewTab{"Chọn Tab Quản Lý"}
     
-    ViewTab -- Tab Bảng Tổng Hợp --> EditTH[1. Nhập điểm trực tiếp trên ô ma trận tháng\n2. Bấm 'Sửa' để đổi 3 tiêu chí khớp\n3. Bấm icon Ngọn Lửa để đưa vào Chiến Dịch\n4. Bấm 'Thêm Dòng Mới' để tạo dự án mới]
+    ViewTab -- "Tab Bảng Tổng Hợp" --> EditTH["1. Nhập điểm trực tiếp trên ô ma trận tháng<br/>2. Bấm Sửa để đổi 3 tiêu chí khớp<br/>3. Bấm icon Ngọn Lửa để đưa vào Chiến Dịch<br/>4. Bấm Thêm Dòng Mới để tạo dự án mới"]
     
-    ViewTab -- Tab Dự Án F2 --> EditF2[1. Nhập điểm trực tiếp trên ô ma trận tháng\n2. Bấm 'Sửa' để đổi tên dự án\n3. Bấm 'Thêm Dòng Mới' để thêm dự án F2]
+    ViewTab -- "Tab Dự Án F2" --> EditF2["1. Nhập điểm trực tiếp trên ô ma trận tháng<br/>2. Bấm Sửa để đổi tên dự án<br/>3. Bấm Thêm Dòng Mới để thêm dự án F2"]
     
-    ViewTab -- Tab Điểm Chiến Dịch --> EditCamp[1. Chọn bộ lọc chiến dịch\n2. Bấm 'Đổi Tên / Thời Gian' để sửa ngày áp dụng\n3. Bấm 'Tạo Dòng Mới' hoặc 'Chọn Dòng Từ Tổng Hợp'\n4. Nhập điểm chiến dịch cho từng dự án]
+    ViewTab -- "Tab Điểm Chiến Dịch" --> EditCamp["1. Chọn bộ lọc chiến dịch<br/>2. Bấm Đổi Tên / Thời Gian để sửa ngày áp dụng<br/>3. Bấm Tạo Dòng Mới hoặc Chọn Dòng Từ Tổng Hợp<br/>4. Nhập điểm chiến dịch cho từng dự án"]
     
-    EditTH --> CheckDirty[Hệ thống phát hiện thay đổi:\n- Đổi màu ô vàng/cam\n- Tăng bộ đếm 'Thay đổi chưa lưu']
+    EditTH --> CheckDirty["Hệ thống phát hiện thay đổi:<br/>- Đổi màu ô viền cam/vàng<br/>- Tăng bộ đếm Thay đổi chưa lưu"]
     EditF2 --> CheckDirty
     EditCamp --> CheckDirty
     
-    CheckDirty --> ClickSave[Bấm nút 'Lưu Thay Đổi']
-    ClickSave --> BatchSave[Ghi hàng loạt xuống Google Sheets\nChuẩn hóa định dạng số .0 và .5]
-    BatchSave --> SuccessToast[Thông báo 'Lưu thay đổi thành công!']
+    CheckDirty --> ClickSave["Bấm nút Lưu Thay Đổi"]
+    ClickSave --> BatchSave["Ghi hàng loạt xuống Google Sheets<br/>Chuẩn hóa định dạng số .0 và .5"]
+    BatchSave --> SuccessToast["Thông báo: Lưu thay đổi thành công!"]
 ```
 
 ---
@@ -129,14 +129,14 @@ Hệ thống hoạt động hoàn toàn tự động khi bước sang chu kỳ t
 
 ```mermaid
 flowchart TD
-    TriggerStart[Trigger 1h sáng ngày mùng 1 hàng tháng\nHOẶC khi Người dùng mở Bảng Cấu Hình] --> CheckMonth{Kiểm tra cột tháng hiện tại\nVí dụ: Tháng 10/2026 đã có chưa?}
+    TriggerStart["Trigger 1h sáng ngày mùng 1 hàng tháng<br/>HOẶC khi mở Bảng Cấu Hình"] --> CheckMonth{"Kiểm tra cột tháng hiện tại<br/>(Ví dụ: Tháng 10/2026 đã có chưa?)"}
     
-    CheckMonth -- Đã tồn tại --> NoAction[Giữ nguyên cấu hình, không chèn thêm]
+    CheckMonth -- "Đã tồn tại" --> NoAction["Giữ nguyên cấu hình, không chèn thêm"]
     
-    CheckMonth -- Chưa có --> InsertCol[1. Tự động chèn cột tháng mới vào vị trí đầu tiên]
-    InsertCol --> CopyScores[2. Sao chép toàn bộ điểm số từ tháng trước sang tháng mới]
-    CopyScores --> FormatCol[3. Định dạng chuẩn mm/yyyy và gắn nhãn 'MỚI NHẤT']
-    FormatCol --> DoneSync[Sẵn sàng tính điểm cho tháng mới mà không cần thao tác tay]
+    CheckMonth -- "Chưa có" --> InsertCol["1. Tự động chèn cột tháng mới vào vị trí đầu tiên"]
+    InsertCol --> CopyScores["2. Sao chép toàn bộ điểm số từ tháng trước sang tháng mới"]
+    CopyScores --> FormatCol["3. Định dạng chuẩn mm/yyyy và gắn nhãn MỚI NHẤT"]
+    FormatCol --> DoneSync["Sẵn sàng tính điểm cho tháng mới mà không cần thao tác tay"]
 ```
 
 ---
