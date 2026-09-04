@@ -32,7 +32,6 @@ Hệ thống **Tính Điểm CVKD Tự Động** được thiết kế để tha
 - **Tự động hóa 100%**: Điểm được tính ngay lập tức khi phát sinh giao dịch mới mà không cần kéo công thức.
 - **Quản lý đa tháng linh hoạt**: Theo dõi lịch sử thay đổi điểm số theo từng tháng độc lập (ma trận điểm).
 - **Hỗ trợ đa chiến dịch đồng thời (Multi-Campaign)**: Thiết lập các chiến dịch bán hàng ngắn hạn với thời gian và điều kiện áp dụng riêng biệt.
-- **Không hardcode**: Người dùng quản trị có thể tự thêm dự án, sửa điều kiện, điều chỉnh điểm số mà không cần biết lập trình.
 
 ---
 
@@ -55,11 +54,6 @@ Google Spreadsheet
 | **Bảng Tổng Hợp (Quỹ NW)** | `Tổng hợp` | Các giao dịch thuộc Quỹ NW (Cột Z = `Quỹ NW`) | Mã dự án + Tháng GD + 3 tiêu chí: Sản phẩm, Loại căn, Khoảng giá |
 | **Dự Án F2 (Quỹ Chéo)** | `Dự án F2` | Các giao dịch quỹ chéo liên kết (Cột Z = `Quỹ chéo`) | Tên dự án F2 + Tháng giao dịch |
 | **Điểm Chiến Dịch** | `Điểm chiến dịch` | Các giao dịch diễn ra trong đợt thi đua / sự kiện bán hàng | Ngày GD thuộc [Từ Ngày -> Đến Ngày] + Trạng thái `Đang chạy` + Khớp dự án & 3 tiêu chí |
-
----
-
-> [!TIP]
-> Toàn bộ quá trình điền, chỉnh sửa điểm và thiết lập điều kiện được thực hiện hoàn toàn trên giao diện trực quan **Web UI**. Khi bấm **Lưu Thay Đổi**, hệ thống sẽ tự động xuất và ghi dữ liệu chuẩn hóa sang 3 sheet trên Google Sheets. Xem hình ảnh cấu trúc chi tiết của từng sheet sau khi lưu tại [Mục 4.6: Kết Quả Đồng Bộ Sang Google Sheets Sau Khi Lưu](#46-kết-quả-đồng-bộ-sang-google-sheets-sau-khi-lưu).
 
 ---
 
