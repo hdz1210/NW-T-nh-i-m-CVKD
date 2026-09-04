@@ -218,17 +218,17 @@ function cleanScore(val) {
  */
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('🎯 Cấu Hình Cơ Chế')
-    .addItem('⚙️ Mở Bảng Cấu Hình Điểm Theo Tháng (UI)', 'openConfigUI')
-    .addItem('📊 Trình Tạo Biểu Đồ & Báo Cáo (BI)', 'openChartBuilderUI')
+    .createMenu('🎯 Cấu Hình')
+    .addItem('⚙️ Bảng Cấu Hình Điểm', 'openConfigUI')
+    .addItem('📊 Trình Tạo Biểu Đồ & Báo Cáo', 'openChartBuilderUI')
     .addSeparator()
-    .addItem('📌 [Option 2] Tính điểm dòng đang chọn / dòng mới', 'calculateSelectedRows')
-    .addItem('⚡ [Option 1] Tính lại toàn bộ điểm Data (Tất cả dòng)', 'calculateAllScoresWithRules')
-    .addItem('🔍 Quét & tính tất cả dòng chưa có điểm', 'autoTriggerOnDataChange')
+    .addItem('📌 Tính điểm dòng chọn / mới', 'calculateSelectedRows')
+    .addItem('⚡ Tính lại toàn bộ điểm Data', 'calculateAllScoresWithRules')
+    .addItem('🔍 Quét & tính dòng chưa có điểm', 'autoTriggerOnDataChange')
     .addSeparator()
-    .addItem('📅 Đồng bộ / Thêm cột tháng hiện tại', 'manualSyncCurrentMonth')
-    .addItem('🛠️ Khởi tạo khung 2 Sheet Cấu hình (Tổng hợp & Dự án F2)', 'initMonthlyConfigSheets')
-    .addItem('🔧 Cài đặt Trigger tự động (chạy 1 lần)', 'setupAutoTrigger')
+    .addItem('📅 Đồng bộ / Thêm cột tháng', 'manualSyncCurrentMonth')
+    .addItem('🛠️ Khởi tạo cấu hình', 'initMonthlyConfigSheets')
+    .addItem('🔧 Cài đặt Trigger tự động', 'setupAutoTrigger')
     .addToUi();
 }
 
@@ -239,8 +239,8 @@ function openConfigUI() {
   const html = HtmlService.createHtmlOutputFromFile('ConfigUI')
     .setWidth(1400)
     .setHeight(840)
-    .setTitle('Quản Lý Cơ Chế Điểm Dự Án Theo Thời Gian');
-  SpreadsheetApp.getUi().showModalDialog(html, '⚙️ Bảng Cấu Hình Điểm Dự Án Theo Thời Gian');
+    .setTitle('⚙️ Bảng Cấu Hình Điểm');
+  SpreadsheetApp.getUi().showModalDialog(html, '⚙️ Bảng Cấu Hình Điểm');
 }
 
 /**
