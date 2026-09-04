@@ -20,7 +20,6 @@ Tài liệu này cung cấp toàn bộ kiến trúc, sơ đồ luồng hoạt đ
    - [4.5. Lưu Thay Đổi An Toàn](#45-lưu-thay-đổi-an-toàn)
 5. [Cơ Chế Khớp & Thứ Tự Ưu Tiên Tính Điểm](#5-cơ-chế-khớp--thứ-tự-ưu-tiên-tính-điểm)
 6. [Hệ Thống Trigger Tự Động & Menu Tiện Ích](#6-hệ-thống-trigger-tự-động--menu-tiện-ích)
-7. [Câu Hỏi Thường Gặp & Xử Lý Sự Cố (FAQ)](#7-câu-hỏi-thường-gặp--xử-lý-sự-cố-faq)
 
 ---
 
@@ -313,19 +312,5 @@ Hệ thống tích hợp sẵn menu **Cấu Hình Điểm** trực tiếp trên 
 | | **Cài đặt Trigger tự động** | Kiểm tra và tái thiết lập hệ thống trigger tự động chạy ngầm (Trigger On-Edit & Trigger Hàng Ngày). |
 
 ---
-
-## 7. CÂU HỎI THƯỜNG GẶP & XỬ LÝ SỰ CỐ (FAQ)
-
-### Q1: Tại sao một giao dịch không được tính điểm (điểm trả về 0 hoặc trống)?
-- **Nguyên nhân 1**: Cột **Loại Quỹ (Cột Z)** trên sheet `DATA` chưa được điền (`Quỹ NW` hoặc `Quỹ chéo`). Hãy điền loại quỹ để hệ thống biết tra cứu vào bảng nào.
-- **Nguyên nhân 2**: Mã dự án hoặc Tên dự án bị sai chính tả so với bảng cấu hình.
-- **Nguyên nhân 3**: Tháng của giao dịch chưa được tạo cột trong bảng cấu hình (hãy mở Bảng Cấu Hình để hệ thống tự động sinh cột tháng).
-
-### Q2: Điểm chiến dịch có tự động dừng khi hết hạn không?
-- **Có**. Khi ngày hiện tại vượt quá ngày **Đến Ngày**, trạng thái chiến dịch tự động chuyển sang `Kết thúc` và hệ thống tự động quay về áp dụng điểm tháng thông thường.
-
-### Q3: Tôi có thể nhập điểm trực tiếp vào Google Sheets thay vì mở Web UI không?
-- **Có**. Dữ liệu trên Web UI và các Sheet `Tổng hợp`, `Dự án F2`, `Điểm chiến dịch` là hoàn toàn đồng bộ 2 chiều. Tuy nhiên, khuyến khích sử dụng Web UI để được tự động chuẩn hóa định dạng số, kiểm tra trùng lặp và tránh làm lệch cấu trúc cột.
-
----
 *Tài liệu được cập nhật tự động theo phiên bản Enterprise UI v2.0.*
+
