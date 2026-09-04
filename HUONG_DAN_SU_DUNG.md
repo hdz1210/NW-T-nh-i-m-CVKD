@@ -57,6 +57,67 @@ Google Spreadsheet
 
 ---
 
+### 2.1. Cấu Trúc Sheet "Tổng hợp" (Quỹ NW)
+
+Sheet `Tổng hợp` lưu trữ cấu hình ma trận điểm của các dự án thuộc Quỹ NW qua các tháng cùng 3 tiêu chí phân loại chi tiết:
+
+![Cấu trúc Sheet Tổng hợp](docs/images/sheet_tong_hop.png)
+
+*Hình ảnh: Cấu trúc sheet "Tổng hợp" trên Google Sheets - 9 cột thông tin cố định (từ Cột A đến Cột I) và các cột tháng điểm số từ Cột J trở đi.*
+
+- **Dòng 1 - 2**: Tiêu đề banner `THÔNG TIN ĐIỂM THEO DỰ ÁN` và nhóm tiêu đề `Tháng`.
+- **Dòng 3 (Header)**:
+  - **Cột A (Trạng thái)**: Tình trạng bán của dự án (`Đang bán`, `Sold out`).
+  - **Cột B (CĐT)**: Chủ đầu tư dự án (`Masterise`, `Vinhomes`...).
+  - **Cột C (Mã dự án)**: Mã nhận diện dự án (`MAS OCP2`, `MAS VGG`, `MLB`...).
+  - **Cột D (Dự án)**: Tên đầy đủ của dự án bất động sản.
+  - **Cột E (Miền)**: Phân vùng địa lý (`Miền Bắc`, `Miền Nam`, `Miền Trung`).
+  - **Cột F (Loại Quỹ)**: Luôn mang giá trị `Quỹ NW`.
+  - **Cột G (Sản Phẩm)**: Phân loại hình bất động sản (`Thấp tầng`, `Cao tầng`, hoặc `Tất cả`).
+  - **Cột H (Loại Căn)**: Phân loại căn hộ (`Studio`, `1PN`, `2PN`, `3PN`, `Duplex`, `Shophouse`, hoặc `Tất cả`).
+  - **Cột I (Khoảng Giá)**: Khoảng giá tính theo tỷ VNĐ (`<= 20`, `20 - 30`, `>= 30`, hoặc `Tất cả`).
+  - **Cột J trở đi (Ma trận tháng)**: Điểm số của từng tháng cụ thể (`09/2026`, `08/2026`, `07/2026`...). Cột tháng mới nhất luôn được tự động chèn ở vị trí Cột J.
+
+---
+
+### 2.2. Cấu Trúc Sheet "Dự án F2" (Quỹ Chéo)
+
+Sheet `Dự án F2` quản lý điểm số cho các dự án liên kết bán chéo theo cơ chế độc lập:
+
+![Cấu trúc Sheet Dự án F2](docs/images/sheet_du_an_f2.png)
+
+*Hình ảnh: Cấu trúc sheet "Dự án F2" trên Google Sheets - 2 cột thông tin cố định và ma trận điểm qua các tháng.*
+
+- **Dòng 2 - 3 (Header)**:
+  - **Cột A (Dự án)**: Tên dự án F2 (`The Gió`, `SBC`, `TFL`, `SCT`, `TPV`, `SFS`, `ER`...).
+  - **Cột B (Loại Quỹ)**: Luôn mang giá trị `Quỹ chéo`.
+  - **Cột C trở đi (Ma trận tháng)**: Điểm số áp dụng cho dự án theo từng tháng giao dịch.
+
+---
+
+### 2.3. Cấu Trúc Sheet "Điểm Chiến Dịch" (Multi-Campaign)
+
+Sheet `Điểm Chiến Dịch` quản lý các đợt thi đua, chiến dịch bán hàng thưởng nóng với độ ưu tiên cao nhất:
+
+![Cấu trúc Sheet Điểm Chiến Dịch](docs/images/sheet_diem_chien_dich.png)
+
+*Hình ảnh: Cấu trúc sheet "Điểm Chiến Dịch" trên Google Sheets - Danh sách các dòng dự án áp dụng trong từng chiến dịch cụ thể.*
+
+- **Dòng 1 - 2**: Banner `BẢNG QUẢN LÝ ĐIỂM CÁC CHIẾN DỊCH BÁN HÀNG` và phụ đề hướng dẫn.
+- **Dòng 3 (Header)**:
+  - **Cột A (STT)**: Số thứ tự cấu hình.
+  - **Cột B (Tên Chiến Dịch)**: Tên chiến dịch áp dụng (`chiến dịch 1`, `chiến dịch 2`, `TEST`...).
+  - **Cột C (Từ Ngày)**: Ngày bắt đầu có hiệu lực (định dạng `YYYY-MM-DD`).
+  - **Cột D (Đến Ngày)**: Ngày kết thúc hiệu lực (định dạng `YYYY-MM-DD`).
+  - **Cột E (Trạng Thái Chiến Dịch)**: `Đang chạy`, `Tạm dừng`, hoặc `Kết thúc`.
+  - **Cột F - I**: Thông tin CĐT, Mã dự án, Tên dự án, Miền.
+  - **Cột J**: Trạng thái dự án (`Đang bán`, `Sold out`).
+  - **Cột K - M (3 Tiêu chí khớp)**: Sản Phẩm, Loại Căn, Khoảng Giá tương tự Bảng Tổng Hợp.
+  - **Cột N (Điểm Chiến Dịch)**: Mức điểm áp dụng thay thế điểm tháng khi giao dịch khớp chiến dịch.
+  - **Cột O (Ghi Chú)**: Ghi chú nội bộ cho dòng cấu hình.
+
+---
+
 ## 3. SƠ ĐỒ LUỒNG HOẠT ĐỘNG (FLOWCHARTS)
 
 ### 3.1. Luồng Tính Điểm Tự Động Cho Giao Dịch
