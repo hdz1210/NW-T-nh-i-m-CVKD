@@ -3061,6 +3061,16 @@
       showToast('Đã thêm dòng mới vào danh sách tạm. Hãy bấm "Lưu Thay Đổi" để cập nhật vào Sheet!', false);
     }
 
+    function onCampaignNameSelect(val) {
+      const camp = configData.campaign;
+      if (camp && camp.name && val && val.trim().toLowerCase() === camp.name.trim().toLowerCase()) {
+        const startEl = document.getElementById('editCampaignStartDate');
+        const endEl = document.getElementById('editCampaignEndDate');
+        if (startEl && camp.startDate && !startEl.value) startEl.value = camp.startDate;
+        if (endEl && camp.endDate && !endEl.value) endEl.value = camp.endDate;
+      }
+    }
+
     function openEditRowModal(tab, rowIdx) {
       const modal = document.getElementById('editRowModal');
       const title = document.getElementById('modalEditTitle');
@@ -3082,9 +3092,9 @@
         const parsedPrice = parseKhoangGiaToMinMax(row.khoangGia);
 
         const camp = configData.campaign || { name: '', startDate: '', endDate: '', status: 'Đang chạy' };
-        const campName = camp.name || '';
-        const campStart = camp.startDate || '';
-        const campEnd = camp.endDate || '';
+        const campName = isCopy ? '' : (camp.name || '');
+        const campStart = isCopy ? '' : (camp.startDate || '');
+        const campEnd = isCopy ? '' : (camp.endDate || '');
         const campStatus = 'Đang chạy';
 
         title.innerText = isCopy ? `🔥 Thêm Vào Chiến Dịch: ${row.code} (${row.name})` : `✏️ Sửa Dự Án Chiến Dịch: ${row.code} (${row.name})`;
@@ -3107,7 +3117,10 @@
             <div class="form-row-2" style="margin-bottom: 8px;">
               <div class="form-group" style="flex: 2;">
                 <label class="field-label" for="editCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
-                <input type="text" class="filter-input" id="editCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" required>
+                <input type="text" class="filter-input" id="editCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" list="existingCampaignList" oninput="onCampaignNameSelect(this.value)" required>
+                <datalist id="existingCampaignList">
+                  ${camp.name ? `<option value="${escapeHtml(camp.name)}">` : ''}
+                </datalist>
               </div>
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="editCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
