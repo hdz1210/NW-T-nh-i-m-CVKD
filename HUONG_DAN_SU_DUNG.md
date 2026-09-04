@@ -1,6 +1,4 @@
-# HƯỚNG DẪN SỬ DỤNG & ĐÀO TẠO VẬN HÀNH HỆ THỐNG CẤU HÌNH TÍNH ĐIỂM CVKD
-
-Tài liệu này cung cấp toàn bộ kiến trúc, sơ đồ luồng hoạt động (flowcharts), quy tắc tính điểm và hướng dẫn chi tiết từng bước dành cho Quản lý, Chuyên viên Vận hành, Kế toán và Chuyên viên Kinh doanh (CVKD).
+# HỆ THỐNG CONFIG VÀ TÍNH ĐIỂM TỰ ĐỘNG CHO GOOGLE SHEET
 
 ---
 
