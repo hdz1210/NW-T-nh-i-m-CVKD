@@ -12,3 +12,6 @@ node_modules/
 # Large data files
 *.xlsx
 *.csv
+
+# Cache
+docs/images/mermaid_cache/
