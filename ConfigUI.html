@@ -1152,10 +1152,10 @@
         <div class="form-group">
           <label class="field-label" for="metaCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái Chiến Dịch</label>
           <select class="filter-select" id="metaCampaignStatus" style="width: 100%; border-color: #fdba74; font-weight: 700;">
-            <option value="Đang chạy">🟢 Đang chạy (Active)</option>
-            <option value="Tạm dừng">⏸️ Tạm dừng (Paused)</option>
-            <option value="Kết thúc">⚪ Kết thúc (Ended)</option>
+            <option value="Đang chạy">🟢 Đang chạy</option>
+            <option value="Tạm dừng">⏸️ Tạm dừng</option>
           </select>
+          <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">💡 Hệ thống tự động chuyển sang "Kết thúc" khi qua ngày Đến Ngày.</div>
         </div>
       </div>
       <div class="modal-footer">
@@ -1278,7 +1278,7 @@
       document.getElementById('badgeF2Count').innerText = configData.f2Rows.length;
 
       const camp = configData.campaign;
-      const campStatus = (camp && camp.status) ? camp.status : 'Chưa có';
+      const campStatus = getEffectiveCampaignStatus(camp);
       const campRowsCount = (camp && camp.rows) ? camp.rows.length : 0;
       const statCampEl = document.getElementById('statCampaignCount');
       if (statCampEl) {
@@ -1287,7 +1287,7 @@
         } else if (campStatus === 'Tạm dừng') {
           statCampEl.innerHTML = `<span style="color:var(--warning);font-weight:800;">⏸️ Tạm dừng</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
         } else {
-          statCampEl.innerHTML = `<span style="color:var(--text-tertiary);font-weight:700;">⚪ ${escapeHtml(campStatus)}</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
+          statCampEl.innerHTML = `<span style="color:var(--text-tertiary);font-weight:700;">⚪ Kết thúc</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
         }
       }
 
@@ -1346,6 +1346,25 @@
       return dStr;
     }
 
+    function getEffectiveCampaignStatus(camp) {
+      if (!camp) return 'Tạm dừng';
+      const rawStatus = camp.status || 'Đang chạy';
+      if (rawStatus === 'Tạm dừng') return 'Tạm dừng';
+
+      if (camp.endDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const parts = String(camp.endDate).split('-');
+        if (parts.length === 3) {
+          const endD = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 23, 59, 59, 999);
+          if (today > endD) {
+            return 'Kết thúc';
+          }
+        }
+      }
+      return 'Đang chạy';
+    }
+
     function updateCampaignBanner() {
       const camp = configData.campaign || {};
       const nameEl = document.getElementById('dispCampaignName');
@@ -1369,7 +1388,7 @@
         }
       }
       if (statusEl) {
-        const st = camp.status || 'Đang chạy';
+        const st = getEffectiveCampaignStatus(camp);
         if (st === 'Đang chạy') {
           statusEl.className = 'badge';
           statusEl.style = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;';
@@ -1381,7 +1400,7 @@
         } else {
           statusEl.className = 'badge';
           statusEl.style = 'background:var(--bg-muted); color:var(--text-tertiary); border:1px solid var(--border-subtle); font-weight:700;';
-          statusEl.innerText = '⚪ Kết thúc';
+          statusEl.innerText = '⚪ Kết thúc (Hết hạn)';
         }
       }
     }
@@ -1397,7 +1416,7 @@
       document.getElementById('metaCampaignName').value = camp.name || '';
       document.getElementById('metaCampaignStartDate').value = camp.startDate || '';
       document.getElementById('metaCampaignEndDate').value = camp.endDate || '';
-      document.getElementById('metaCampaignStatus').value = camp.status || 'Đang chạy';
+      document.getElementById('metaCampaignStatus').value = (camp.status === 'Tạm dừng') ? 'Tạm dừng' : 'Đang chạy';
       modal.style.display = 'flex';
     }
 
@@ -2568,9 +2587,8 @@
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="addCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
                 <select class="filter-select" id="addCampaignStatus" style="border-color: #fdba74; font-weight: 700;">
-                  <option value="Đang chạy" ${campStatus === 'Đang chạy' ? 'selected' : ''}>🟢 Đang chạy</option>
+                  <option value="Đang chạy" ${campStatus !== 'Tạm dừng' ? 'selected' : ''}>🟢 Đang chạy</option>
                   <option value="Tạm dừng" ${campStatus === 'Tạm dừng' ? 'selected' : ''}>⏸️ Tạm dừng</option>
-                  <option value="Kết thúc" ${campStatus === 'Kết thúc' ? 'selected' : ''}>⚪ Kết thúc</option>
                 </select>
               </div>
             </div>
@@ -3048,9 +3066,8 @@
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="editCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
                 <select class="filter-select" id="editCampaignStatus" style="border-color: #fdba74; font-weight: 700;">
-                  <option value="Đang chạy" ${campStatus === 'Đang chạy' ? 'selected' : ''}>🟢 Đang chạy</option>
+                  <option value="Đang chạy" ${campStatus !== 'Tạm dừng' ? 'selected' : ''}>🟢 Đang chạy</option>
                   <option value="Tạm dừng" ${campStatus === 'Tạm dừng' ? 'selected' : ''}>⏸️ Tạm dừng</option>
-                  <option value="Kết thúc" ${campStatus === 'Kết thúc' ? 'selected' : ''}>⚪ Kết thúc</option>
                 </select>
               </div>
             </div>

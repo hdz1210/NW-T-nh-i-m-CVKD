@@ -918,7 +918,7 @@ function fetchCampaignDataInternal(ss) {
     const name = String(metaVals[1] || '').trim();
     const rawStart = metaVals[3];
     const rawEnd = metaVals[5];
-    const status = String(metaVals[7] || 'Đang chạy').trim();
+    let status = String(metaVals[7] || 'Đang chạy').trim();
 
     let startDateStr = '';
     const dStart = parseDateSafe(rawStart);
@@ -927,6 +927,17 @@ function fetchCampaignDataInternal(ss) {
     let endDateStr = '';
     const dEnd = parseDateSafe(rawEnd);
     if (dEnd) endDateStr = formatDateSafe(dEnd, ss);
+
+    // Tự động kiểm tra ngày: Nếu ngày hiện tại vượt quá ngày kết thúc -> Tự động chuyển trạng thái thành Kết thúc!
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dEnd) {
+      const endCmp = new Date(dEnd);
+      endCmp.setHours(23, 59, 59, 999);
+      if (today > endCmp && status !== 'Tạm dừng') {
+        status = 'Kết thúc';
+      }
+    }
 
     const lastRow = cdSheet.getLastRow();
     const dataRows = cdSheet.getRange(4, 1, lastRow - 3, 11).getValues();
@@ -1009,7 +1020,18 @@ function saveCampaignData(payload) {
     const name = String(payload.name || '').trim();
     const startDate = String(payload.startDate || '').trim();
     const endDate = String(payload.endDate || '').trim();
-    const status = String(payload.status || 'Đang chạy').trim();
+    let status = String(payload.status || 'Đang chạy').trim();
+    if (status !== 'Tạm dừng' && endDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dEnd = parseDateSafe(endDate);
+      if (dEnd) {
+        dEnd.setHours(23, 59, 59, 999);
+        if (today > dEnd) {
+          status = 'Kết thúc';
+        }
+      }
+    }
     const rows = payload.rows || [];
 
     // 1. Ghi Metadata dòng 1
@@ -1213,7 +1235,7 @@ function getRuleEngineContext(ss) {
     const startDate = parseDateSafe(rawStart);
     const endDate = parseDateSafe(rawEnd);
 
-    if (cdStatus === 'Đang chạy' && startDate && endDate) {
+    if (cdStatus !== 'Tạm dừng' && startDate && endDate) {
       startDate.setHours(0, 0, 0, 0);
       endDate.setHours(23, 59, 59, 999);
 
