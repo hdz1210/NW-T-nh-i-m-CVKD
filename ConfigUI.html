@@ -658,10 +658,10 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 38px;
+      height: 36px;
       padding: 0 10px;
       background: #ffffff;
-      border: 1px solid var(--border-subtle);
+      border: 1px solid var(--border-strong);
       border-radius: var(--radius-md);
       cursor: pointer;
       font-size: var(--text-sm);
@@ -671,13 +671,13 @@
       box-sizing: border-box;
     }
     .multi-select-trigger:hover {
-      border-color: var(--border-strong);
+      border-color: var(--brand);
     }
     .multi-select-label {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 155px;
+      max-width: calc(100% - 18px);
       font-weight: 500;
     }
     .multi-select-arrow {
@@ -689,7 +689,8 @@
       position: absolute;
       top: 100%;
       left: 0;
-      width: 250px;
+      width: 100%;
+      min-width: 260px;
       max-height: 290px;
       background: #ffffff;
       border: 1px solid var(--border-subtle);
@@ -1893,11 +1894,12 @@
               </span>
             </div>
 
-            <div class="form-row-3" style="align-items: flex-start;">
+            <!-- Hàng 1: Sản Phẩm & Loại Căn (2 cột cân đối) -->
+            <div class="form-row-2">
               <!-- 1. Sản Phẩm -->
               <div class="form-group">
                 <label class="field-label" for="selSanPham">1. Sản Phẩm</label>
-                <select class="filter-select" style="width:100%;" id="selSanPham">
+                <select class="filter-select" style="width:100%; height:36px;" id="selSanPham">
                   <option value="Tất cả">Tất cả (Cao & Thấp tầng)</option>
                   <option value="Cao tầng">Cao tầng</option>
                   <option value="Thấp tầng">Thấp tầng</option>
@@ -1925,31 +1927,33 @@
                 </div>
                 <input type="hidden" id="addLoaiCanInput" value="Tất cả">
               </div>
+            </div>
 
-              <!-- 3. Khoảng Giá (Toán học: >= 10, < 10, 10 - 20...) -->
-              <div class="form-group">
-                <label class="field-label" style="display:flex; justify-content:space-between; align-items:center;">
-                  <span>3. Khoảng Giá (tỷ VNĐ)</span>
-                  <span id="addKhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">Tất cả</span>
-                </label>
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <div style="flex:1;">
-                    <span style="font-size:10px; color:var(--text-tertiary); font-weight:700;">Min (tỷ):</span>
-                    <input type="number" step="0.5" min="0" max="999" class="filter-input" style="width:100%; padding:4px 6px; font-weight:700;" id="addGiaTu" placeholder="0" value="0" oninput="onPriceInputChange('add')">
-                  </div>
-                  <span style="color: var(--text-tertiary); font-weight:700; padding-top:14px;">-</span>
-                  <div style="flex:1;">
-                    <span style="font-size:10px; color:var(--text-tertiary); font-weight:700;">Max (tỷ):</span>
-                    <input type="number" step="0.5" min="0" max="999" class="filter-input" style="width:100%; padding:4px 6px; font-weight:700;" id="addGiaDen" placeholder="999" value="999" oninput="onPriceInputChange('add')">
-                  </div>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                  <label style="font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; color:var(--text-secondary);">
-                    <input type="checkbox" id="addIsDat" onchange="onPriceInputChange('add')"> Chỉ tính tiền đất (VHHVB)
-                  </label>
-                  <input type="hidden" id="addKhoangGiaInput" value="Tất cả">
-                </div>
+            <!-- Hàng 2: Khoảng Giá (Trải ngang cân đối) -->
+            <div class="form-group" style="margin-bottom:0;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <label class="field-label" style="margin-bottom:0;">3. Khoảng Giá (tỷ VNĐ)</label>
+                <span id="addKhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">Tất cả</span>
               </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+                <div style="display:flex; align-items:center; gap:6px; flex:1;">
+                  <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Từ (Min):</span>
+                  <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addGiaTu" placeholder="0" value="0" oninput="onPriceInputChange('add')">
+                  <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
+                </div>
+                <span style="color:var(--text-tertiary); font-weight:700; padding:0 2px;">—</span>
+                <div style="display:flex; align-items:center; gap:6px; flex:1;">
+                  <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Đến (Max):</span>
+                  <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addGiaDen" placeholder="999" value="999" oninput="onPriceInputChange('add')">
+                  <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
+                </div>
+                <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
+                <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
+                  <input type="checkbox" id="addIsDat" style="cursor:pointer;" onchange="onPriceInputChange('add')">
+                  <span>Chỉ tính tiền đất (VHHVB)</span>
+                </label>
+              </div>
+              <input type="hidden" id="addKhoangGiaInput" value="Tất cả">
             </div>
           </div>
 
@@ -2144,11 +2148,12 @@
               </span>
             </div>
 
-            <div class="form-row-3" style="align-items: flex-start;">
+            <!-- Hàng 1: Sản Phẩm & Loại Căn (2 cột cân đối) -->
+            <div class="form-row-2">
               <!-- 1. Sản Phẩm -->
               <div class="form-group">
                 <label class="field-label" for="editSelSanPham">1. Sản Phẩm</label>
-                <select class="filter-select" id="editSelSanPham">
+                <select class="filter-select" style="width:100%; height:36px;" id="editSelSanPham">
                   <option value="Tất cả" ${spVal === 'Tất cả' || spVal === '*' || !spVal ? 'selected' : ''}>Tất cả (Cao & Thấp tầng)</option>
                   <option value="Cao tầng" ${spVal === 'Cao tầng' ? 'selected' : ''}>Cao tầng</option>
                   <option value="Thấp tầng" ${spVal === 'Thấp tầng' ? 'selected' : ''}>Thấp tầng</option>
@@ -2176,31 +2181,33 @@
                 </div>
                 <input type="hidden" id="editLoaiCanInput" value="${escapeHtml(lcVal)}">
               </div>
+            </div>
 
-              <!-- 3. Khoảng Giá (Toán học: >= 10, < 10, 10 - 20...) -->
-              <div class="form-group">
-                <label class="field-label" style="display:flex; justify-content:space-between; align-items:center;">
-                  <span>3. Khoảng Giá (tỷ VNĐ)</span>
-                  <span id="editKhoangGiaPreview" style="font-size:11px; font-weight:800; color:${parsedPrice.label === 'Tất cả' ? 'var(--text-tertiary)' : '#92400e'}; background:${parsedPrice.label === 'Tất cả' ? 'var(--bg-muted)' : '#fef3c7'}; padding:2px 8px; border-radius:4px; border:1px solid ${parsedPrice.label === 'Tất cả' ? 'var(--border-subtle)' : '#fde68a'};">${escapeHtml(parsedPrice.label)}</span>
-                </label>
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <div style="flex:1;">
-                    <span style="font-size:10px; color:var(--text-tertiary); font-weight:700;">Min (tỷ):</span>
-                    <input type="number" step="0.5" min="0" max="999" class="filter-input" style="width:100%; padding:4px 6px; font-weight:700;" id="editGiaTu" placeholder="0" value="${parsedPrice.min}" oninput="onPriceInputChange('edit')">
-                  </div>
-                  <span style="color: var(--text-tertiary); font-weight:700; padding-top:14px;">-</span>
-                  <div style="flex:1;">
-                    <span style="font-size:10px; color:var(--text-tertiary); font-weight:700;">Max (tỷ):</span>
-                    <input type="number" step="0.5" min="0" max="999" class="filter-input" style="width:100%; padding:4px 6px; font-weight:700;" id="editGiaDen" placeholder="999" value="${parsedPrice.max}" oninput="onPriceInputChange('edit')">
-                  </div>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                  <label style="font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; color:var(--text-secondary);">
-                    <input type="checkbox" id="editIsDat" ${parsedPrice.isDat ? 'checked' : ''} onchange="onPriceInputChange('edit')"> Chỉ tính tiền đất (VHHVB)
-                  </label>
-                  <input type="hidden" id="editKhoangGiaInput" value="${escapeHtml(parsedPrice.label)}">
-                </div>
+            <!-- Hàng 2: Khoảng Giá (Trải ngang cân đối) -->
+            <div class="form-group" style="margin-bottom:0;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <label class="field-label" style="margin-bottom:0;">3. Khoảng Giá (tỷ VNĐ)</label>
+                <span id="editKhoangGiaPreview" style="font-size:11px; font-weight:800; color:${parsedPrice.label === 'Tất cả' ? 'var(--text-tertiary)' : '#92400e'}; background:${parsedPrice.label === 'Tất cả' ? 'var(--bg-muted)' : '#fef3c7'}; padding:2px 8px; border-radius:4px; border:1px solid ${parsedPrice.label === 'Tất cả' ? 'var(--border-subtle)' : '#fde68a'};">${escapeHtml(parsedPrice.label)}</span>
               </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+                <div style="display:flex; align-items:center; gap:6px; flex:1;">
+                  <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Từ (Min):</span>
+                  <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="editGiaTu" placeholder="0" value="${parsedPrice.min}" oninput="onPriceInputChange('edit')">
+                  <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
+                </div>
+                <span style="color:var(--text-tertiary); font-weight:700; padding:0 2px;">—</span>
+                <div style="display:flex; align-items:center; gap:6px; flex:1;">
+                  <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Đến (Max):</span>
+                  <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="editGiaDen" placeholder="999" value="${parsedPrice.max}" oninput="onPriceInputChange('edit')">
+                  <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
+                </div>
+                <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
+                <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
+                  <input type="checkbox" id="editIsDat" ${parsedPrice.isDat ? 'checked' : ''} style="cursor:pointer;" onchange="onPriceInputChange('edit')">
+                  <span>Chỉ tính tiền đất (VHHVB)</span>
+                </label>
+              </div>
+              <input type="hidden" id="editKhoangGiaInput" value="${escapeHtml(parsedPrice.label)}">
             </div>
           </div>
         `;
