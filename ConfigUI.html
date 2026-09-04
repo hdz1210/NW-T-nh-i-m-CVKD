@@ -744,19 +744,31 @@
     }
     .campaign-combobox-arrow {
       position: absolute;
-      right: 10px;
+      right: 6px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 13px;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      background: #fed7aa;
+      font-size: 11px;
       color: #9a3412;
       cursor: pointer;
       user-select: none;
       z-index: 2;
       line-height: 1;
-      transition: transform 0.15s ease;
+      transition: all 0.15s ease;
+    }
+    .campaign-combobox-arrow:hover {
+      background: #fdba74;
+      color: #7c2d12;
     }
     .campaign-combobox-arrow.open {
       transform: translateY(-50%) rotate(180deg);
+      background: #fdba74;
     }
     .campaign-combobox-dropdown {
       position: absolute;
@@ -2915,16 +2927,6 @@
         let campEnd = '';
         let campStatus = 'Đang chạy';
 
-        if (selectedCampaignFilter && selectedCampaignFilter !== 'ALL') {
-          const matched = configData.campaignsList?.find(c => c.name.trim().toLowerCase() === selectedCampaignFilter.trim().toLowerCase());
-          if (matched) {
-            campName = matched.name;
-            campStart = matched.startDate || '';
-            campEnd = matched.endDate || '';
-            campStatus = (matched.status === 'Tạm dừng') ? 'Tạm dừng' : 'Đang chạy';
-          }
-        }
-
         container.innerHTML = `
           <!-- Khối Cấu Hình Chiến Dịch (Tên & Date Range) -->
           <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">
@@ -2933,15 +2935,15 @@
                 🔥 THÔNG TIN CHIẾN DỊCH ÁP DỤNG
               </span>
               <span style="font-size: 11px; font-weight: 600; color: #ea580c;">
-                (Bắt buộc nhập tên & thời gian)
+                (Mặc định thêm mới • Hoặc bấm ▼ để chọn chiến dịch đã có)
               </span>
             </div>
             <div class="form-row-2" style="margin-bottom: 8px;">
               <div class="form-group" style="flex: 2;">
                 <label class="field-label" for="addCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
                 <div class="campaign-combobox" id="addCampaignCombobox">
-                  <input type="text" class="filter-input" id="addCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('add')" onfocus="showCampaignDropdown('add')" required>
-                  <span class="campaign-combobox-arrow" id="addCampaignArrow" onclick="toggleCampaignDropdown('add')">▼</span>
+                  <input type="text" class="filter-input" id="addCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('add')" required>
+                  <span class="campaign-combobox-arrow" id="addCampaignArrow" onclick="toggleCampaignDropdown('add')" title="Bấm để chọn chiến dịch đã cấu hình">▼</span>
                   <div class="campaign-combobox-dropdown" id="addCampaignDropdown"></div>
                 </div>
               </div>
@@ -3445,7 +3447,7 @@
         html += '<div style="padding: 8px 12px; color: #a8a29e; font-size: 11px; font-style: italic;">Không tìm thấy chiến dịch phù hợp</div>';
       }
       
-      filtered.forEach((c, idx) => {
+      filtered.forEach((c) => {
         const badgeClass = getCampaignStatusBadgeClass(c.status);
         const emoji = getCampaignStatusEmoji(c.status);
         const dateRange = formatCampaignDateRange(c.startDate, c.endDate);
@@ -3455,7 +3457,7 @@
         const inputEl = document.getElementById(prefix + 'CampaignName');
         const isActive = inputEl && inputEl.value.trim().toLowerCase() === c.name.trim().toLowerCase();
         
-        html += '<div class="campaign-dd-item' + (isActive ? ' active' : '') + '" onclick="selectCampaignFromDropdown(\'' + prefix + '\', ' + idx + ')">';
+        html += '<div class="campaign-dd-item' + (isActive ? ' active' : '') + '" data-cname="' + escapedName + '" onclick="selectCampaignByName(\'' + prefix + '\', this.getAttribute(\'data-cname\'))">';
         html += '<div class="campaign-dd-info">';
         html += '<div class="campaign-dd-name">' + escapedName + '</div>';
         html += '<div class="campaign-dd-meta">' + dateRange + '</div>';
@@ -3499,25 +3501,29 @@
       if (dropdown.classList.contains('show')) {
         hideCampaignDropdown(prefix);
       } else {
-        showCampaignDropdown(prefix);
+        // Luôn hiển thị đầy đủ danh sách khi người dùng bấm nút dropdown
+        buildCampaignDropdownItems(prefix, '');
+        dropdown.classList.add('show');
+        const arrow = document.getElementById(prefix + 'CampaignArrow');
+        if (arrow) arrow.classList.add('open');
       }
     }
 
     function filterCampaignDropdown(prefix) {
       const dropdown = document.getElementById(prefix + 'CampaignDropdown');
       if (!dropdown || !dropdown.classList.contains('show')) {
-        showCampaignDropdown(prefix);
-        return;
+        return; // Không tự bung dropdown khi đang gõ, chỉ lọc nếu dropdown đang mở
       }
       const inputEl = document.getElementById(prefix + 'CampaignName');
       const filterText = inputEl ? inputEl.value : '';
       buildCampaignDropdownItems(prefix, filterText);
     }
 
-    function selectCampaignFromDropdown(prefix, idx) {
+    function selectCampaignByName(prefix, campaignName) {
+      if (!campaignName) return;
       const list = getCampaignsList();
-      if (idx < 0 || idx >= list.length) return;
-      const c = list[idx];
+      const c = list.find(item => item.name.trim().toLowerCase() === String(campaignName).trim().toLowerCase());
+      if (!c) return;
       
       // Fill name
       const nameEl = document.getElementById(prefix + 'CampaignName');
@@ -3537,7 +3543,6 @@
         if (st === 'Đang chạy' || st === 'Tạm dừng') {
           statusEl.value = st;
         } else {
-          // 'Kết thúc' -> show as Tạm dừng since campaign has ended
           statusEl.value = 'Tạm dừng';
         }
       }
@@ -3596,15 +3601,11 @@
         let campStatus = 'Đang chạy';
 
         if (isCopy) {
-          if (selectedCampaignFilter && selectedCampaignFilter !== 'ALL') {
-            const matched = configData.campaignsList?.find(c => c.name.trim().toLowerCase() === selectedCampaignFilter.trim().toLowerCase());
-            if (matched) {
-              campName = matched.name;
-              campStart = matched.startDate || '';
-              campEnd = matched.endDate || '';
-              campStatus = (matched.status === 'Tạm dừng') ? 'Tạm dừng' : 'Đang chạy';
-            }
-          }
+          // Mặc định khi thêm từ bảng khác vào chiến dịch: luôn để trống để thêm mới trước
+          campName = '';
+          campStart = '';
+          campEnd = '';
+          campStatus = 'Đang chạy';
         } else {
           campName = row.campaignName || '';
           campStart = row.startDate || '';
@@ -3626,15 +3627,15 @@
                 🔥 THÔNG TIN CHIẾN DỊCH ÁP DỤNG
               </span>
               <span style="font-size: 11px; font-weight: 600; color: #ea580c;">
-                (Bắt buộc nhập tên & thời gian)
+                (Mặc định thêm mới • Hoặc bấm ▼ để chọn chiến dịch đã có)
               </span>
             </div>
             <div class="form-row-2" style="margin-bottom: 8px;">
               <div class="form-group" style="flex: 2;">
                 <label class="field-label" for="editCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
                 <div class="campaign-combobox" id="editCampaignCombobox">
-                  <input type="text" class="filter-input" id="editCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('edit')" onfocus="showCampaignDropdown('edit')" required>
-                  <span class="campaign-combobox-arrow" id="editCampaignArrow" onclick="toggleCampaignDropdown('edit')">▼</span>
+                  <input type="text" class="filter-input" id="editCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('edit')" required>
+                  <span class="campaign-combobox-arrow" id="editCampaignArrow" onclick="toggleCampaignDropdown('edit')" title="Bấm để chọn chiến dịch đã cấu hình">▼</span>
                   <div class="campaign-combobox-dropdown" id="editCampaignDropdown"></div>
                 </div>
               </div>
