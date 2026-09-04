@@ -1571,6 +1571,12 @@
       'Liền Kề', 'Song Lập', 'Đơn Lập', 'Tứ lập', 'Shophouse', 'Shop đế', 'TMDV', 'Đất nền'
     ];
 
+    function isConditionAll(val) {
+      if (val === null || val === undefined) return true;
+      const s = String(val).trim().toLowerCase();
+      return s === '' || s === '*' || s === 'tất cả' || s === 'tat ca' || s === 'all' || s === 'none' || s === '-';
+    }
+
     function buildMultiSelectOptions(prefix, selectedList) {
       const isAll = (!selectedList || selectedList.length === 0 || selectedList.some(s => isConditionAll(s)));
       const selectedSet = new Set((selectedList || []).map(s => s.toLowerCase()));
@@ -1667,6 +1673,38 @@
         labelEl.style.color = 'var(--brand)';
         if (inputEl) inputEl.value = selectedUnits.join(', ');
       }
+    }
+
+    function toggleMultiSelect(prefix, forceClose) {
+      const dropdown = document.getElementById(prefix + 'LoaiCanDropdown');
+      if (!dropdown) return;
+      if (forceClose === true) {
+        dropdown.style.display = 'none';
+        return;
+      }
+      const isVisible = (dropdown.style.display === 'flex');
+      const otherPrefix = (prefix === 'add') ? 'edit' : 'add';
+      const otherDropdown = document.getElementById(otherPrefix + 'LoaiCanDropdown');
+      if (otherDropdown) otherDropdown.style.display = 'none';
+
+      dropdown.style.display = isVisible ? 'none' : 'flex';
+      if (!isVisible) {
+        const searchInput = document.getElementById(prefix + 'LoaiCanSearch');
+        if (searchInput) {
+          searchInput.value = '';
+          filterMultiSelectOptions(prefix);
+          searchInput.focus();
+        }
+      }
+    }
+
+    function filterMultiSelectOptions(prefix) {
+      const q = (document.getElementById(prefix + 'LoaiCanSearch').value || '').trim().toLowerCase();
+      const options = document.querySelectorAll(`#${prefix}LoaiCanOptions .multi-select-option`);
+      options.forEach(opt => {
+        const text = opt.getAttribute('data-text');
+        opt.style.display = (!q || (text && text.includes(q))) ? 'flex' : 'none';
+      });
     }
 
     function parseKhoangGiaToMinMax(val) {
