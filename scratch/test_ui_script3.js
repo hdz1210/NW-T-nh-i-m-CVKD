@@ -1,1309 +1,4 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <base target="_top">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚙️ Bảng Cấu Hình Điểm</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    /* =========================================================================
-       1. DESIGN SYSTEM TOKENS (IMPECCABLE PRECISION THEME)
-       ========================================================================= */
-    :root {
-      --brand: #1d4ed8;
-      --brand-hover: #1e40af;
-      --brand-subtle: #eff6ff;
-      --brand-border: #bfdbfe;
 
-      --bg-canvas: #f8fafc;
-      --bg-surface: #ffffff;
-      --bg-muted: #f1f5f9;
-      --bg-hover: #f8fafc;
-
-      --text-primary: #0f172a;
-      --text-secondary: #334155;
-      --text-tertiary: #64748b;
-      --text-inverse: #ffffff;
-
-      --border-subtle: #e2e8f0;
-      --border-strong: #cbd5e1;
-
-      --success: #047857;
-      --success-hover: #065f46;
-      --success-subtle: #ecfdf5;
-      --success-text: #065f46;
-
-      --danger: #b91c1c;
-      --danger-hover: #991b1b;
-      --danger-subtle: #fef2f2;
-      --danger-text: #991b1b;
-
-      --warning: #b45309;
-      --warning-subtle: #fffbeb;
-      --warning-text: #92400e;
-
-      --purple-subtle: #faf5ff;
-      --purple-text: #7e22ce;
-      --purple-border: #e9d5ff;
-
-      --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
-      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
-      --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
-      --shadow-popover: 0 10px 15px -3px rgba(15, 23, 42, 0.12), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
-
-      --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
-
-      --text-xs: 11px;
-      --text-sm: 13px;
-      --text-base: 14px;
-      --text-md: 16px;
-      --text-lg: 20px;
-
-      --radius-sm: 6px;
-      --radius-md: 8px;
-      --radius-lg: 12px;
-      --radius-full: 9999px;
-    }
-
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: var(--font-sans);
-      font-size: var(--text-base);
-      color: var(--text-primary);
-      background-color: var(--bg-canvas);
-      line-height: 1.5;
-      padding: 16px;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* Container */
-    .app-container {
-      max-width: 1380px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    /* Header */
-    .app-header {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 16px 20px;
-      box-shadow: var(--shadow-sm);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    .header-titles {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .app-title {
-      font-size: var(--text-lg);
-      font-weight: 800;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .app-subtitle {
-      font-size: var(--text-sm);
-      color: var(--text-tertiary);
-    }
-
-    /* KPI Metrics Deck */
-    .kpi-deck {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 12px;
-    }
-
-    @media (max-width: 1200px) {
-      .kpi-deck {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-    @media (max-width: 768px) {
-      .kpi-deck {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    /* Campaign Control Card & Styling */
-    .campaign-control-card {
-      background: linear-gradient(135deg, #fffaf5 0%, #ffffff 100%);
-      border: 1.5px solid #fdba74;
-      border-radius: var(--radius-lg);
-      padding: 16px 20px;
-      box-shadow: 0 2px 6px rgba(234, 88, 12, 0.08);
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .campaign-control-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .campaign-form-row {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .campaign-field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .campaign-field-label {
-      font-size: var(--text-xs);
-      font-weight: 700;
-      color: #9a3412;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-
-    .cell-score-campaign {
-      border-color: #fb923c !important;
-      background: #fff7ed !important;
-      color: #c2410c !important;
-      font-weight: 800 !important;
-    }
-    .cell-score-campaign:focus {
-      border-color: #ea580c !important;
-      box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2) !important;
-    }
-
-    .kpi-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 12px 16px;
-      box-shadow: var(--shadow-xs);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .kpi-label {
-      font-size: var(--text-xs);
-      font-weight: 700;
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .kpi-value {
-      font-size: var(--text-lg);
-      font-weight: 800;
-      font-family: var(--font-mono);
-      color: var(--text-primary);
-    }
-
-    .kpi-highlight-brand { color: var(--brand); }
-    .kpi-highlight-success { color: var(--success); }
-    .kpi-highlight-warning { color: var(--warning); }
-
-    /* Tab Switcher */
-    .tab-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border-bottom: 2px solid var(--border-subtle);
-      padding-bottom: 2px;
-    }
-
-    .tab-btn {
-      padding: 8px 16px;
-      font-size: var(--text-base);
-      font-weight: 700;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      border-radius: var(--radius-md) var(--radius-md) 0 0;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.15s ease;
-      position: relative;
-    }
-
-    .tab-btn:hover {
-      color: var(--brand);
-      background: var(--brand-subtle);
-    }
-
-    .tab-btn.active {
-      color: var(--brand);
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-bottom: 2px solid var(--bg-surface);
-      margin-bottom: -3px;
-      box-shadow: var(--shadow-xs);
-    }
-
-    .tab-badge {
-      font-size: var(--text-xs);
-      font-weight: 800;
-      padding: 2px 6px;
-      border-radius: var(--radius-full);
-      background: var(--bg-muted);
-      color: var(--text-secondary);
-    }
-
-    .tab-btn.active .tab-badge {
-      background: var(--brand-subtle);
-      color: var(--brand);
-    }
-
-    /* Toolbar Controls */
-    .toolbar-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 14px 16px;
-      box-shadow: var(--shadow-xs);
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .toolbar-filters {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .toolbar-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .filter-input, .filter-select {
-      height: 36px;
-      padding: 6px 12px;
-      font-size: var(--text-sm);
-      font-family: var(--font-sans);
-      color: var(--text-primary);
-      background: var(--bg-surface);
-      border: 1px solid var(--border-strong);
-      border-radius: var(--radius-md);
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .filter-input:focus, .filter-select:focus {
-      border-color: var(--brand);
-      box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.15);
-    }
-
-    .filter-input {
-      width: 240px;
-    }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      height: 36px;
-      padding: 0 14px;
-      font-size: var(--text-sm);
-      font-weight: 700;
-      border-radius: var(--radius-md);
-      border: 1px solid transparent;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      white-space: nowrap;
-    }
-
-    .btn-primary {
-      background-color: var(--brand);
-      color: var(--text-inverse);
-      box-shadow: var(--shadow-xs);
-    }
-    .btn-primary:hover {
-      background-color: var(--brand-hover);
-    }
-
-    .btn-secondary {
-      background-color: var(--bg-surface);
-      color: var(--text-secondary);
-      border-color: var(--border-strong);
-    }
-    .btn-secondary:hover {
-      background-color: var(--bg-muted);
-      color: var(--text-primary);
-    }
-
-    .btn-success {
-      background-color: var(--success);
-      color: var(--text-inverse);
-    }
-    .btn-success:hover {
-      background-color: var(--success-hover);
-    }
-
-    .btn-warning {
-      background-color: var(--warning);
-      color: var(--text-inverse);
-    }
-
-    .btn-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1px 6px;
-      font-size: var(--text-xs);
-      font-weight: 800;
-      border-radius: var(--radius-full);
-      background: rgba(255, 255, 255, 0.25);
-      color: var(--text-inverse);
-    }
-
-    /* Table Container */
-    .table-container {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .table-scroll-wrapper {
-      max-height: 520px;
-      overflow: auto;
-      position: relative;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      font-size: var(--text-sm);
-    }
-
-    thead {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    th {
-      background-color: var(--bg-muted);
-      color: var(--text-secondary);
-      font-weight: 700;
-      font-size: var(--text-xs);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      padding: 10px 12px;
-      border-bottom: 2px solid var(--border-strong);
-      border-right: 1px solid var(--border-subtle);
-      white-space: nowrap;
-      text-align: left;
-    }
-
-    th.th-month {
-      background-color: var(--brand-subtle);
-      color: var(--brand);
-      text-align: center;
-      min-width: 85px;
-      font-family: var(--font-mono);
-      font-size: var(--text-sm);
-      font-weight: 800;
-    }
-
-    th.th-month.th-latest {
-      background-color: #dbeafe;
-      color: #1e3a8a;
-      border-left: 2px solid var(--brand);
-      border-right: 2px solid var(--brand);
-    }
-
-    td {
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--border-subtle);
-      border-right: 1px solid var(--border-subtle);
-      background-color: var(--bg-surface);
-      vertical-align: middle;
-      color: var(--text-primary);
-    }
-
-    tr:hover td {
-      background-color: #f8fafc;
-    }
-
-    /* Freeze Columns */
-    th.freeze-col, td.freeze-col {
-      position: sticky;
-      left: 0;
-      width: 42px;
-      min-width: 42px;
-      max-width: 42px;
-      z-index: 4;
-      text-align: center;
-      background-color: #ffffff !important;
-    }
-    th.freeze-col-actions, td.freeze-col-actions {
-      position: sticky;
-      left: 42px;
-      width: 106px;
-      min-width: 106px;
-      max-width: 106px;
-      z-index: 4;
-      text-align: center;
-      background-color: #ffffff !important;
-      padding: 4px 6px !important;
-    }
-    th.freeze-col-2, td.freeze-col-2 {
-      position: sticky;
-      left: 148px;
-      z-index: 4;
-      background-color: #ffffff !important;
-      border-right: 2px solid #cbd5e1 !important;
-      box-shadow: 2px 0 4px rgba(15, 23, 42, 0.06);
-    }
-
-    tr:hover td.freeze-col, 
-    tr:hover td.freeze-col-actions, 
-    tr:hover td.freeze-col-2 {
-      background-color: #f8fafc !important;
-    }
-
-    thead th.freeze-col, thead th.freeze-col-actions, thead th.freeze-col-2 {
-      z-index: 25 !important;
-      background-color: #f1f5f9 !important;
-      border-bottom: 2px solid #cbd5e1;
-    }
-
-    /* Action Buttons */
-    .btn-action {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px;
-      height: 26px;
-      min-width: 26px;
-      max-width: 26px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-subtle);
-      background: var(--bg-surface);
-      cursor: pointer;
-      font-size: 12px;
-      transition: all 0.15s ease;
-      padding: 0;
-      margin: 0;
-      flex-shrink: 0;
-    }
-    .btn-action:hover {
-      background: var(--bg-muted);
-      border-color: var(--border-strong);
-      transform: translateY(-1px);
-    }
-    .btn-action-edit:hover {
-      background: var(--primary-50);
-      border-color: var(--primary-500);
-    }
-    .btn-action-del:hover {
-      background: #fef2f2;
-      border-color: #ef4444;
-    }
-
-    /* Cell Score Input */
-    .cell-score-input {
-      width: 68px;
-      height: 28px;
-      padding: 2px 6px;
-      font-family: var(--font-mono);
-      font-size: var(--text-sm);
-      font-weight: 700;
-      text-align: center;
-      border: 1px solid transparent;
-      border-radius: var(--radius-sm);
-      background: transparent;
-      color: var(--text-primary);
-      transition: all 0.15s ease;
-    }
-
-    .cell-score-input:hover {
-      border-color: var(--border-strong);
-      background: var(--bg-muted);
-    }
-
-    .cell-score-input:focus {
-      outline: none;
-      border-color: var(--brand);
-      background: var(--bg-surface);
-      box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.2);
-    }
-
-    .cell-modified {
-      background-color: #fef9c3 !important;
-      border-color: #eab308 !important;
-      color: #713f12 !important;
-      font-weight: 800 !important;
-    }
-
-    /* Badges */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
-      font-size: var(--text-xs);
-      font-weight: 700;
-      border-radius: var(--radius-full);
-      white-space: nowrap;
-    }
-
-    .badge-selling { background: var(--success-subtle); color: var(--success-text); }
-    .badge-soldout { background: var(--bg-muted); color: var(--text-tertiary); }
-    .badge-fund-nw { background: var(--brand-subtle); color: var(--brand); }
-    .badge-fund-cross { background: var(--purple-subtle); color: var(--purple-text); border: 1px solid var(--purple-border); }
-    .badge-condition {
-      background: #f1f5f9;
-      color: #334155;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      padding: 1px 6px;
-      border-radius: var(--radius-sm);
-      border: 1px solid #e2e8f0;
-    }
-
-    /* Toast Notification */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 1000;
-      min-width: 320px;
-      padding: 12px 18px;
-      border-radius: var(--radius-md);
-      font-weight: 600;
-      font-size: var(--text-sm);
-      display: none;
-      box-shadow: var(--shadow-popover);
-      animation: slideIn 0.2s ease-out;
-    }
-    .toast-success { background: var(--success-subtle); color: var(--success-text); border: 1px solid #a7f3d0; }
-    .toast-error   { background: var(--danger-subtle); color: var(--danger-text); border: 1px solid #fecaca; }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Loading Overlay */
-    .loading-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(255, 255, 255, 0.75);
-      backdrop-filter: blur(2px);
-      z-index: 999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-    }
-    .spinner {
-      width: 36px;
-      height: 36px;
-      border: 3px solid var(--border-subtle);
-      border-top-color: var(--brand);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Modal Backdrop */
-    .modal-backdrop {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 23, 42, 0.5);
-      z-index: 500;
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-content {
-      background: var(--bg-surface);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-popover);
-      width: 660px;
-      max-width: 94vw;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      animation: slideIn 0.15s ease-out;
-    }
-
-    .form-row-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .form-row-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-    }
-
-    /* Custom Autocomplete Dropdown */
-    .autocomplete-container {
-      position: relative;
-      width: 100%;
-    }
-    .autocomplete-dropdown {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
-      width: 100%;
-      max-height: 200px;
-      overflow-y: auto;
-      background: #ffffff;
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-      z-index: 1050;
-      display: none;
-      flex-direction: column;
-      box-sizing: border-box;
-    }
-    .autocomplete-item {
-      padding: 7px 10px;
-      cursor: pointer;
-      border-bottom: 1px solid #f1f5f9;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      transition: background 0.12s ease;
-      text-align: left;
-    }
-    .autocomplete-item:last-child {
-      border-bottom: none;
-    }
-    .autocomplete-item:hover {
-      background: var(--primary-50);
-    }
-    .autocomplete-title {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--brand);
-    }
-    .autocomplete-sub {
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-
-    /* Campaign Combobox Dropdown */
-    .campaign-combobox {
-      position: relative;
-      width: 100%;
-    }
-    .campaign-combobox input {
-      padding-right: 34px !important;
-    }
-    .campaign-combobox-arrow {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 13px;
-      color: #9a3412;
-      cursor: pointer;
-      user-select: none;
-      z-index: 2;
-      line-height: 1;
-      transition: transform 0.15s ease;
-    }
-    .campaign-combobox-arrow.open {
-      transform: translateY(-50%) rotate(180deg);
-    }
-    .campaign-combobox-dropdown {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
-      width: 100%;
-      max-height: 240px;
-      overflow-y: auto;
-      background: #ffffff;
-      border: 1px solid #fdba74;
-      border-radius: var(--radius-md);
-      box-shadow: 0 10px 30px rgba(154, 52, 18, 0.12);
-      z-index: 1060;
-      display: none;
-      flex-direction: column;
-      box-sizing: border-box;
-    }
-    .campaign-combobox-dropdown.show {
-      display: flex;
-    }
-    .campaign-dd-item {
-      padding: 8px 12px;
-      cursor: pointer;
-      border-bottom: 1px solid #fff7ed;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: background 0.12s ease;
-      text-align: left;
-    }
-    .campaign-dd-item:last-child {
-      border-bottom: none;
-    }
-    .campaign-dd-item:hover {
-      background: #fff7ed;
-    }
-    .campaign-dd-item.active {
-      background: #ffedd5;
-    }
-    .campaign-dd-item-new {
-      color: #059669;
-      font-weight: 700;
-      font-size: 12px;
-      border-bottom: 2px solid #d1fae5 !important;
-      padding: 10px 12px;
-    }
-    .campaign-dd-item-new:hover {
-      background: #ecfdf5;
-    }
-    .campaign-dd-info {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      flex: 1;
-      min-width: 0;
-    }
-    .campaign-dd-name {
-      font-size: 12px;
-      font-weight: 700;
-      color: #9a3412;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .campaign-dd-meta {
-      font-size: 10.5px;
-      color: #78716c;
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-    .campaign-dd-badge {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 9999px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .campaign-dd-badge.running {
-      background: #dcfce7;
-      color: #166534;
-    }
-    .campaign-dd-badge.paused {
-      background: #fef3c7;
-      color: #92400e;
-    }
-    .campaign-dd-badge.ended {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    /* Multi-select Droplist */
-    .multi-select-container {
-      position: relative;
-      width: 100%;
-    }
-    .multi-select-trigger {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 36px;
-      padding: 0 10px;
-      background: #ffffff;
-      border: 1px solid var(--border-strong);
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      font-size: var(--text-sm);
-      color: var(--text-primary);
-      transition: all 0.15s ease;
-      user-select: none;
-      box-sizing: border-box;
-    }
-    .multi-select-trigger:hover {
-      border-color: var(--brand);
-    }
-    .multi-select-label {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: calc(100% - 18px);
-      font-weight: 500;
-    }
-    .multi-select-arrow {
-      font-size: 10px;
-      color: var(--text-tertiary);
-      margin-left: 4px;
-    }
-    .multi-select-dropdown {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      width: 100%;
-      min-width: 260px;
-      max-height: 290px;
-      background: #ffffff;
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-      z-index: 1000;
-      margin-top: 4px;
-      display: none;
-      flex-direction: column;
-      padding: 8px;
-      box-sizing: border-box;
-    }
-    .multi-select-search-box {
-      margin-bottom: 6px;
-    }
-    .multi-select-search {
-      width: 100%;
-      padding: 6px 8px;
-      font-size: 12px;
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
-      outline: none;
-      box-sizing: border-box;
-    }
-    .multi-select-search:focus {
-      border-color: var(--brand);
-    }
-    .multi-select-actions {
-      display: flex;
-      justify-content: space-between;
-      padding: 2px 4px 6px 4px;
-      border-bottom: 1px solid var(--border-subtle);
-      margin-bottom: 6px;
-    }
-    .multi-select-btn-link {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--brand);
-      cursor: pointer;
-    }
-    .multi-select-btn-link:hover {
-      text-decoration: underline;
-    }
-    .multi-select-options {
-      overflow-y: auto;
-      max-height: 180px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .multi-select-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 5px 6px;
-      font-size: 12px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      user-select: none;
-    }
-    .multi-select-option:hover {
-      background-color: var(--bg-muted);
-    }
-    .multi-select-option input[type="checkbox"] {
-      cursor: pointer;
-      accent-color: var(--brand);
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--border-subtle);
-      padding-bottom: 12px;
-    }
-    .modal-title { font-size: var(--text-md); font-weight: 800; color: var(--text-primary); }
-    .modal-close { background: none; border: none; font-size: 20px; color: var(--text-tertiary); cursor: pointer; }
-
-    .modal-body {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .field-label { font-size: var(--text-xs); font-weight: 700; color: var(--text-secondary); text-transform: uppercase; }
-
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      border-top: 1px solid var(--border-subtle);
-      padding-top: 12px;
-    }
-  </style>
-</head>
-<body>
-
-  <!-- Loading Overlay -->
-  <div class="loading-overlay" id="loadingOverlay" role="status" aria-live="polite">
-    <div class="spinner"></div>
-    <div style="font-weight: 700; color: var(--text-secondary);" id="loadingText">Đang tải cấu hình điểm đa tháng...</div>
-  </div>
-
-  <!-- Toast -->
-  <div class="toast" id="toastBox" role="alert"></div>
-
-  <!-- Main Container -->
-  <div class="app-container">
-
-    <!-- Header -->
-    <header class="app-header">
-      <div class="header-titles">
-        <h1 class="app-title">
-          <span>⚙️</span>
-          <span>Bảng Cấu Hình Điểm</span>
-        </h1>
-
-      </div>
-      <div class="toolbar-actions">
-        <button type="button" class="btn btn-secondary" onclick="manualSyncMonth()" title="Tạo cột tháng hiện tại nếu bước sang kỳ mới">
-          <span>📅</span> Đồng Bộ Tháng Mới
-        </button>
-        <button type="button" class="btn btn-secondary" onclick="confirmResetSheets()" title="Khởi tạo khung 2 sheet cấu hình (trống) để bắt đầu nhập">
-          <span>🛠️</span> Khởi Tạo Khung 2 Sheet
-        </button>
-        <button type="button" class="btn btn-primary" id="btnSave" onclick="saveAllChanges()">
-          <span>💾</span> Lưu Thay Đổi
-          <span class="btn-badge" id="saveBadge" style="display:none;">0</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- KPI Metrics Deck -->
-    <section class="kpi-deck" aria-label="Thống kê tổng quan">
-      <div class="kpi-card">
-        <span class="kpi-label">Dự Án Quỹ NW (Tổng Hợp)</span>
-        <span class="kpi-value kpi-highlight-brand" id="statTHCount">0 dòng</span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Dự Án F2 (Quỹ Chéo)</span>
-        <span class="kpi-value kpi-highlight-success" id="statF2Count">0 dự án</span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Tháng Mới Nhất</span>
-        <span class="kpi-value" id="statLatestMonth">--/----</span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Thay Đổi Chưa Lưu</span>
-        <span class="kpi-value kpi-highlight-warning" id="statUnsavedCount">0 ô</span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Chiến Dịch Hiện Tại</span>
-        <span class="kpi-value" id="statCampaignCount" style="font-size: 14px; line-height: 1.3;">Chưa có</span>
-      </div>
-    </section>
-
-    <!-- Tab Bar -->
-    <nav class="tab-bar" aria-label="Chuyển đổi bảng cấu hình">
-      <button type="button" class="tab-btn active" id="tabBtnTH" onclick="switchTab('th')">
-        <span>🏢</span> Bảng Tổng Hợp (Quỹ NW)
-        <span class="tab-badge" id="badgeTHCount">106</span>
-      </button>
-      <button type="button" class="tab-btn" id="tabBtnF2" onclick="switchTab('f2')">
-        <span>🔄</span> Dự Án F2 (Quỹ Chéo)
-        <span class="tab-badge" id="badgeF2Count">29</span>
-      </button>
-      <button type="button" class="tab-btn" id="tabBtnCampaign" onclick="switchTab('campaign')">
-        <span>🔥</span> Điểm Chiến Dịch
-        <span class="tab-badge" id="badgeCampaignCount">0</span>
-      </button>
-    </nav>
-
-    <!-- Campaign Control Panel (Hiển thị khi chọn tab Điểm Chiến Dịch) -->
-    <div class="campaign-control-card" id="campaignControlPanel" style="display: none;">
-      <div class="campaign-control-header">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 24px; line-height: 1;">🔥</span>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="font-size: 16px; font-weight: 800; color: #9a3412;">Cấu Hình Điểm Chiến Dịch</div>
-            <span id="campaignDirtyText" style="font-size: 12px; font-weight: 800; color: #c2410c; background: #ffedd5; padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid #fdba74; display: none;">⚠️ Có thay đổi chưa lưu</span>
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <button type="button" class="btn btn-secondary" onclick="openAddCampaignRowModal()" style="border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Tạo mới một dòng cấu hình cho chiến dịch">
-            <span>➕</span> Tạo Dòng Mới
-          </button>
-          <button type="button" class="btn btn-secondary" onclick="openPickFromTongHopModal()" style="border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Chọn từng dòng từ Bảng Tổng Hợp để thêm vào Chiến Dịch">
-            <span>📥</span> Chọn Dòng Từ Tổng Hợp
-          </button>
-          <button type="button" class="btn btn-primary" onclick="saveCampaignChanges()" style="background-color: #ea580c; border-color: #c2410c;">
-            <span>💾</span> Lưu Bảng Chiến Dịch
-          </button>
-        </div>
-      </div>
-
-      <!-- Thông tin chiến dịch hiện tại (Thay thế form nhập rườm rà) -->
-      <div id="campaignMetaBar" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--radius-md); padding: 8px 14px; margin-top: 4px;">
-        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 13px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="color: #ea580c; font-weight: 700;">🎯 Tên Chiến Dịch:</span>
-            <span id="dispCampaignName" style="font-weight: 800; color: #9a3412;">(Chưa đặt tên)</span>
-          </div>
-          <span style="color: #fed7aa;">|</span>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="color: #ea580c; font-weight: 700;">🗓️ Thời Gian:</span>
-            <span id="dispCampaignDates" style="font-weight: 800; color: #15803d;">Chưa thiết lập</span>
-          </div>
-          <span style="color: #fed7aa;">|</span>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="color: #ea580c; font-weight: 700;">Trạng Thái:</span>
-            <span id="dispCampaignStatusBadge" class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;">🟢 Đang chạy</span>
-          </div>
-        </div>
-        <button type="button" class="btn btn-secondary" onclick="openEditCampaignMetaModal()" style="height: 28px; padding: 0 10px; font-size: 12px; border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Chỉnh sửa tên và thời gian chiến dịch">
-          ✏️ Đổi Tên / Thời Gian
-        </button>
-      </div>
-    </div>
-
-    <!-- Toolbar Filters -->
-    <div class="toolbar-card">
-      <div class="toolbar-filters">
-        <input type="text" class="filter-input" id="searchInput" placeholder="🔍 Tìm mã DA, tên dự án, CĐT..." oninput="applyFilters()" aria-label="Tìm kiếm dự án">
-
-        <select class="filter-select" id="monthFilter" onchange="applyFilters()" aria-label="Lọc theo tháng">
-          <option value="ALL">🗓️ Xem tất cả các tháng (Ma trận)</option>
-        </select>
-
-        <select class="filter-select" id="cdtFilter" onchange="applyFilters()" aria-label="Lọc theo chủ đầu tư">
-          <option value="ALL">🏢 Tất cả CĐT</option>
-        </select>
-
-        <select class="filter-select" id="regionFilter" onchange="applyFilters()" aria-label="Lọc theo miền">
-          <option value="ALL">🌐 Tất cả miền</option>
-          <option value="Miền Bắc">Miền Bắc</option>
-          <option value="Miền Nam">Miền Nam</option>
-          <option value="Miền Trung">Miền Trung</option>
-        </select>
-
-        <select class="filter-select" id="statusFilter" onchange="applyFilters()" aria-label="Lọc theo trạng thái">
-          <option value="ALL">📌 Tất cả trạng thái</option>
-          <option value="Đang bán">Đang bán</option>
-          <option value="Sold out">Sold out</option>
-        </select>
-      </div>
-
-      <div class="toolbar-actions">
-        <button type="button" class="btn btn-secondary" onclick="openAddRowModal()">
-          <span>➕</span> Thêm Dòng Mới
-        </button>
-      </div>
-    </div>
-
-    <!-- Table Container -->
-    <div class="table-container">
-      <div class="table-scroll-wrapper" id="tableWrapper">
-        <table id="configTable">
-          <thead id="tableHead"></thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Modal Chọn Dòng Từ Bảng Tổng Hợp Để Thêm Vào Chiến Dịch -->
-  <div class="modal-backdrop" id="pickTHRowModal">
-    <div class="modal-content" style="max-width: 980px; width: 95%;">
-      <div class="modal-header">
-        <h3 class="modal-title">📥 Chọn Dòng Từ Bảng Tổng Hợp Để Thêm Vào Chiến Dịch</h3>
-        <button type="button" class="modal-close" onclick="closePickTHRowModal()">×</button>
-      </div>
-      <div class="modal-body" style="gap: 12px;">
-        <input type="text" class="filter-input" id="searchPickTH" placeholder="🔍 Tìm theo mã DA, tên DA, CĐT, loại căn, khoảng giá..." oninput="renderPickTHList()" style="width: 100%;">
-        <div class="table-scroll-wrapper" style="max-height: 420px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md);">
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 44px; text-align: center;">STT</th>
-                <th style="width: 90px;">Mã DA</th>
-                <th style="min-width: 160px;">Tên Dự Án</th>
-                <th style="width: 100px;">CĐT</th>
-                <th style="width: 90px; text-align: center;">Sản Phẩm</th>
-                <th style="min-width: 130px;">Loại Căn</th>
-                <th style="min-width: 100px; text-align: center;">Khoảng Giá</th>
-                <th style="width: 85px; text-align: center;">Điểm Gốc</th>
-                <th style="width: 120px; text-align: center;">Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody id="pickTHTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closePickTHRowModal()">Đóng</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Thêm Dòng Mới -->
-  <div class="modal-backdrop" id="addRowModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title" id="modalAddTitle">Thêm Dòng Cấu Hình Mới</h3>
-        <button type="button" class="modal-close" onclick="closeAddRowModal()">×</button>
-      </div>
-      <div class="modal-body" id="modalAddBody">
-        <!-- Nội dung sinh tự động theo tab hiện tại -->
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeAddRowModal()">Hủy</button>
-        <button type="button" class="btn btn-primary" onclick="submitAddRow()">Thêm Ngay</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Chỉnh Sửa Dòng Cấu Hình -->
-  <div class="modal-backdrop" id="editRowModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title" id="modalEditTitle">✏️ Chỉnh Sửa Dòng Cấu Hình</h3>
-        <button type="button" class="modal-close" onclick="closeEditRowModal()">×</button>
-      </div>
-      <div class="modal-body" id="modalEditBody">
-        <!-- Nội dung sinh tự động khi bấm nút Sửa -->
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeEditRowModal()">Hủy</button>
-        <button type="button" class="btn btn-primary" id="btnEditRowSubmit" onclick="submitEditRow()">Lưu Cập Nhật</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Xác Nhận Đẹp (In-App Confirm thay thế browser confirm) -->
-  <div class="modal-backdrop" id="customConfirmModal">
-    <div class="modal-content" style="width: 440px; text-align: center; padding: 28px 24px; gap: 14px;">
-      <div id="confirmIcon" style="font-size: 44px; line-height: 1;">⚠️</div>
-      <div id="confirmTitle" style="font-size: 18px; font-weight: 800; color: var(--text-primary);">Xác Nhận</div>
-      <div id="confirmMessage" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; white-space: pre-line;"></div>
-      <div style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
-        <button type="button" class="btn btn-secondary" style="min-width: 100px;" onclick="closeCustomConfirm(false)">Hủy</button>
-        <button type="button" class="btn btn-primary" id="btnConfirmAccept" style="min-width: 100px;" onclick="closeCustomConfirm(true)">Đồng Ý</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Cảnh Báo Chưa Lưu Cấu Hình (Lưu - Vẫn Đóng) -->
-  <div class="modal-backdrop" id="unsavedPromptModal" style="z-index: 1000;">
-    <div class="modal-content" style="max-width: 440px; text-align: center; padding: 28px 24px; gap: 14px;">
-      <div style="font-size: 44px; line-height: 1;">⚠️</div>
-      <div style="font-size: 18px; font-weight: 800; color: var(--text-primary);">Bạn chưa lưu cấu hình!</div>
-      <div id="unsavedPromptDesc" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; white-space: pre-line;">
-        Các cấu hình vừa thực hiện chưa được lưu vào Google Sheets. Bạn có muốn lưu lại trước khi đóng không?
-      </div>
-      <div style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
-        <button type="button" class="btn btn-primary" id="btnUnsavedPromptSave" onclick="onUnsavedPromptSave()" style="min-width: 110px; font-weight: 800; background: var(--brand);">
-          <span>💾</span> Lưu
-        </button>
-        <button type="button" class="btn btn-secondary" id="btnUnsavedPromptDiscard" onclick="onUnsavedPromptDiscard()" style="min-width: 110px; font-weight: 700; color: var(--danger); border-color: #fca5a5; background: #fff;">
-          <span>✕</span> Vẫn đóng
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal Sửa Thông Tin Chiến Dịch (Tên, Thời Gian) -->
-  <div class="modal-backdrop" id="editCampaignMetaModal">
-    <div class="modal-content" style="max-width: 520px;">
-      <div class="modal-header">
-        <h3 class="modal-title">🔥 Thông Tin Chiến Dịch</h3>
-        <button type="button" class="modal-close" onclick="closeEditCampaignMetaModal()">×</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label class="field-label" for="metaCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
-          <div class="campaign-combobox" id="metaCampaignCombobox">
-            <input type="text" class="filter-input" id="metaCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" style="width: 100%; border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('meta')" onfocus="showCampaignDropdown('meta')" required>
-            <span class="campaign-combobox-arrow" id="metaCampaignArrow" onclick="toggleCampaignDropdown('meta')">▼</span>
-            <div class="campaign-combobox-dropdown" id="metaCampaignDropdown"></div>
-          </div>
-        </div>
-        <div class="form-row-2" style="margin-bottom: 12px;">
-          <div class="form-group">
-            <label class="field-label" for="metaCampaignStartDate" style="color: #9a3412; font-weight: 700;">Từ Ngày (*)</label>
-            <input type="date" class="filter-input" id="metaCampaignStartDate" style="width: 100%; border-color: #fdba74; font-weight: 600;" required>
-          </div>
-          <div class="form-group">
-            <label class="field-label" for="metaCampaignEndDate" style="color: #9a3412; font-weight: 700;">Đến Ngày (*)</label>
-            <input type="date" class="filter-input" id="metaCampaignEndDate" style="width: 100%; border-color: #fdba74; font-weight: 600;" required>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="field-label" for="metaCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái Chiến Dịch</label>
-          <select class="filter-select" id="metaCampaignStatus" style="width: 100%; border-color: #fdba74; font-weight: 700;">
-            <option value="Đang chạy">🟢 Đang chạy</option>
-            <option value="Tạm dừng">⏸️ Tạm dừng</option>
-          </select>
-          <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">💡 Hệ thống tự động chuyển sang "Kết thúc" khi qua ngày Đến Ngày.</div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeEditCampaignMetaModal()">Hủy</button>
-        <button type="button" class="btn btn-primary" onclick="submitCampaignMetaModal()" style="background-color: #ea580c; border-color: #c2410c;">Lưu Cập Nhật</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
     // Global State
     let configData = {
       thMonths: [],
@@ -1416,7 +111,7 @@
       document.getElementById('badgeF2Count').innerText = configData.f2Rows.length;
 
       const camp = configData.campaign;
-      const campStatus = getEffectiveCampaignStatus(camp);
+      const campStatus = (camp && camp.status) ? camp.status : 'Chưa có';
       const campRowsCount = (camp && camp.rows) ? camp.rows.length : 0;
       const statCampEl = document.getElementById('statCampaignCount');
       if (statCampEl) {
@@ -1425,7 +120,7 @@
         } else if (campStatus === 'Tạm dừng') {
           statCampEl.innerHTML = `<span style="color:var(--warning);font-weight:800;">⏸️ Tạm dừng</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
         } else {
-          statCampEl.innerHTML = `<span style="color:var(--text-tertiary);font-weight:700;">⚪ Kết thúc</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
+          statCampEl.innerHTML = `<span style="color:var(--text-tertiary);font-weight:700;">⚪ ${escapeHtml(campStatus)}</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
         }
       }
 
@@ -1475,137 +170,17 @@
       renderTable();
     }
 
-    function formatDateVn(dStr) {
-      if (!dStr) return '';
-      const parts = String(dStr).trim().split('-');
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-      }
-      return dStr;
-    }
-
-    function getEffectiveCampaignStatus(camp) {
-      if (!camp) return 'Tạm dừng';
-      const rawStatus = camp.status || 'Đang chạy';
-      if (rawStatus === 'Tạm dừng') return 'Tạm dừng';
-
-      if (camp.endDate) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const parts = String(camp.endDate).split('-');
-        if (parts.length === 3) {
-          const endD = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 23, 59, 59, 999);
-          if (today > endD) {
-            return 'Kết thúc';
-          }
-        }
-      }
-      return 'Đang chạy';
-    }
-
-    function updateCampaignBanner() {
-      const camp = configData.campaign || {};
-      const nameEl = document.getElementById('dispCampaignName');
-      const datesEl = document.getElementById('dispCampaignDates');
-      const statusEl = document.getElementById('dispCampaignStatusBadge');
-
-      if (nameEl) {
-        nameEl.innerText = camp.name || '(Chưa đặt tên)';
-        nameEl.style.color = camp.name ? '#9a3412' : 'var(--text-tertiary)';
-      }
-      if (datesEl) {
-        if (camp.startDate && camp.endDate) {
-          datesEl.innerText = `${formatDateVn(camp.startDate)} → ${formatDateVn(camp.endDate)}`;
-          datesEl.style.color = '#15803d';
-        } else if (camp.startDate) {
-          datesEl.innerText = `Từ ${formatDateVn(camp.startDate)}`;
-          datesEl.style.color = '#15803d';
-        } else {
-          datesEl.innerText = 'Chưa thiết lập';
-          datesEl.style.color = 'var(--text-tertiary)';
-        }
-      }
-      if (statusEl) {
-        const st = getEffectiveCampaignStatus(camp);
-        if (st === 'Đang chạy') {
-          statusEl.className = 'badge';
-          statusEl.style = 'background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;';
-          statusEl.innerText = '🟢 Đang chạy';
-        } else if (st === 'Tạm dừng') {
-          statusEl.className = 'badge';
-          statusEl.style = 'background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:700;';
-          statusEl.innerText = '⏸️ Tạm dừng';
-        } else {
-          statusEl.className = 'badge';
-          statusEl.style = 'background:var(--bg-muted); color:var(--text-tertiary); border:1px solid var(--border-subtle); font-weight:700;';
-          statusEl.innerText = '⚪ Kết thúc (Hết hạn)';
-        }
-      }
-    }
-
     function populateCampaignForm() {
-      updateCampaignBanner();
-    }
+      const camp = configData.campaign || { name: '', startDate: '', endDate: '', status: 'Tạm dừng', rows: [] };
+      const nameEl = document.getElementById('campaignName');
+      const startEl = document.getElementById('campaignStartDate');
+      const endEl = document.getElementById('campaignEndDate');
+      const statusEl = document.getElementById('campaignStatus');
 
-    function openEditCampaignMetaModal() {
-      const camp = configData.campaign || { name: '', startDate: '', endDate: '', status: 'Đang chạy' };
-      const modal = document.getElementById('editCampaignMetaModal');
-      if (!modal) return;
-      document.getElementById('metaCampaignName').value = camp.name || '';
-      document.getElementById('metaCampaignStartDate').value = camp.startDate || '';
-      document.getElementById('metaCampaignEndDate').value = camp.endDate || '';
-      document.getElementById('metaCampaignStatus').value = 'Đang chạy';
-      modal.style.display = 'flex';
-    }
-
-    function closeEditCampaignMetaModal(force) {
-      if (!force) {
-        showUnsavedPrompt({
-          desc: 'Bạn chưa lưu thông tin chiến dịch vừa chỉnh sửa. Bạn có muốn lưu lại trước khi đóng không?',
-          onSave: function() {
-            submitCampaignMetaModal();
-          },
-          onDiscard: function() {
-            closeEditCampaignMetaModal(true);
-          }
-        });
-        return;
-      }
-      const modal = document.getElementById('editCampaignMetaModal');
-      if (modal) modal.style.display = 'none';
-    }
-
-    function submitCampaignMetaModal() {
-      const name = (document.getElementById('metaCampaignName').value || '').trim();
-      const start = document.getElementById('metaCampaignStartDate').value;
-      const end = document.getElementById('metaCampaignEndDate').value;
-      const status = document.getElementById('metaCampaignStatus').value;
-
-      if (!name) {
-        showToast('Vui lòng nhập Tên Chiến Dịch!', true);
-        document.getElementById('metaCampaignName').focus();
-        return;
-      }
-      if (!start || !end) {
-        showToast('Vui lòng chọn Từ Ngày và Đến Ngày áp dụng chiến dịch!', true);
-        return;
-      }
-      if (new Date(start) > new Date(end)) {
-        showToast('Từ Ngày không được lớn hơn Đến Ngày!', true);
-        return;
-      }
-
-      if (!configData.campaign) configData.campaign = { rows: [] };
-      configData.campaign.name = name;
-      configData.campaign.startDate = start;
-      configData.campaign.endDate = end;
-      configData.campaign.status = status;
-
-      closeEditCampaignMetaModal(true);
-      updateCampaignBanner();
-      renderStats();
-      showToast('Đang tự động lưu thông tin Chiến Dịch vào Sheet...');
-      saveCampaignChanges();
+      if (nameEl) nameEl.value = camp.name || '';
+      if (startEl) startEl.value = camp.startDate || '';
+      if (endEl) endEl.value = camp.endDate || '';
+      if (statusEl) statusEl.value = camp.status || 'Tạm dừng';
     }
 
     function markCampaignDirty() {
@@ -1674,9 +249,9 @@
 
       // Header row
       let headHtml = `<tr>
-        <th class="freeze-col">#</th>
-        <th class="freeze-col-actions">Thao Tác</th>
-        <th class="freeze-col-2" style="width:90px; min-width:90px;">Mã DA</th>
+        <th class="freeze-col" style="width:36px; text-align:center;">#</th>
+        <th class="freeze-col-actions" style="width:70px; text-align:center;">Thao Tác</th>
+        <th class="freeze-col-2" style="width:90px;">Mã DA</th>
         <th style="min-width:180px;">Tên Dự Án</th>
         <th style="min-width:110px;">CĐT</th>
         <th style="width:90px;">Miền</th>
@@ -1733,13 +308,11 @@
           : `<span class="badge" style="background:var(--bg-muted); color:var(--text-tertiary); font-size:11px; font-weight:600;">Tất cả</span>`;
 
         bodyHtml += `<tr>
-          <td class="freeze-col" style="color:var(--text-tertiary); font-size:11px;">${idx + 1}</td>
-          <td class="freeze-col-actions">
-            <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
-              <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('th', ${r.rowIdx})" title="Chỉnh sửa dòng này">✏️</button>
-              <button type="button" class="btn-action" style="color:#ea580c; border-color:#fdba74; background:#fff7ed;" onclick="pickThRowToCampaign(${r.rowIdx})" title="Thêm vào chiến dịch">🔥</button>
-              <button type="button" class="btn-action btn-action-del" onclick="deleteRow('th', ${r.rowIdx}, '${escapeHtml(r.code)} - ${escapeHtml(r.name)}')" title="Xóa dòng này">🗑️</button>
-            </div>
+          <td class="freeze-col" style="text-align:center; color:var(--text-tertiary); font-size:11px;">${idx + 1}</td>
+          <td class="freeze-col-actions" style="text-align:center; white-space:nowrap; padding:4px 6px;">
+            <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('th', ${r.rowIdx})" title="Chỉnh sửa dòng này">✏️</button>
+            <button type="button" class="btn-action" style="color:#ea580c; border-color:#fdba74; background:#fff7ed;" onclick="pickThRowToCampaign(${r.rowIdx})" title="Sao chép dòng này sang Điểm Chiến Dịch">🔥</button>
+            <button type="button" class="btn-action btn-action-del" onclick="deleteRow('th', ${r.rowIdx}, '${escapeHtml(r.code)} - ${escapeHtml(r.name)}')" title="Xóa dòng này">🗑️</button>
           </td>
           <td class="freeze-col-2" style="font-weight:700; font-family:var(--font-mono); color:var(--brand);">${escapeHtml(r.code)}</td>
           <td style="font-weight:600;">${escapeHtml(r.name)}</td>
@@ -1775,9 +348,9 @@
       const displayMonths = (selMonth === 'ALL') ? allMonths : allMonths.filter(m => m.dateStr === selMonth);
 
       let headHtml = `<tr>
-        <th class="freeze-col">#</th>
-        <th class="freeze-col-actions">Thao Tác</th>
-        <th class="freeze-col-2" style="min-width:200px;">Tên Dự Án (F2)</th>
+        <th class="freeze-col" style="width:36px; text-align:center;">#</th>
+        <th class="freeze-col-actions" style="width:70px; text-align:center;">Thao Tác</th>
+        <th class="freeze-col-2" style="min-width:220px;">Tên Dự Án (F2)</th>
         <th style="width:120px;">Loại Quỹ</th>`;
 
       displayMonths.forEach(m => {
@@ -1804,12 +377,10 @@
       let bodyHtml = '';
       filtered.forEach((r, idx) => {
         bodyHtml += `<tr>
-          <td class="freeze-col" style="color:var(--text-tertiary); font-size:11px;">${idx + 1}</td>
-          <td class="freeze-col-actions">
-            <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
-              <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('f2', ${r.rowIdx})" title="Chỉnh sửa tên dự án">✏️</button>
-              <button type="button" class="btn-action btn-action-del" onclick="deleteRow('f2', ${r.rowIdx}, '${escapeHtml(r.name)}')" title="Xóa dự án F2 này">🗑️</button>
-            </div>
+          <td class="freeze-col" style="text-align:center; color:var(--text-tertiary); font-size:11px;">${idx + 1}</td>
+          <td class="freeze-col-actions" style="text-align:center; white-space:nowrap; padding:4px 6px;">
+            <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('f2', ${r.rowIdx})" title="Chỉnh sửa tên dự án">✏️</button>
+            <button type="button" class="btn-action btn-action-del" onclick="deleteRow('f2', ${r.rowIdx}, '${escapeHtml(r.name)}')" title="Xóa dự án F2 này">🗑️</button>
           </td>
           <td class="freeze-col-2" style="font-weight:700;">${escapeHtml(r.name)}</td>
           <td><span class="badge badge-fund-cross">Quỹ chéo</span></td>`;
@@ -2049,28 +620,71 @@
       });
     }
 
+    function cloneFromTongHopToCampaign() {
+      if (!configData.thRows || configData.thRows.length === 0) {
+        showToast('Không có dữ liệu trong Bảng Tổng Hợp để sao chép!', true);
+        return;
+      }
+
+      showConfirmModal({
+        icon: '📋',
+        title: 'Sao Chép Cấu Hình Từ Tổng Hợp',
+        message: `Hệ thống sẽ sao chép toàn bộ ${configData.thRows.length} dòng điều kiện (CĐT, Mã DA, Tên DA, Sản Phẩm, Loại Căn, Khoảng Giá) từ Bảng Tổng Hợp sang Bảng Chiến Dịch.\n\nĐiểm chiến dịch ban đầu sẽ được lấy từ tháng mới nhất (${configData.thMonths[0]?.display || 'tháng gần nhất'}).\n\nBạn có muốn tiếp tục?`
+      }, function() {
+        const latestMonthKey = (configData.thMonths && configData.thMonths.length > 0) ? configData.thMonths[0].dateStr : null;
+        
+        if (!configData.campaign) configData.campaign = {};
+        configData.campaign.rows = configData.thRows.map((r, idx) => {
+          let baselineScore = 0;
+          if (latestMonthKey && r.scores && r.scores[latestMonthKey] !== undefined) {
+            baselineScore = r.scores[latestMonthKey];
+          } else if (r.scores) {
+            const keys = Object.keys(r.scores);
+            baselineScore = keys.length > 0 ? r.scores[keys[0]] : 0;
+          }
+
+          return {
+            rowIdx: idx,
+            stt: idx + 1,
+            cdt: r.cdt || '',
+            code: r.code || '',
+            name: r.name || '',
+            region: r.region || '',
+            status: r.status || 'Đang bán',
+            sanPham: r.sanPham || 'Tất cả',
+            loaiCan: r.loaiCan || 'Tất cả',
+            khoangGia: r.khoangGia || 'Tất cả',
+            score: baselineScore,
+            note: r.note || ''
+          };
+        });
+
+        markCampaignDirty();
+        renderStats();
+        renderTable();
+        showToast(`Đã sao chép thành công ${configData.campaign.rows.length} dòng từ Tổng Hợp! Hãy chỉnh sửa điểm và bấm "Lưu Bảng Chiến Dịch".`);
+      });
+    }
+
     function saveCampaignChanges() {
-      const camp = configData.campaign || {};
-      const name = (camp.name || '').trim();
-      const startDate = camp.startDate || '';
-      const endDate = camp.endDate || '';
-      const status = camp.status || 'Đang chạy';
+      const name = (document.getElementById('campaignName').value || '').trim();
+      const startDate = document.getElementById('campaignStartDate').value;
+      const endDate = document.getElementById('campaignEndDate').value;
+      const status = document.getElementById('campaignStatus').value;
 
       if (!name) {
-        showToast('Chưa có thông tin Tên Chiến Dịch! Vui lòng nhập thông tin chiến dịch.', true);
-        openEditCampaignMetaModal();
+        showToast('Vui lòng nhập Tên Chiến Dịch!', true);
+        document.getElementById('campaignName').focus();
         return;
       }
 
       if (status === 'Đang chạy') {
         if (!startDate || !endDate) {
           showToast('Chiến dịch Đang chạy bắt buộc phải có Từ Ngày và Đến Ngày!', true);
-          openEditCampaignMetaModal();
           return;
         }
         if (new Date(startDate) > new Date(endDate)) {
           showToast('Từ Ngày không được lớn hơn Đến Ngày!', true);
-          openEditCampaignMetaModal();
           return;
         }
       }
@@ -2095,20 +709,9 @@
             configData.campaign.endDate = endDate;
             configData.campaign.status = status;
 
-            // Cập nhật campaignsList local để combobox luôn đồng bộ
-            if (!configData.campaignsList) configData.campaignsList = [];
-            const existIdx = configData.campaignsList.findIndex(c => c.name.trim().toLowerCase() === name.trim().toLowerCase());
-            const entry = { name: name, startDate: startDate, endDate: endDate, status: status };
-            if (existIdx >= 0) {
-              configData.campaignsList[existIdx] = entry;
-            } else {
-              configData.campaignsList.unshift(entry);
-            }
-
             const txt = document.getElementById('campaignDirtyText');
             if (txt) txt.style.display = 'none';
 
-            updateCampaignBanner();
             renderStats();
             updateUnsavedBadge();
             showToast(`Đã lưu thành công chiến dịch "${name}" với ${res.rowCount || configData.campaign.rows.length} dòng!`);
@@ -2720,170 +1323,8 @@
 
 
 
-      if (fundType === 'campaign') {
-        if (title) title.innerText = '➕ Thêm Dự Án Vào Điểm Chiến Dịch';
-        const camp = configData.campaign || { name: '', startDate: '', endDate: '', status: 'Đang chạy' };
-        const campName = camp.name || '';
-        const campStart = camp.startDate || '';
-        const campEnd = camp.endDate || '';
-        const campStatus = 'Đang chạy';
-
-        container.innerHTML = `
-          <!-- Khối Cấu Hình Chiến Dịch (Tên & Date Range) -->
-          <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span style="font-size: var(--text-xs); font-weight: 800; color: #9a3412; text-transform: uppercase;">
-                🔥 THÔNG TIN CHIẾN DỊCH ÁP DỤNG
-              </span>
-              <span style="font-size: 11px; font-weight: 600; color: #ea580c;">
-                (Bắt buộc nhập tên & thời gian)
-              </span>
-            </div>
-            <div class="form-row-2" style="margin-bottom: 8px;">
-              <div class="form-group" style="flex: 2;">
-                <label class="field-label" for="addCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
-                <div class="campaign-combobox" id="addCampaignCombobox">
-                  <input type="text" class="filter-input" id="addCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('add')" onfocus="showCampaignDropdown('add')" required>
-                  <span class="campaign-combobox-arrow" id="addCampaignArrow" onclick="toggleCampaignDropdown('add')">▼</span>
-                  <div class="campaign-combobox-dropdown" id="addCampaignDropdown"></div>
-                </div>
-              </div>
-              <div class="form-group" style="flex: 1;">
-                <label class="field-label" for="addCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
-                <select class="filter-select" id="addCampaignStatus" style="border-color: #fdba74; font-weight: 700;">
-                  <option value="Đang chạy" selected>🟢 Đang chạy</option>
-                  <option value="Tạm dừng">⏸️ Tạm dừng</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row-2">
-              <div class="form-group">
-                <label class="field-label" for="addCampaignStartDate" style="color: #9a3412; font-weight: 700;">Từ Ngày (*)</label>
-                <input type="date" class="filter-input" id="addCampaignStartDate" value="${campStart}" style="border-color: #fdba74; font-weight: 600;" required>
-              </div>
-              <div class="form-group">
-                <label class="field-label" for="addCampaignEndDate" style="color: #9a3412; font-weight: 700;">Đến Ngày (*)</label>
-                <input type="date" class="filter-input" id="addCampaignEndDate" value="${campEnd}" style="border-color: #fdba74; font-weight: 600;" required>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="field-label" for="addCode">Mã Dự Án (*)</label>
-              <div class="autocomplete-container">
-                <input type="text" class="filter-input" style="width:100%;" id="addCode" placeholder="Ví dụ: MAS OCP2, VIN VGG..." autocomplete="off" oninput="showProjectCodeSuggest('add')" onfocus="showProjectCodeSuggest('add')" required>
-                <div class="autocomplete-dropdown" id="addCode_dropdown"></div>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="field-label" for="addName">Tên Dự Án</label>
-              <div class="autocomplete-container">
-                <input type="text" class="filter-input" style="width:100%;" id="addName" placeholder="Ví dụ: Vinhomes Ocean Park 2..." autocomplete="off" oninput="showProjectNameSuggest('add')" onfocus="showProjectNameSuggest('add')">
-                <div class="autocomplete-dropdown" id="addName_dropdown"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="field-label" for="addCdt">Chủ Đầu Tư (CĐT)</label>
-              <div class="autocomplete-container">
-                <input type="text" class="filter-input" style="width:100%;" id="addCdt" placeholder="Ví dụ: Masterise, Vinhomes..." autocomplete="off" oninput="showCdtSuggest('add')" onfocus="showCdtSuggest('add')">
-                <div class="autocomplete-dropdown" id="addCdt_dropdown"></div>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="field-label" for="addRegion">Miền</label>
-              <select class="filter-select" style="width:100%;" id="addRegion">
-                <option value="Miền Bắc">Miền Bắc</option>
-                <option value="Miền Nam">Miền Nam</option>
-                <option value="Miền Trung">Miền Trung</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">
-                🎯 Cấu Hình 3 Tiêu Chí Khớp (Sản Phẩm - Loại Căn - Khoảng Giá)
-              </span>
-              <span style="font-size: 11px; color: var(--text-tertiary);">
-                (* hoặc để trống = Áp dụng tất cả)
-              </span>
-            </div>
-
-            <!-- Hàng 1: Sản Phẩm & Loại Căn (2 cột cân đối) -->
-            <div class="form-row-2">
-              <!-- 1. Sản Phẩm -->
-              <div class="form-group">
-                <label class="field-label" for="selSanPham">1. Sản Phẩm</label>
-                <select class="filter-select" style="width:100%; height:36px;" id="selSanPham">
-                  <option value="Tất cả">Tất cả (Cao & Thấp tầng)</option>
-                  <option value="Cao tầng">Cao tầng</option>
-                  <option value="Thấp tầng">Thấp tầng</option>
-                </select>
-              </div>
-
-              <!-- 2. Loại Căn Multi-select Droplist -->
-              <div class="form-group" style="position: relative;">
-                <label class="field-label">2. Loại Căn</label>
-                <div class="multi-select-container" id="addLoaiCanContainer">
-                  <div class="multi-select-trigger" id="addLoaiCanTrigger" onclick="toggleMultiSelect('add')">
-                    <span class="multi-select-label" id="addLoaiCanLabel">Tất cả</span>
-                    <span class="multi-select-arrow">▼</span>
-                  </div>
-                  <div class="multi-select-dropdown" id="addLoaiCanDropdown">
-                    <div class="multi-select-search-box">
-                      <input type="text" class="multi-select-search" id="addLoaiCanSearch" placeholder="🔍 Tìm loại căn..." oninput="filterMultiSelectOptions('add')">
-                    </div>
-                    <div class="multi-select-actions">
-                      <span class="multi-select-btn-link" onclick="selectAllUnits('add')">Chọn tất cả</span>
-                      <span class="multi-select-btn-link" onclick="clearAllUnits('add')">Bỏ chọn</span>
-                    </div>
-                    <div class="multi-select-options" id="addLoaiCanOptions"></div>
-                  </div>
-                </div>
-                <input type="hidden" id="addLoaiCanInput" value="Tất cả">
-              </div>
-            </div>
-
-            <!-- Hàng 2: Khoảng Giá (Trải ngang cân đối) -->
-            <div class="form-group" style="margin-bottom:0;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <label class="field-label" style="margin-bottom:0;">3. Khoảng Giá (tỷ VNĐ)</label>
-                <span id="addKhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">Tất cả</span>
-              </div>
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
-                <div style="display:flex; align-items:center; gap:6px; flex:1;">
-                  <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Từ (Min):</span>
-                  <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addGiaTu" placeholder="0" value="0" oninput="onPriceInputChange('add')">
-                  <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
-                </div>
-                <span style="color:var(--text-tertiary); font-weight:700; padding:0 2px;">—</span>
-                <div style="display:flex; align-items:center; gap:6px; flex:1;">
-                  <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Đến (Max):</span>
-                  <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addGiaDen" placeholder="999" value="999" oninput="onPriceInputChange('add')">
-                  <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
-                </div>
-                <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
-                <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
-                  <input type="checkbox" id="addIsDat" style="cursor:pointer;" onchange="onPriceInputChange('add')">
-                  <span>Chỉ tính tiền đất (VHHVB)</span>
-                </label>
-              </div>
-              <input type="hidden" id="addKhoangGiaInput" value="Tất cả">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="field-label" for="addScore" style="color: #9a3412; font-weight: 800;">🔥 Điểm Chiến Dịch (*)</label>
-            <input type="number" step="0.5" class="filter-input" style="width:140px; font-weight: 800;" id="addScore" placeholder="Ví dụ: 8.0" value="8.0">
-          </div>
-        `;
-        buildMultiSelectOptions('add', []);
-      } else if (fundType === 'th') {
-        if (title) title.innerText = '➕ Thêm Dự Án / Điều Kiện (Quỹ NW)';
+      if (fundType === 'th' || fundType === 'campaign') {
+        if (title) title.innerText = (fundType === 'campaign') ? '➕ Thêm Dự Án Vào Điểm Chiến Dịch' : '➕ Thêm Dự Án / Điều Kiện (Quỹ NW)';
 
         container.innerHTML = `
           <div class="form-row-2">
@@ -3018,99 +1459,12 @@
       }
     }
 
-    function closeAddRowModal(force) {
-      if (!force) {
-        const fundType = document.getElementById('addFundType') ? document.getElementById('addFundType').value : activeTab;
-        if (fundType === 'campaign') {
-          showUnsavedPrompt({
-            desc: 'Bạn đang tạo dòng cấu hình chiến dịch mới và chưa bấm lưu. Bạn có muốn lưu trước khi đóng không?',
-            onSave: function() {
-              submitAddRow();
-            },
-            onDiscard: function() {
-              closeAddRowModal(true);
-            }
-          });
-          return;
-        }
-      }
+    function closeAddRowModal() {
       document.getElementById('addRowModal').style.display = 'none';
     }
 
     function submitAddRow() {
       const fundType = document.getElementById('addFundType') ? document.getElementById('addFundType').value : activeTab;
-
-      if (fundType === 'campaign') {
-        const campNameEl = document.getElementById('addCampaignName');
-        const campStartEl = document.getElementById('addCampaignStartDate');
-        const campEndEl = document.getElementById('addCampaignEndDate');
-        const campStatusEl = document.getElementById('addCampaignStatus');
-
-        const campName = campNameEl ? campNameEl.value.trim() : '';
-        const campStart = campStartEl ? campStartEl.value : '';
-        const campEnd = campEndEl ? campEndEl.value : '';
-        const campStatus = campStatusEl ? campStatusEl.value : 'Đang chạy';
-
-        if (!campName) {
-          showToast('Vui lòng nhập Tên Chiến Dịch!', true);
-          if (campNameEl) campNameEl.focus();
-          return;
-        }
-
-        if (!campStart || !campEnd) {
-          showToast('Vui lòng chọn Từ Ngày và Đến Ngày áp dụng chiến dịch!', true);
-          return;
-        }
-
-        if (new Date(campStart) > new Date(campEnd)) {
-          showToast('Từ Ngày không được lớn hơn Đến Ngày!', true);
-          return;
-        }
-
-        const codeInput = document.getElementById('addCode');
-        const code = codeInput ? codeInput.value.trim() : '';
-        if (!code) { showToast('Vui lòng nhập Mã Dự Án!', true); return; }
-        const name = (document.getElementById('addName') && document.getElementById('addName').value.trim()) || code;
-        const cdt = (document.getElementById('addCdt') && document.getElementById('addCdt').value.trim()) || '';
-        const region = document.getElementById('addRegion') ? document.getElementById('addRegion').value : 'Miền Bắc';
-        const vals = getThreeFieldValues('add');
-        const score = parseFloat(document.getElementById('addScore').value) || 0;
-
-        if (!configData.campaign) configData.campaign = { rows: [] };
-        configData.campaign.name = campName;
-        configData.campaign.startDate = campStart;
-        configData.campaign.endDate = campEnd;
-        configData.campaign.status = campStatus;
-        if (!configData.campaign.rows) configData.campaign.rows = [];
-
-        const newRow = {
-          rowIdx: configData.campaign.rows.length,
-          stt: configData.campaign.rows.length + 1,
-          cdt: cdt,
-          code: code,
-          name: name,
-          region: region,
-          status: 'Đang bán',
-          sanPham: vals.sanPham,
-          loaiCan: vals.loaiCan,
-          khoangGia: vals.khoangGia,
-          score: score,
-          note: ''
-        };
-
-        configData.campaign.rows.push(newRow);
-        closeAddRowModal(true);
-        updateCampaignBanner();
-        renderStats();
-        if (activeTab === 'campaign') {
-          renderTable();
-        } else {
-          switchTab('campaign');
-        }
-        showToast(`Đang tự động lưu dự án "${code}" vào Sheet Điểm Chiến Dịch...`);
-        saveCampaignChanges();
-        return;
-      }
 
       if (fundType === 'th') {
         const codeInput = document.getElementById('addCode');
@@ -3187,189 +1541,12 @@
         }
       }
 
-      closeAddRowModal(true);
+      closeAddRowModal();
       updateUnsavedBadge();
       renderStats();
       renderTable();
       showToast('Đã thêm dòng mới vào danh sách tạm. Hãy bấm "Lưu Thay Đổi" để cập nhật vào Sheet!', false);
     }
-
-    /* ========== CAMPAIGN COMBOBOX DROPDOWN LOGIC ========== */
-    function getCampaignsList() {
-      return (configData && configData.campaignsList) ? configData.campaignsList : [];
-    }
-
-    function getCampaignStatusBadgeClass(status) {
-      if (!status) return 'running';
-      const s = status.trim().toLowerCase();
-      if (s === 'tạm dừng') return 'paused';
-      if (s === 'kết thúc') return 'ended';
-      return 'running';
-    }
-
-    function getCampaignStatusEmoji(status) {
-      if (!status) return '🟢';
-      const s = status.trim().toLowerCase();
-      if (s === 'tạm dừng') return '⏸️';
-      if (s === 'kết thúc') return '🔴';
-      return '🟢';
-    }
-
-    function formatCampaignDateRange(startDate, endDate) {
-      if (!startDate && !endDate) return 'Chưa cấu hình ngày';
-      const fmt = (d) => {
-        if (!d) return '??';
-        const parts = d.split('-');
-        if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0];
-        return d;
-      };
-      return fmt(startDate) + ' → ' + fmt(endDate);
-    }
-
-    function buildCampaignDropdownItems(prefix, filterText) {
-      const dropdown = document.getElementById(prefix + 'CampaignDropdown');
-      if (!dropdown) return;
-      
-      const list = getCampaignsList();
-      const filter = (filterText || '').trim().toLowerCase();
-      
-      let html = '';
-      // "Create new" option always first
-      html += '<div class="campaign-dd-item campaign-dd-item-new" onclick="selectCampaignNew(\'' + prefix + '\')">';
-      html += '➕ Nhập chiến dịch mới...';
-      html += '</div>';
-      
-      // Filter and render existing campaigns
-      const filtered = filter ? list.filter(c => c.name.toLowerCase().includes(filter)) : list;
-      
-      if (filtered.length === 0 && list.length > 0) {
-        html += '<div style="padding: 8px 12px; color: #a8a29e; font-size: 11px; font-style: italic;">Không tìm thấy chiến dịch phù hợp</div>';
-      }
-      
-      filtered.forEach((c, idx) => {
-        const badgeClass = getCampaignStatusBadgeClass(c.status);
-        const emoji = getCampaignStatusEmoji(c.status);
-        const dateRange = formatCampaignDateRange(c.startDate, c.endDate);
-        const escapedName = escapeHtml(c.name);
-        
-        // Check if this is the currently selected campaign
-        const inputEl = document.getElementById(prefix + 'CampaignName');
-        const isActive = inputEl && inputEl.value.trim().toLowerCase() === c.name.trim().toLowerCase();
-        
-        html += '<div class="campaign-dd-item' + (isActive ? ' active' : '') + '" onclick="selectCampaignFromDropdown(\'' + prefix + '\', ' + idx + ')">';
-        html += '<div class="campaign-dd-info">';
-        html += '<div class="campaign-dd-name">' + escapedName + '</div>';
-        html += '<div class="campaign-dd-meta">' + dateRange + '</div>';
-        html += '</div>';
-        html += '<span class="campaign-dd-badge ' + badgeClass + '">' + emoji + ' ' + escapeHtml(c.status || 'Đang chạy') + '</span>';
-        html += '</div>';
-      });
-      
-      dropdown.innerHTML = html;
-    }
-
-    function showCampaignDropdown(prefix) {
-      const dropdown = document.getElementById(prefix + 'CampaignDropdown');
-      const arrow = document.getElementById(prefix + 'CampaignArrow');
-      if (!dropdown) return;
-      
-      const list = getCampaignsList();
-      if (list.length === 0) return; // No history, nothing to show
-      
-      const inputEl = document.getElementById(prefix + 'CampaignName');
-      const filterText = inputEl ? inputEl.value : '';
-      buildCampaignDropdownItems(prefix, filterText);
-      dropdown.classList.add('show');
-      if (arrow) arrow.classList.add('open');
-    }
-
-    function hideCampaignDropdown(prefix) {
-      const dropdown = document.getElementById(prefix + 'CampaignDropdown');
-      const arrow = document.getElementById(prefix + 'CampaignArrow');
-      if (dropdown) dropdown.classList.remove('show');
-      if (arrow) arrow.classList.remove('open');
-    }
-
-    function hideAllCampaignDropdowns() {
-      ['edit', 'add', 'meta'].forEach(p => hideCampaignDropdown(p));
-    }
-
-    function toggleCampaignDropdown(prefix) {
-      const dropdown = document.getElementById(prefix + 'CampaignDropdown');
-      if (!dropdown) return;
-      if (dropdown.classList.contains('show')) {
-        hideCampaignDropdown(prefix);
-      } else {
-        showCampaignDropdown(prefix);
-      }
-    }
-
-    function filterCampaignDropdown(prefix) {
-      const dropdown = document.getElementById(prefix + 'CampaignDropdown');
-      if (!dropdown || !dropdown.classList.contains('show')) {
-        showCampaignDropdown(prefix);
-        return;
-      }
-      const inputEl = document.getElementById(prefix + 'CampaignName');
-      const filterText = inputEl ? inputEl.value : '';
-      buildCampaignDropdownItems(prefix, filterText);
-    }
-
-    function selectCampaignFromDropdown(prefix, idx) {
-      const list = getCampaignsList();
-      if (idx < 0 || idx >= list.length) return;
-      const c = list[idx];
-      
-      // Fill name
-      const nameEl = document.getElementById(prefix + 'CampaignName');
-      if (nameEl) nameEl.value = c.name || '';
-      
-      // Fill dates
-      const startEl = document.getElementById(prefix + 'CampaignStartDate');
-      const endEl = document.getElementById(prefix + 'CampaignEndDate');
-      if (startEl) startEl.value = c.startDate || '';
-      if (endEl) endEl.value = c.endDate || '';
-      
-      // Fill status
-      const statusEl = document.getElementById(prefix + 'CampaignStatus');
-      if (statusEl) {
-        const st = c.status || 'Đang chạy';
-        // Only set valid values
-        if (st === 'Đang chạy' || st === 'Tạm dừng') {
-          statusEl.value = st;
-        } else {
-          // 'Kết thúc' -> show as Tạm dừng since campaign has ended
-          statusEl.value = 'Tạm dừng';
-        }
-      }
-      
-      hideCampaignDropdown(prefix);
-    }
-
-    function selectCampaignNew(prefix) {
-      const nameEl = document.getElementById(prefix + 'CampaignName');
-      if (nameEl) {
-        nameEl.value = '';
-        nameEl.focus();
-      }
-      
-      const startEl = document.getElementById(prefix + 'CampaignStartDate');
-      const endEl = document.getElementById(prefix + 'CampaignEndDate');
-      if (startEl) startEl.value = '';
-      if (endEl) endEl.value = '';
-      
-      const statusEl = document.getElementById(prefix + 'CampaignStatus');
-      if (statusEl) statusEl.value = 'Đang chạy';
-      
-      hideCampaignDropdown(prefix);
-    }
-
-    // Close campaign dropdowns on click outside
-    document.addEventListener('click', function(e) {
-      if (!e.target.closest('.campaign-combobox')) {
-        hideAllCampaignDropdowns();
-      }
-    });
 
     function openEditRowModal(tab, rowIdx) {
       const modal = document.getElementById('editRowModal');
@@ -3391,57 +1568,10 @@
         const giaVal = (row.khoangGia && row.khoangGia !== '*' && row.khoangGia !== 'Tất cả') ? row.khoangGia : 'Tất cả';
         const parsedPrice = parseKhoangGiaToMinMax(row.khoangGia);
 
-        const camp = configData.campaign || { name: '', startDate: '', endDate: '', status: 'Đang chạy' };
-        const campName = isCopy ? '' : (camp.name || '');
-        const campStart = isCopy ? '' : (camp.startDate || '');
-        const campEnd = isCopy ? '' : (camp.endDate || '');
-        const campStatus = 'Đang chạy';
-
-        title.innerText = isCopy ? `🔥 Thêm Vào Chiến Dịch: ${row.code} (${row.name})` : `✏️ Sửa Dự Án Chiến Dịch: ${row.code} (${row.name})`;
-        const submitBtn = document.getElementById('btnEditRowSubmit');
-        if (submitBtn) submitBtn.innerText = isCopy ? '🔥 Thêm Vào Chiến Dịch' : 'Lưu Cập Nhật';
+        title.innerText = isCopy ? `🔥 Sao Chép Vào Chiến Dịch: ${row.code} (${row.name})` : `✏️ Sửa Dự Án Chiến Dịch: ${row.code} (${row.name})`;
         body.innerHTML = `
           <input type="hidden" id="editRowIdx" value="${rowIdx}">
           <input type="hidden" id="editTab" value="${tab}">
-
-          <!-- Khối Cấu Hình Chiến Dịch (Tên & Date Range) -->
-          <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span style="font-size: var(--text-xs); font-weight: 800; color: #9a3412; text-transform: uppercase;">
-                🔥 THÔNG TIN CHIẾN DỊCH ÁP DỤNG
-              </span>
-              <span style="font-size: 11px; font-weight: 600; color: #ea580c;">
-                (Bắt buộc nhập tên & thời gian)
-              </span>
-            </div>
-            <div class="form-row-2" style="margin-bottom: 8px;">
-              <div class="form-group" style="flex: 2;">
-                <label class="field-label" for="editCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
-                <div class="campaign-combobox" id="editCampaignCombobox">
-                  <input type="text" class="filter-input" id="editCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('edit')" onfocus="showCampaignDropdown('edit')" required>
-                  <span class="campaign-combobox-arrow" id="editCampaignArrow" onclick="toggleCampaignDropdown('edit')">▼</span>
-                  <div class="campaign-combobox-dropdown" id="editCampaignDropdown"></div>
-                </div>
-              </div>
-              <div class="form-group" style="flex: 1;">
-                <label class="field-label" for="editCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
-                <select class="filter-select" id="editCampaignStatus" style="border-color: #fdba74; font-weight: 700;">
-                  <option value="Đang chạy" selected>🟢 Đang chạy</option>
-                  <option value="Tạm dừng">⏸️ Tạm dừng</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row-2">
-              <div class="form-group">
-                <label class="field-label" for="editCampaignStartDate" style="color: #9a3412; font-weight: 700;">Từ Ngày (*)</label>
-                <input type="date" class="filter-input" id="editCampaignStartDate" value="${campStart}" style="border-color: #fdba74; font-weight: 600;" required>
-              </div>
-              <div class="form-group">
-                <label class="field-label" for="editCampaignEndDate" style="color: #9a3412; font-weight: 700;">Đến Ngày (*)</label>
-                <input type="date" class="filter-input" id="editCampaignEndDate" value="${campEnd}" style="border-color: #fdba74; font-weight: 600;" required>
-              </div>
-            </div>
-          </div>
           
           <div class="form-row-2">
             <div class="form-group">
@@ -3588,8 +1718,6 @@
         });
 
         title.innerText = `✏️ Sửa Dự Án: ${row.code} (${row.name})`;
-        const submitBtnTH = document.getElementById('btnEditRowSubmit');
-        if (submitBtnTH) submitBtnTH.innerText = 'Lưu Cập Nhật';
         body.innerHTML = `
           <input type="hidden" id="editRowIdx" value="${rowIdx}">
           <input type="hidden" id="editTab" value="th">
@@ -3715,8 +1843,6 @@
         if (!row) { showToast('Không tìm thấy dòng F2!', true); return; }
 
         title.innerText = `✏️ Sửa Dự Án Quỹ Chéo: ${row.name}`;
-        const submitBtnF2 = document.getElementById('btnEditRowSubmit');
-        if (submitBtnF2) submitBtnF2.innerText = 'Lưu Cập Nhật';
         body.innerHTML = `
           <input type="hidden" id="editRowIdx" value="${rowIdx}">
           <input type="hidden" id="editTab" value="f2">
@@ -3734,22 +1860,7 @@
       modal.style.display = 'flex';
     }
 
-    function closeEditRowModal(force) {
-      if (!force) {
-        const tab = document.getElementById('editTab') ? document.getElementById('editTab').value : '';
-        if (tab === 'campaign-copy' || tab === 'campaign') {
-          showUnsavedPrompt({
-            desc: 'Bạn đang thiết lập cấu hình dòng chiến dịch và chưa bấm lưu. Bạn có muốn lưu trước khi đóng không?',
-            onSave: function() {
-              submitEditRow();
-            },
-            onDiscard: function() {
-              closeEditRowModal(true);
-            }
-          });
-          return;
-        }
-      }
+    function closeEditRowModal() {
       document.getElementById('editRowModal').style.display = 'none';
     }
 
@@ -3758,34 +1869,7 @@
       const tab = document.getElementById('editTab').value;
 
       if (tab === 'campaign-copy') {
-        const campNameEl = document.getElementById('editCampaignName');
-        const campStartEl = document.getElementById('editCampaignStartDate');
-        const campEndEl = document.getElementById('editCampaignEndDate');
-        const campStatusEl = document.getElementById('editCampaignStatus');
-
-        const campName = campNameEl ? campNameEl.value.trim() : '';
-        const campStart = campStartEl ? campStartEl.value : '';
-        const campEnd = campEndEl ? campEndEl.value : '';
-        const campStatus = campStatusEl ? campStatusEl.value : 'Đang chạy';
-
-        if (!campName) {
-          showToast('Vui lòng nhập Tên Chiến Dịch!', true);
-          if (campNameEl) campNameEl.focus();
-          return;
-        }
-
-        if (!campStart || !campEnd) {
-          showToast('Vui lòng chọn Từ Ngày và Đến Ngày áp dụng chiến dịch!', true);
-          return;
-        }
-
-        if (new Date(campStart) > new Date(campEnd)) {
-          showToast('Từ Ngày không được lớn hơn Đến Ngày!', true);
-          return;
-        }
-
         const code = document.getElementById('editCode').value.trim();
-        if (!code) { showToast('Vui lòng nhập Mã Dự Án!', true); return; }
         const name = document.getElementById('editName').value.trim() || code;
         const cdt = document.getElementById('editCdt').value.trim();
         const region = document.getElementById('editRegion').value;
@@ -3795,10 +1879,6 @@
         const score = scoreEl ? (parseFloat(scoreEl.value) || 0) : 0;
 
         if (!configData.campaign) configData.campaign = { rows: [] };
-        configData.campaign.name = campName;
-        configData.campaign.startDate = campStart;
-        configData.campaign.endDate = campEnd;
-        configData.campaign.status = campStatus;
         if (!configData.campaign.rows) configData.campaign.rows = [];
 
         const newRow = {
@@ -3817,62 +1897,29 @@
         };
 
         configData.campaign.rows.push(newRow);
-        closeEditRowModal(true);
-        updateCampaignBanner();
+        closeEditRowModal();
+        markCampaignDirty();
         renderStats();
         if (activeTab === 'campaign') {
           renderTable();
         } else {
           switchTab('campaign');
         }
-        showToast(`Đang tự động lưu dự án "${code}" vào Sheet Điểm Chiến Dịch...`);
-        saveCampaignChanges();
+        showToast(`Đã thêm dự án "${code}" vào Điểm Chiến Dịch!`);
         return;
       }
 
       if (tab === 'campaign') {
-        const campNameEl = document.getElementById('editCampaignName');
-        const campStartEl = document.getElementById('editCampaignStartDate');
-        const campEndEl = document.getElementById('editCampaignEndDate');
-        const campStatusEl = document.getElementById('editCampaignStatus');
-
-        const campName = campNameEl ? campNameEl.value.trim() : '';
-        const campStart = campStartEl ? campStartEl.value : '';
-        const campEnd = campEndEl ? campEndEl.value : '';
-        const campStatus = campStatusEl ? campStatusEl.value : 'Đang chạy';
-
-        if (!campName) {
-          showToast('Vui lòng nhập Tên Chiến Dịch!', true);
-          if (campNameEl) campNameEl.focus();
-          return;
-        }
-
-        if (!campStart || !campEnd) {
-          showToast('Vui lòng chọn Từ Ngày và Đến Ngày áp dụng chiến dịch!', true);
-          return;
-        }
-
-        if (new Date(campStart) > new Date(campEnd)) {
-          showToast('Từ Ngày không được lớn hơn Đến Ngày!', true);
-          return;
-        }
-
         const row = configData.campaign?.rows?.find(r => r.rowIdx === rowIdx);
         if (!row) { showToast('Không tìm thấy dòng chiến dịch!', true); return; }
 
         const code = document.getElementById('editCode').value.trim();
-        if (!code) { showToast('Vui lòng nhập Mã Dự Án!', true); return; }
         const name = document.getElementById('editName').value.trim() || code;
         const cdt = document.getElementById('editCdt').value.trim();
         const region = document.getElementById('editRegion').value;
         const status = document.getElementById('editStatus').value;
         const vals = getThreeFieldValues('edit');
         const scoreEl = document.getElementById('editScoreCampaign');
-
-        configData.campaign.name = campName;
-        configData.campaign.startDate = campStart;
-        configData.campaign.endDate = campEnd;
-        configData.campaign.status = campStatus;
 
         row.code = code;
         row.name = name;
@@ -3884,12 +1931,10 @@
         row.khoangGia = vals.khoangGia;
         if (scoreEl) row.score = parseFloat(scoreEl.value) || 0;
 
-        closeEditRowModal(true);
-        updateCampaignBanner();
-        renderStats();
+        closeEditRowModal();
+        markCampaignDirty();
         renderTable();
-        showToast('Đang tự động lưu cập nhật vào Sheet Điểm Chiến Dịch...');
-        saveCampaignChanges();
+        showToast('Đã cập nhật dòng chiến dịch thành công!');
         return;
       }
       if (!rowIdx) return;
@@ -3909,7 +1954,7 @@
             hideLoading();
             if (res && res.success) {
               showToast('Đã cập nhật dự án thành công!', false);
-              closeEditRowModal(true);
+              closeEditRowModal();
               fetchData();
             } else {
               showToast('Lỗi cập nhật: ' + (res ? res.error : ''), true);
@@ -3936,7 +1981,7 @@
             hideLoading();
             if (res && res.success) {
               showToast('Đã cập nhật dự án F2 thành công!', false);
-              closeEditRowModal(true);
+              closeEditRowModal();
               fetchData();
             } else {
               showToast('Lỗi cập nhật: ' + (res ? res.error : ''), true);
@@ -4007,177 +2052,4 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
     }
-
-    // =========================================================================
-    // XỬ LÝ CẢNH BÁO CHƯA LƯU CẤU HÌNH & ĐÓNG APP SCRIPT
-    // =========================================================================
-    let pendingUnsavedAction = null;
-
-    function showUnsavedPrompt(options) {
-      pendingUnsavedAction = options || {};
-      const modal = document.getElementById('unsavedPromptModal');
-      const descEl = document.getElementById('unsavedPromptDesc');
-      if (descEl && options && options.desc) {
-        descEl.innerText = options.desc;
-      }
-      if (modal) modal.style.display = 'flex';
-    }
-
-    function closeUnsavedPrompt() {
-      const modal = document.getElementById('unsavedPromptModal');
-      if (modal) modal.style.display = 'none';
-      pendingUnsavedAction = null;
-    }
-
-    function onUnsavedPromptSave() {
-      if (pendingUnsavedAction && typeof pendingUnsavedAction.onSave === 'function') {
-        const fn = pendingUnsavedAction.onSave;
-        closeUnsavedPrompt();
-        fn();
-      } else {
-        closeUnsavedPrompt();
-      }
-    }
-
-    function onUnsavedPromptDiscard() {
-      if (pendingUnsavedAction && typeof pendingUnsavedAction.onDiscard === 'function') {
-        const fn = pendingUnsavedAction.onDiscard;
-        closeUnsavedPrompt();
-        fn();
-      } else {
-        closeUnsavedPrompt();
-      }
-    }
-
-    function hasUnsavedChanges() {
-      const campDirty = (typeof isCampaignDirty !== 'undefined' && isCampaignDirty === true);
-      const dataDirty = (typeof modifiedCellsTH !== 'undefined' && modifiedCellsTH.size > 0) ||
-                        (typeof modifiedCellsF2 !== 'undefined' && modifiedCellsF2.size > 0) ||
-                        (typeof newRowsTH !== 'undefined' && newRowsTH.length > 0) ||
-                        (typeof newRowsF2 !== 'undefined' && newRowsF2.length > 0);
-      return campDirty || dataDirty;
-    }
-
-    function attemptCloseApp() {
-      if (hasUnsavedChanges()) {
-        showUnsavedPrompt({
-          desc: 'Các thay đổi cấu hình điểm chưa được lưu vào Google Sheets. Bạn có muốn lưu lại trước khi đóng App Script không?',
-          onSave: function() {
-            saveEverythingAndClose();
-          },
-          onDiscard: function() {
-            google.script.host.close();
-          }
-        });
-      } else {
-        google.script.host.close();
-      }
-    }
-
-    function saveEverythingAndClose() {
-      showLoading('Đang lưu cấu hình trước khi đóng App Script...');
-
-      const doSaveCampaign = (next) => {
-        if (isCampaignDirty && configData.campaign) {
-          const camp = configData.campaign;
-          const name = (camp.name || '').trim();
-          const startDate = camp.startDate || '';
-          const endDate = camp.endDate || '';
-          const status = camp.status || 'Đang chạy';
-
-          if (name) {
-            const payload = {
-              name: name,
-              startDate: startDate,
-              endDate: endDate,
-              status: status,
-              rows: configData.campaign.rows || []
-            };
-            google.script.run
-              .withSuccessHandler(function() {
-                isCampaignDirty = false;
-                next();
-              })
-              .withFailureHandler(function(err) {
-                hideLoading();
-                showToast('Lỗi khi lưu chiến dịch: ' + (err.message || err), true);
-              })
-              .saveCampaignData(payload);
-            return;
-          }
-        }
-        next();
-      };
-
-      const doSaveMonthly = (next) => {
-        const thUpdates = Array.from(modifiedCellsTH.values());
-        const f2Updates = Array.from(modifiedCellsF2.values());
-        if (thUpdates.length > 0 || f2Updates.length > 0 || newRowsTH.length > 0 || newRowsF2.length > 0) {
-          const payload = {
-            thCellUpdates: thUpdates,
-            f2CellUpdates: f2Updates,
-            newRowsTH: newRowsTH,
-            newRowsF2: newRowsF2,
-            thMonths: configData.thMonths,
-            f2Months: configData.f2Months
-          };
-          google.script.run
-            .withSuccessHandler(function() {
-              modifiedCellsTH.clear();
-              modifiedCellsF2.clear();
-              newRowsTH.length = 0;
-              newRowsF2.length = 0;
-              next();
-            })
-            .withFailureHandler(function(err) {
-              hideLoading();
-              showToast('Lỗi khi lưu bảng Tổng hợp / F2: ' + (err.message || err), true);
-            })
-            .saveMonthlyConfigData(payload);
-          return;
-        }
-        next();
-      };
-
-      doSaveCampaign(function() {
-        doSaveMonthly(function() {
-          hideLoading();
-          google.script.host.close();
-        });
-      });
-    }
-
-    let hasPromptedUnsavedOnExit = false;
-
-    // Bắt chuyển động chuột rời mép trên cửa sổ (hướng tới nút X "Close dialog" mặc định của Google Sheets)
-    document.addEventListener('mouseleave', function(e) {
-      if (e.clientY <= 0 && hasUnsavedChanges() && !hasPromptedUnsavedOnExit) {
-        hasPromptedUnsavedOnExit = true;
-        showUnsavedPrompt({
-          desc: 'Bạn có thay đổi cấu hình chưa được lưu vào Google Sheets. Bạn có muốn lưu lại trước khi đóng không?',
-          onSave: function() {
-            hasPromptedUnsavedOnExit = false;
-            saveEverythingAndClose();
-          },
-          onDiscard: function() {
-            hasPromptedUnsavedOnExit = false;
-            google.script.host.close();
-          }
-        });
-      }
-    });
-
-    document.addEventListener('mouseenter', function() {
-      setTimeout(() => { hasPromptedUnsavedOnExit = false; }, 800);
-    });
-
-    window.addEventListener('beforeunload', function(e) {
-      if (hasUnsavedChanges()) {
-        e.preventDefault();
-        e.returnValue = 'Bạn chưa lưu cấu hình!';
-        return 'Bạn chưa lưu cấu hình!';
-      }
-    });
-  </script>
-</body>
-</html>
+  

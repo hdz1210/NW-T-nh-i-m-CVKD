@@ -734,6 +734,121 @@
       color: var(--text-secondary);
     }
 
+    /* Campaign Combobox Dropdown */
+    .campaign-combobox {
+      position: relative;
+      width: 100%;
+    }
+    .campaign-combobox input {
+      padding-right: 34px !important;
+    }
+    .campaign-combobox-arrow {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      color: #9a3412;
+      cursor: pointer;
+      user-select: none;
+      z-index: 2;
+      line-height: 1;
+      transition: transform 0.15s ease;
+    }
+    .campaign-combobox-arrow.open {
+      transform: translateY(-50%) rotate(180deg);
+    }
+    .campaign-combobox-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 100%;
+      max-height: 240px;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid #fdba74;
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 30px rgba(154, 52, 18, 0.12);
+      z-index: 1060;
+      display: none;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+    .campaign-combobox-dropdown.show {
+      display: flex;
+    }
+    .campaign-dd-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #fff7ed;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.12s ease;
+      text-align: left;
+    }
+    .campaign-dd-item:last-child {
+      border-bottom: none;
+    }
+    .campaign-dd-item:hover {
+      background: #fff7ed;
+    }
+    .campaign-dd-item.active {
+      background: #ffedd5;
+    }
+    .campaign-dd-item-new {
+      color: #059669;
+      font-weight: 700;
+      font-size: 12px;
+      border-bottom: 2px solid #d1fae5 !important;
+      padding: 10px 12px;
+    }
+    .campaign-dd-item-new:hover {
+      background: #ecfdf5;
+    }
+    .campaign-dd-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      flex: 1;
+      min-width: 0;
+    }
+    .campaign-dd-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #9a3412;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .campaign-dd-meta {
+      font-size: 10.5px;
+      color: #78716c;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .campaign-dd-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 9999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .campaign-dd-badge.running {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .campaign-dd-badge.paused {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .campaign-dd-badge.ended {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
     /* Multi-select Droplist */
     .multi-select-container {
       position: relative;
@@ -1156,7 +1271,11 @@
       <div class="modal-body">
         <div class="form-group" style="margin-bottom: 12px;">
           <label class="field-label" for="metaCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
-          <input type="text" class="filter-input" id="metaCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" style="width: 100%; border-color: #fdba74; font-weight: 700;" required>
+          <div class="campaign-combobox" id="metaCampaignCombobox">
+            <input type="text" class="filter-input" id="metaCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" style="width: 100%; border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('meta')" onfocus="showCampaignDropdown('meta')" required>
+            <span class="campaign-combobox-arrow" id="metaCampaignArrow" onclick="toggleCampaignDropdown('meta')">▼</span>
+            <div class="campaign-combobox-dropdown" id="metaCampaignDropdown"></div>
+          </div>
         </div>
         <div class="form-row-2" style="margin-bottom: 12px;">
           <div class="form-group">
@@ -1976,6 +2095,16 @@
             configData.campaign.endDate = endDate;
             configData.campaign.status = status;
 
+            // Cập nhật campaignsList local để combobox luôn đồng bộ
+            if (!configData.campaignsList) configData.campaignsList = [];
+            const existIdx = configData.campaignsList.findIndex(c => c.name.trim().toLowerCase() === name.trim().toLowerCase());
+            const entry = { name: name, startDate: startDate, endDate: endDate, status: status };
+            if (existIdx >= 0) {
+              configData.campaignsList[existIdx] = entry;
+            } else {
+              configData.campaignsList.unshift(entry);
+            }
+
             const txt = document.getElementById('campaignDirtyText');
             if (txt) txt.style.display = 'none';
 
@@ -2613,7 +2742,11 @@
             <div class="form-row-2" style="margin-bottom: 8px;">
               <div class="form-group" style="flex: 2;">
                 <label class="field-label" for="addCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
-                <input type="text" class="filter-input" id="addCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" required>
+                <div class="campaign-combobox" id="addCampaignCombobox">
+                  <input type="text" class="filter-input" id="addCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('add')" onfocus="showCampaignDropdown('add')" required>
+                  <span class="campaign-combobox-arrow" id="addCampaignArrow" onclick="toggleCampaignDropdown('add')">▼</span>
+                  <div class="campaign-combobox-dropdown" id="addCampaignDropdown"></div>
+                </div>
               </div>
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="addCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>
@@ -3061,15 +3194,182 @@
       showToast('Đã thêm dòng mới vào danh sách tạm. Hãy bấm "Lưu Thay Đổi" để cập nhật vào Sheet!', false);
     }
 
-    function onCampaignNameSelect(val) {
-      const camp = configData.campaign;
-      if (camp && camp.name && val && val.trim().toLowerCase() === camp.name.trim().toLowerCase()) {
-        const startEl = document.getElementById('editCampaignStartDate');
-        const endEl = document.getElementById('editCampaignEndDate');
-        if (startEl && camp.startDate && !startEl.value) startEl.value = camp.startDate;
-        if (endEl && camp.endDate && !endEl.value) endEl.value = camp.endDate;
+    /* ========== CAMPAIGN COMBOBOX DROPDOWN LOGIC ========== */
+    function getCampaignsList() {
+      return (configData && configData.campaignsList) ? configData.campaignsList : [];
+    }
+
+    function getCampaignStatusBadgeClass(status) {
+      if (!status) return 'running';
+      const s = status.trim().toLowerCase();
+      if (s === 'tạm dừng') return 'paused';
+      if (s === 'kết thúc') return 'ended';
+      return 'running';
+    }
+
+    function getCampaignStatusEmoji(status) {
+      if (!status) return '🟢';
+      const s = status.trim().toLowerCase();
+      if (s === 'tạm dừng') return '⏸️';
+      if (s === 'kết thúc') return '🔴';
+      return '🟢';
+    }
+
+    function formatCampaignDateRange(startDate, endDate) {
+      if (!startDate && !endDate) return 'Chưa cấu hình ngày';
+      const fmt = (d) => {
+        if (!d) return '??';
+        const parts = d.split('-');
+        if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0];
+        return d;
+      };
+      return fmt(startDate) + ' → ' + fmt(endDate);
+    }
+
+    function buildCampaignDropdownItems(prefix, filterText) {
+      const dropdown = document.getElementById(prefix + 'CampaignDropdown');
+      if (!dropdown) return;
+      
+      const list = getCampaignsList();
+      const filter = (filterText || '').trim().toLowerCase();
+      
+      let html = '';
+      // "Create new" option always first
+      html += '<div class="campaign-dd-item campaign-dd-item-new" onclick="selectCampaignNew(\'' + prefix + '\')">';
+      html += '➕ Nhập chiến dịch mới...';
+      html += '</div>';
+      
+      // Filter and render existing campaigns
+      const filtered = filter ? list.filter(c => c.name.toLowerCase().includes(filter)) : list;
+      
+      if (filtered.length === 0 && list.length > 0) {
+        html += '<div style="padding: 8px 12px; color: #a8a29e; font-size: 11px; font-style: italic;">Không tìm thấy chiến dịch phù hợp</div>';
+      }
+      
+      filtered.forEach((c, idx) => {
+        const badgeClass = getCampaignStatusBadgeClass(c.status);
+        const emoji = getCampaignStatusEmoji(c.status);
+        const dateRange = formatCampaignDateRange(c.startDate, c.endDate);
+        const escapedName = escapeHtml(c.name);
+        
+        // Check if this is the currently selected campaign
+        const inputEl = document.getElementById(prefix + 'CampaignName');
+        const isActive = inputEl && inputEl.value.trim().toLowerCase() === c.name.trim().toLowerCase();
+        
+        html += '<div class="campaign-dd-item' + (isActive ? ' active' : '') + '" onclick="selectCampaignFromDropdown(\'' + prefix + '\', ' + idx + ')">';
+        html += '<div class="campaign-dd-info">';
+        html += '<div class="campaign-dd-name">' + escapedName + '</div>';
+        html += '<div class="campaign-dd-meta">' + dateRange + '</div>';
+        html += '</div>';
+        html += '<span class="campaign-dd-badge ' + badgeClass + '">' + emoji + ' ' + escapeHtml(c.status || 'Đang chạy') + '</span>';
+        html += '</div>';
+      });
+      
+      dropdown.innerHTML = html;
+    }
+
+    function showCampaignDropdown(prefix) {
+      const dropdown = document.getElementById(prefix + 'CampaignDropdown');
+      const arrow = document.getElementById(prefix + 'CampaignArrow');
+      if (!dropdown) return;
+      
+      const list = getCampaignsList();
+      if (list.length === 0) return; // No history, nothing to show
+      
+      const inputEl = document.getElementById(prefix + 'CampaignName');
+      const filterText = inputEl ? inputEl.value : '';
+      buildCampaignDropdownItems(prefix, filterText);
+      dropdown.classList.add('show');
+      if (arrow) arrow.classList.add('open');
+    }
+
+    function hideCampaignDropdown(prefix) {
+      const dropdown = document.getElementById(prefix + 'CampaignDropdown');
+      const arrow = document.getElementById(prefix + 'CampaignArrow');
+      if (dropdown) dropdown.classList.remove('show');
+      if (arrow) arrow.classList.remove('open');
+    }
+
+    function hideAllCampaignDropdowns() {
+      ['edit', 'add', 'meta'].forEach(p => hideCampaignDropdown(p));
+    }
+
+    function toggleCampaignDropdown(prefix) {
+      const dropdown = document.getElementById(prefix + 'CampaignDropdown');
+      if (!dropdown) return;
+      if (dropdown.classList.contains('show')) {
+        hideCampaignDropdown(prefix);
+      } else {
+        showCampaignDropdown(prefix);
       }
     }
+
+    function filterCampaignDropdown(prefix) {
+      const dropdown = document.getElementById(prefix + 'CampaignDropdown');
+      if (!dropdown || !dropdown.classList.contains('show')) {
+        showCampaignDropdown(prefix);
+        return;
+      }
+      const inputEl = document.getElementById(prefix + 'CampaignName');
+      const filterText = inputEl ? inputEl.value : '';
+      buildCampaignDropdownItems(prefix, filterText);
+    }
+
+    function selectCampaignFromDropdown(prefix, idx) {
+      const list = getCampaignsList();
+      if (idx < 0 || idx >= list.length) return;
+      const c = list[idx];
+      
+      // Fill name
+      const nameEl = document.getElementById(prefix + 'CampaignName');
+      if (nameEl) nameEl.value = c.name || '';
+      
+      // Fill dates
+      const startEl = document.getElementById(prefix + 'CampaignStartDate');
+      const endEl = document.getElementById(prefix + 'CampaignEndDate');
+      if (startEl) startEl.value = c.startDate || '';
+      if (endEl) endEl.value = c.endDate || '';
+      
+      // Fill status
+      const statusEl = document.getElementById(prefix + 'CampaignStatus');
+      if (statusEl) {
+        const st = c.status || 'Đang chạy';
+        // Only set valid values
+        if (st === 'Đang chạy' || st === 'Tạm dừng') {
+          statusEl.value = st;
+        } else {
+          // 'Kết thúc' -> show as Tạm dừng since campaign has ended
+          statusEl.value = 'Tạm dừng';
+        }
+      }
+      
+      hideCampaignDropdown(prefix);
+    }
+
+    function selectCampaignNew(prefix) {
+      const nameEl = document.getElementById(prefix + 'CampaignName');
+      if (nameEl) {
+        nameEl.value = '';
+        nameEl.focus();
+      }
+      
+      const startEl = document.getElementById(prefix + 'CampaignStartDate');
+      const endEl = document.getElementById(prefix + 'CampaignEndDate');
+      if (startEl) startEl.value = '';
+      if (endEl) endEl.value = '';
+      
+      const statusEl = document.getElementById(prefix + 'CampaignStatus');
+      if (statusEl) statusEl.value = 'Đang chạy';
+      
+      hideCampaignDropdown(prefix);
+    }
+
+    // Close campaign dropdowns on click outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.campaign-combobox')) {
+        hideAllCampaignDropdowns();
+      }
+    });
 
     function openEditRowModal(tab, rowIdx) {
       const modal = document.getElementById('editRowModal');
@@ -3117,10 +3417,11 @@
             <div class="form-row-2" style="margin-bottom: 8px;">
               <div class="form-group" style="flex: 2;">
                 <label class="field-label" for="editCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
-                <input type="text" class="filter-input" id="editCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" list="existingCampaignList" oninput="onCampaignNameSelect(this.value)" required>
-                <datalist id="existingCampaignList">
-                  ${camp.name ? `<option value="${escapeHtml(camp.name)}">` : ''}
-                </datalist>
+                <div class="campaign-combobox" id="editCampaignCombobox">
+                  <input type="text" class="filter-input" id="editCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('edit')" onfocus="showCampaignDropdown('edit')" required>
+                  <span class="campaign-combobox-arrow" id="editCampaignArrow" onclick="toggleCampaignDropdown('edit')">▼</span>
+                  <div class="campaign-combobox-dropdown" id="editCampaignDropdown"></div>
+                </div>
               </div>
               <div class="form-group" style="flex: 1;">
                 <label class="field-label" for="editCampaignStatus" style="color: #9a3412; font-weight: 700;">Trạng Thái</label>

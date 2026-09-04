@@ -751,6 +751,33 @@ function fetchMonthlyConfigData() {
 
     const campaign = fetchCampaignDataInternal(ss);
 
+    // Đọc danh sách chiến dịch đã cấu hình từ PropertiesService
+    let campaignsList = [];
+    try {
+      const props = PropertiesService.getDocumentProperties();
+      const raw = props.getProperty('CONFIGURED_CAMPAIGNS_LIST');
+      if (raw) {
+        campaignsList = JSON.parse(raw);
+      }
+    } catch (e) {
+      Logger.log('Lỗi đọc CONFIGURED_CAMPAIGNS_LIST: ' + e.toString());
+    }
+    // Đảm bảo chiến dịch hiện tại (nếu có) luôn nằm trong list
+    if (campaign && campaign.exists && campaign.name) {
+      const existIdx = campaignsList.findIndex(c => c.name.trim().toLowerCase() === campaign.name.trim().toLowerCase());
+      const entry = {
+        name: campaign.name,
+        startDate: campaign.startDate || '',
+        endDate: campaign.endDate || '',
+        status: campaign.status || 'Đang chạy'
+      };
+      if (existIdx >= 0) {
+        campaignsList[existIdx] = entry;
+      } else {
+        campaignsList.unshift(entry);
+      }
+    }
+
     return {
       success: true,
       thMonths,
@@ -758,6 +785,7 @@ function fetchMonthlyConfigData() {
       f2Months,
       f2Rows,
       campaign,
+      campaignsList,
       latestMonth: thMonths[0] ? thMonths[0].display : (f2Months[0] ? f2Months[0].display : '')
     };
   } catch (err) {
@@ -1103,7 +1131,27 @@ function saveCampaignData(payload) {
       if (w > 260) cdSheet.setColumnWidth(col, 260);
     }
 
-    return { success: true, count: rows.length };
+    // Lưu chiến dịch vào danh sách lịch sử (PropertiesService)
+    try {
+      const props = PropertiesService.getDocumentProperties();
+      let campaignsList = [];
+      const raw = props.getProperty('CONFIGURED_CAMPAIGNS_LIST');
+      if (raw) {
+        campaignsList = JSON.parse(raw);
+      }
+      const entry = { name: name, startDate: startDate, endDate: endDate, status: status };
+      const existIdx = campaignsList.findIndex(c => c.name.trim().toLowerCase() === name.trim().toLowerCase());
+      if (existIdx >= 0) {
+        campaignsList[existIdx] = entry;
+      } else {
+        campaignsList.unshift(entry);
+      }
+      props.setProperty('CONFIGURED_CAMPAIGNS_LIST', JSON.stringify(campaignsList));
+    } catch (propErr) {
+      Logger.log('Lỗi lưu CONFIGURED_CAMPAIGNS_LIST: ' + propErr.toString());
+    }
+
+    return { success: true, count: rows.length, rowCount: rows.length };
   } catch (err) {
     Logger.log('Lỗi saveCampaignData: ' + err.toString());
     return { success: false, error: err.toString() };
