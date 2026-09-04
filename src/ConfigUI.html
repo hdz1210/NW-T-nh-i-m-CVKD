@@ -910,9 +910,6 @@
           <span>💾</span> Lưu Thay Đổi
           <span class="btn-badge" id="saveBadge" style="display:none;">0</span>
         </button>
-        <button type="button" class="btn btn-secondary" onclick="attemptCloseApp()" style="color: var(--danger); border-color: #fca5a5; background: #fff; font-weight: 700;" title="Đóng cửa sổ Bảng Cấu Hình">
-          <span>✕</span> Đóng
-        </button>
       </div>
     </header>
 
@@ -1486,10 +1483,10 @@
       configData.campaign.status = status;
 
       closeEditCampaignMetaModal(true);
-      markCampaignDirty();
       updateCampaignBanner();
       renderStats();
-      showToast('Đã cập nhật thông tin Chiến Dịch!');
+      showToast('Đang tự động lưu thông tin Chiến Dịch vào Sheet...');
+      saveCampaignChanges();
     }
 
     function markCampaignDirty() {
@@ -2970,7 +2967,6 @@
 
         configData.campaign.rows.push(newRow);
         closeAddRowModal(true);
-        markCampaignDirty();
         updateCampaignBanner();
         renderStats();
         if (activeTab === 'campaign') {
@@ -2978,7 +2974,8 @@
         } else {
           switchTab('campaign');
         }
-        showToast(`Đã thêm dự án "${code}" vào Điểm Chiến Dịch!`);
+        showToast(`Đang tự động lưu dự án "${code}" vào Sheet Điểm Chiến Dịch...`);
+        saveCampaignChanges();
         return;
       }
 
@@ -3507,7 +3504,6 @@
 
         configData.campaign.rows.push(newRow);
         closeEditRowModal(true);
-        markCampaignDirty();
         updateCampaignBanner();
         renderStats();
         if (activeTab === 'campaign') {
@@ -3515,7 +3511,8 @@
         } else {
           switchTab('campaign');
         }
-        showToast(`Đã thêm dự án "${code}" vào Điểm Chiến Dịch!`);
+        showToast(`Đang tự động lưu dự án "${code}" vào Sheet Điểm Chiến Dịch...`);
+        saveCampaignChanges();
         return;
       }
 
@@ -3574,11 +3571,11 @@
         if (scoreEl) row.score = parseFloat(scoreEl.value) || 0;
 
         closeEditRowModal(true);
-        markCampaignDirty();
         updateCampaignBanner();
         renderStats();
         renderTable();
-        showToast('Đã cập nhật dòng chiến dịch thành công!');
+        showToast('Đang tự động lưu cập nhật vào Sheet Điểm Chiến Dịch...');
+        saveCampaignChanges();
         return;
       }
       if (!rowIdx) return;
@@ -3835,6 +3832,30 @@
         });
       });
     }
+
+    let hasPromptedUnsavedOnExit = false;
+
+    // Bắt chuyển động chuột rời mép trên cửa sổ (hướng tới nút X "Close dialog" mặc định của Google Sheets)
+    document.addEventListener('mouseleave', function(e) {
+      if (e.clientY <= 0 && hasUnsavedChanges() && !hasPromptedUnsavedOnExit) {
+        hasPromptedUnsavedOnExit = true;
+        showUnsavedPrompt({
+          desc: 'Bạn có thay đổi cấu hình chưa được lưu vào Google Sheets. Bạn có muốn lưu lại trước khi đóng không?',
+          onSave: function() {
+            hasPromptedUnsavedOnExit = false;
+            saveEverythingAndClose();
+          },
+          onDiscard: function() {
+            hasPromptedUnsavedOnExit = false;
+            google.script.host.close();
+          }
+        });
+      }
+    });
+
+    document.addEventListener('mouseenter', function() {
+      setTimeout(() => { hasPromptedUnsavedOnExit = false; }, 800);
+    });
 
     window.addEventListener('beforeunload', function(e) {
       if (hasUnsavedChanges()) {
