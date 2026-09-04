@@ -1061,43 +1061,15 @@ function fetchCampaignDataInternal(ss) {
       campMap.get(key).rowCount++;
     });
 
-    // Bổ sung các chiến dịch đã lưu trong PropertiesService
+    // Đồng bộ lại cache trong PropertiesService theo đúng các dòng đang có trên sheet
+    const campaignsList = Array.from(campMap.values());
     try {
       const props = PropertiesService.getDocumentProperties();
-      const raw = props.getProperty('CONFIGURED_CAMPAIGNS_LIST');
-      if (raw) {
-        const savedList = JSON.parse(raw);
-        if (Array.isArray(savedList)) {
-          savedList.forEach(sc => {
-            if (!sc || !sc.name) return;
-            const key = sc.name.trim().toLowerCase();
-            if (!campMap.has(key)) {
-              let scStatus = sc.status || 'Đang chạy';
-              if (sc.endDate) {
-                const scEnd = parseDateSafe(sc.endDate);
-                if (scEnd) {
-                  scEnd.setHours(23, 59, 59, 999);
-                  if (today > scEnd && scStatus !== 'Tạm dừng') {
-                    scStatus = 'Kết thúc';
-                  }
-                }
-              }
-              campMap.set(key, {
-                name: sc.name.trim(),
-                startDate: sc.startDate || '',
-                endDate: sc.endDate || '',
-                status: scStatus,
-                rowCount: 0
-              });
-            }
-          });
-        }
-      }
+      props.setProperty('CONFIGURED_CAMPAIGNS_LIST', JSON.stringify(campaignsList));
     } catch (e) {
-      Logger.log('Lỗi đọc CONFIGURED_CAMPAIGNS_LIST trong fetchCampaignDataInternal: ' + e.toString());
+      Logger.log('Lỗi cập nhật CONFIGURED_CAMPAIGNS_LIST: ' + e.toString());
     }
 
-    const campaignsList = Array.from(campMap.values());
     const firstCamp = campaignsList.length > 0 ? campaignsList[0] : null;
 
     return {
@@ -1285,21 +1257,7 @@ function saveCampaignData(payload) {
       }
 
       const props = PropertiesService.getDocumentProperties();
-      let campaignsList = [];
-      const raw = props.getProperty('CONFIGURED_CAMPAIGNS_LIST');
-      if (raw) {
-        try {
-          const prev = JSON.parse(raw);
-          if (Array.isArray(prev)) {
-            prev.forEach(p => {
-              if (p && p.name && !campMap.has(p.name.trim().toLowerCase())) {
-                campMap.set(p.name.trim().toLowerCase(), p);
-              }
-            });
-          }
-        } catch (pe) {}
-      }
-      campaignsList = Array.from(campMap.values());
+      const campaignsList = Array.from(campMap.values());
       props.setProperty('CONFIGURED_CAMPAIGNS_LIST', JSON.stringify(campaignsList));
     } catch (propErr) {
       Logger.log('Lỗi lưu CONFIGURED_CAMPAIGNS_LIST: ' + propErr.toString());

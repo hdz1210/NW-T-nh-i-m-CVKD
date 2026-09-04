@@ -739,22 +739,25 @@
       position: relative;
       width: 100%;
     }
-    .campaign-combobox input {
-      padding-right: 34px !important;
+    .campaign-combobox input,
+    .campaign-combobox input.filter-input {
+      width: 100% !important;
+      box-sizing: border-box !important;
+      padding-right: 36px !important;
     }
     .campaign-combobox-arrow {
       position: absolute;
-      right: 6px;
+      right: 5px;
       top: 50%;
       transform: translateY(-50%);
-      width: 26px;
-      height: 26px;
+      width: 24px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: 4px;
       background: #fed7aa;
-      font-size: 11px;
+      font-size: 10px;
       color: #9a3412;
       cursor: pointer;
       user-select: none;
@@ -1472,20 +1475,7 @@
         campMap.get(key).rowCount++;
       });
 
-      configData.campaignsList.forEach(c => {
-        if (!c || !c.name) return;
-        const key = c.name.trim().toLowerCase();
-        if (!campMap.has(key)) {
-          campMap.set(key, {
-            name: c.name.trim(),
-            startDate: c.startDate || '',
-            endDate: c.endDate || '',
-            status: c.status || 'Đang chạy',
-            rowCount: 0
-          });
-        }
-      });
-
+      // Chỉ giữ lại các chiến dịch thực sự có dòng cấu hình trong sheet
       configData.campaignsList = Array.from(campMap.values());
     }
 
@@ -2942,7 +2932,7 @@
               <div class="form-group" style="flex: 2;">
                 <label class="field-label" for="addCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
                 <div class="campaign-combobox" id="addCampaignCombobox">
-                  <input type="text" class="filter-input" id="addCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('add')" required>
+                  <input type="text" class="filter-input" id="addCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="width: 100% !important; border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('add')" required>
                   <span class="campaign-combobox-arrow" id="addCampaignArrow" onclick="toggleCampaignDropdown('add')" title="Bấm để chọn chiến dịch đã cấu hình">▼</span>
                   <div class="campaign-combobox-dropdown" id="addCampaignDropdown"></div>
                 </div>
@@ -3634,7 +3624,7 @@
               <div class="form-group" style="flex: 2;">
                 <label class="field-label" for="editCampaignName" style="color: #9a3412; font-weight: 700;">Tên Chiến Dịch (*)</label>
                 <div class="campaign-combobox" id="editCampaignCombobox">
-                  <input type="text" class="filter-input" id="editCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('edit')" required>
+                  <input type="text" class="filter-input" id="editCampaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" value="${escapeHtml(campName)}" style="width: 100% !important; border-color: #fdba74; font-weight: 700;" autocomplete="off" oninput="filterCampaignDropdown('edit')" required>
                   <span class="campaign-combobox-arrow" id="editCampaignArrow" onclick="toggleCampaignDropdown('edit')" title="Bấm để chọn chiến dịch đã cấu hình">▼</span>
                   <div class="campaign-combobox-dropdown" id="editCampaignDropdown"></div>
                 </div>
