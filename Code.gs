@@ -14,6 +14,7 @@ const APP_CONFIG = {
   SHEET_MAS_VCG: 'Danh sách căn MAS VCG',
   SHEET_GIAN_XAY: 'Giãn xây HVB',
   SHEET_CBNV: 'CBNV',
+  SHEET_CHIEN_DICH: 'Điểm Chiến Dịch',
   COL_OUTPUT_SCORE: 24, // Cột X: Điểm tạm (Index 24)
 };
 
@@ -748,12 +749,15 @@ function fetchMonthlyConfigData() {
       });
     }
 
+    const campaign = fetchCampaignDataInternal(ss);
+
     return {
       success: true,
       thMonths,
       thRows,
       f2Months,
       f2Rows,
+      campaign,
       latestMonth: thMonths[0] ? thMonths[0].display : (f2Months[0] ? f2Months[0].display : '')
     };
   } catch (err) {
@@ -892,6 +896,206 @@ function updateMonthlyConfigRow(tab, rowIdx, data) {
 }
 
 /**
+ * Đọc dữ liệu cấu hình chiến dịch từ sheet 'Điểm Chiến Dịch'
+ */
+function fetchCampaignDataInternal(ss) {
+  try {
+    ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+    const cdSheet = ss.getSheetByName(APP_CONFIG.SHEET_CHIEN_DICH);
+    if (!cdSheet || cdSheet.getLastRow() < 4) {
+      return {
+        exists: false,
+        name: '',
+        startDate: '',
+        endDate: '',
+        status: 'Tạm dừng',
+        rows: []
+      };
+    }
+
+    // Đọc metadata dòng 1
+    const metaVals = cdSheet.getRange(1, 1, 1, Math.max(8, cdSheet.getLastColumn())).getValues()[0];
+    const name = String(metaVals[1] || '').trim();
+    const rawStart = metaVals[3];
+    const rawEnd = metaVals[5];
+    const status = String(metaVals[7] || 'Đang chạy').trim();
+
+    let startDateStr = '';
+    const dStart = parseDateSafe(rawStart);
+    if (dStart) startDateStr = formatDateSafe(dStart, ss);
+
+    let endDateStr = '';
+    const dEnd = parseDateSafe(rawEnd);
+    if (dEnd) endDateStr = formatDateSafe(dEnd, ss);
+
+    const lastRow = cdSheet.getLastRow();
+    const dataRows = cdSheet.getRange(4, 1, lastRow - 3, 11).getValues();
+    const rows = [];
+
+    for (let i = 0; i < dataRows.length; i++) {
+      const r = dataRows[i];
+      const rowNumber = i + 4;
+      const cdt = String(r[1] || '').trim();
+      const code = String(r[2] || '').trim();
+      const projName = String(r[3] || '').trim();
+      const region = String(r[4] || '').trim();
+      const rowStatus = String(r[5] || 'Đang bán').trim();
+      const sanPham = isConditionAll(r[6]) ? 'Tất cả' : String(r[6]).trim();
+      const loaiCan = isConditionAll(r[7]) ? 'Tất cả' : String(r[7]).trim();
+      const khoangGia = isConditionAll(r[8]) ? 'Tất cả' : canonicalKhoangGia(r[8]);
+      const scoreVal = r[9];
+      const score = (scoreVal !== '' && scoreVal !== null && !isNaN(scoreVal)) ? Number(scoreVal) : '';
+      const note = String(r[10] || '').trim();
+
+      rows.push({
+        rowIdx: rowNumber,
+        cdt,
+        code,
+        name: projName,
+        region,
+        status: rowStatus,
+        sanPham,
+        loaiCan,
+        khoangGia,
+        score,
+        note
+      });
+    }
+
+    return {
+      exists: true,
+      name,
+      startDate: startDateStr,
+      endDate: endDateStr,
+      status,
+      rows
+    };
+  } catch (err) {
+    Logger.log('Lỗi fetchCampaignDataInternal: ' + err.toString());
+    return {
+      exists: false,
+      name: '',
+      startDate: '',
+      endDate: '',
+      status: 'Tạm dừng',
+      rows: [],
+      error: err.toString()
+    };
+  }
+}
+
+/**
+ * Public API tải dữ liệu chiến dịch cho client
+ */
+function fetchCampaignData() {
+  return fetchCampaignDataInternal();
+}
+
+/**
+ * Lưu toàn bộ cấu hình chiến dịch vào sheet 'Điểm Chiến Dịch'
+ */
+function saveCampaignData(payload) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let cdSheet = ss.getSheetByName(APP_CONFIG.SHEET_CHIEN_DICH);
+
+    if (!cdSheet) {
+      cdSheet = ss.insertSheet(APP_CONFIG.SHEET_CHIEN_DICH);
+    }
+
+    // Xóa sạch dữ liệu cũ
+    cdSheet.clear();
+
+    const name = String(payload.name || '').trim();
+    const startDate = String(payload.startDate || '').trim();
+    const endDate = String(payload.endDate || '').trim();
+    const status = String(payload.status || 'Đang chạy').trim();
+    const rows = payload.rows || [];
+
+    // 1. Ghi Metadata dòng 1
+    const metaHeaders = [
+      ['TÊN CHIẾN DỊCH:', name, 'TỪ NGÀY:', startDate, 'ĐẾN NGÀY:', endDate, 'TRẠNG THÁI:', status]
+    ];
+    cdSheet.getRange(1, 1, 1, 8).setValues(metaHeaders);
+
+    const metaRange = cdSheet.getRange(1, 1, 1, 8);
+    metaRange.setFontFamily('Arial').setFontSize(10);
+    [1, 3, 5, 7].forEach(col => {
+      cdSheet.getRange(1, col).setFontWeight('bold').setBackground('#eff6ff').setFontColor('#1d4ed8');
+    });
+    [2, 4, 6, 8].forEach(col => {
+      cdSheet.getRange(1, col).setFontWeight('bold').setHorizontalAlignment('center');
+    });
+
+    // Dòng 2: Phụ đề ghi chú
+    cdSheet.getRange(2, 1, 1, 11).merge();
+    cdSheet.getRange(2, 1).setValue('💡 Bảng Điểm Chiến Dịch áp dụng tự động cho các giao dịch trong khoảng thời gian trên (Ưu tiên thay thế điểm tháng).')
+      .setFontStyle('italic').setFontSize(9).setFontColor('#64748b').setBackground('#f8fafc');
+
+    // 2. Ghi Header bảng ở dòng 3
+    const headers = [
+      ['STT', 'Chủ đầu tư', 'Mã DA', 'Tên Dự Án', 'Miền', 'Trạng Thái', 'Sản Phẩm', 'Loại Căn', 'Khoảng Giá', 'Điểm Chiến Dịch', 'Ghi Chú']
+    ];
+    cdSheet.getRange(3, 1, 1, 11).setValues(headers)
+      .setFontWeight('bold')
+      .setBackground('#f1f5f9')
+      .setHorizontalAlignment('center')
+      .setFontSize(10)
+      .setBorder(true, true, true, true, true, true, '#cbd5e1', SpreadsheetApp.BorderStyle.SOLID);
+
+    // 3. Ghi các dòng cấu hình từ dòng 4
+    if (rows.length > 0) {
+      const dataRows = rows.map((r, idx) => {
+        return [
+          idx + 1,
+          r.cdt || '',
+          r.code || '',
+          r.name || '',
+          r.region || '',
+          r.status || 'Đang bán',
+          isConditionAll(r.sanPham) ? 'Tất cả' : r.sanPham,
+          isConditionAll(r.loaiCan) ? 'Tất cả' : r.loaiCan,
+          canonicalKhoangGia(r.khoangGia),
+          (r.score !== '' && r.score !== null && !isNaN(r.score)) ? cleanScore(r.score) : '',
+          r.note || ''
+        ];
+      });
+
+      const dataRange = cdSheet.getRange(4, 1, dataRows.length, 11);
+      dataRange.setValues(dataRows);
+      dataRange.setFontFamily('Arial').setFontSize(10);
+      dataRange.setBorder(true, true, true, true, true, true, '#e2e8f0', SpreadsheetApp.BorderStyle.SOLID);
+
+      cdSheet.getRange(4, 1, dataRows.length, 1).setHorizontalAlignment('center'); // STT
+      cdSheet.getRange(4, 3, dataRows.length, 1).setHorizontalAlignment('center'); // Mã DA
+      cdSheet.getRange(4, 5, dataRows.length, 2).setHorizontalAlignment('center'); // Miền, Trạng thái
+      cdSheet.getRange(4, 7, dataRows.length, 3).setHorizontalAlignment('center'); // SP, LC, KG
+      cdSheet.getRange(4, 10, dataRows.length, 1).setNumberFormat('0.##').setHorizontalAlignment('center').setFontWeight('bold'); // Điểm
+    }
+
+    // Tự động căn chỉnh độ rộng cột
+    for (let col = 1; col <= 11; col++) {
+      cdSheet.autoResizeColumn(col);
+      const w = cdSheet.getColumnWidth(col);
+      if (w < 80) cdSheet.setColumnWidth(col, 80);
+      if (w > 260) cdSheet.setColumnWidth(col, 260);
+    }
+
+    return { success: true, count: rows.length };
+  } catch (err) {
+    Logger.log('Lỗi saveCampaignData: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
+}
+
+/**
+ * Alias lưu dữ liệu cho client gọi
+ */
+function saveCampaignConfig(payload) {
+  return saveCampaignData(payload);
+}
+
+/**
  * =========================================================================
  * BỘ TẢI CONTEXT ENGINE TÍNH ĐIỂM (RULE ENGINE CONTEXT)
  * =========================================================================
@@ -996,7 +1200,53 @@ function getRuleEngineContext(ss) {
       .forEach(r => { if (r[0]) cbnvMap.set(String(r[0]).trim().toUpperCase(), String(r[1]).trim().toUpperCase()); });
   }
 
-  return { f2Map, f2MonthsList, thMap, thMonthsList, masVCGSet, gianXayMap, cbnvMap };
+  // 4. Tải cấu hình Điểm Chiến Dịch (nếu có và đang chạy)
+  let campaignConfig = null;
+  const cdSheet = ss.getSheetByName(APP_CONFIG.SHEET_CHIEN_DICH);
+  if (cdSheet && cdSheet.getLastRow() >= 4) {
+    const metaVals = cdSheet.getRange(1, 1, 1, Math.max(8, cdSheet.getLastColumn())).getValues()[0];
+    const cdName = String(metaVals[1] || '').trim();
+    const rawStart = metaVals[3];
+    const rawEnd = metaVals[5];
+    const cdStatus = String(metaVals[7] || '').trim();
+
+    const startDate = parseDateSafe(rawStart);
+    const endDate = parseDateSafe(rawEnd);
+
+    if (cdStatus === 'Đang chạy' && startDate && endDate) {
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+
+      const cdMap = new Map();
+      const lastRow = cdSheet.getLastRow();
+      const cdDataRows = cdSheet.getRange(4, 1, lastRow - 3, 11).getValues();
+
+      let currentCode = '';
+      cdDataRows.forEach(r => {
+        if (r[2]) currentCode = String(r[2]).trim().toLowerCase();
+        if (!currentCode) return;
+
+        const sanPham = String(r[6] || '*').trim();
+        const loaiCan = String(r[7] || '*').trim();
+        const khoangGia = String(r[8] || '*').trim();
+        const rawScore = r[9];
+        const score = (rawScore !== '' && rawScore !== null && !isNaN(rawScore)) ? Number(rawScore) : 0;
+
+        if (!cdMap.has(currentCode)) cdMap.set(currentCode, []);
+        cdMap.get(currentCode).push({ sanPham, loaiCan, khoangGia, score });
+      });
+
+      campaignConfig = {
+        active: true,
+        name: cdName,
+        startDate: startDate,
+        endDate: endDate,
+        map: cdMap
+      };
+    }
+  }
+
+  return { f2Map, f2MonthsList, thMap, thMonthsList, masVCGSet, gianXayMap, cbnvMap, campaignConfig };
 }
 
 /**
@@ -1169,80 +1419,121 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
 
   let baseScore = 0;
 
-  // 3. Khớp điểm theo Loại Quỹ
-  if (loaiQuy === 'Quỹ Chéo') {
-    // Tra cứu trong bảng Dự án F2
-    const duAnKey = duAn.toLowerCase();
-    if (ctx.f2Map.has(duAnKey)) {
-      const monthScores = ctx.f2Map.get(duAnKey);
-      if (monthScores.has(monthKey)) {
-        baseScore = monthScores.get(monthKey);
-      } else {
-        // Lấy tháng gần nhất
-        const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
-        baseScore = (latestKey && monthScores.has(latestKey)) ? monthScores.get(latestKey) : 1;
-      }
-    } else {
-      baseScore = 1; // Mặc định Quỹ chéo không thuộc danh sách F2 là 1 điểm
-    }
-  } else {
-    // Quỹ NW: Tra cứu trong bảng Tổng Hợp
-    const duAnKey = duAn.toLowerCase();
-    let candidates = ctx.thMap.get(duAnKey) || [];
-
-    // Nếu không tìm thấy bằng tên dự án, thử tìm bằng mã căn hoặc từ khóa
-    if (candidates.length === 0) {
-      for (const [code, list] of ctx.thMap.entries()) {
-        if (duAnKey.includes(code) || code.includes(duAnKey)) {
-          candidates = list;
-          break;
-        }
-      }
-    }
-
-    if (candidates.length > 0) {
-      let matchedRow = null;
-
-      // Ưu tiên dòng khớp cả 3 tiêu chí Sản phẩm, Loại căn, Khoảng giá trước
-      for (const cand of candidates) {
-        if (matchRules(cand.sanPham, cand.loaiCan, cand.khoangGia, sanPham, loaiCan, valInBillion)) {
-          matchedRow = cand;
-          break;
-        }
-      }
-
-      // Nếu không có dòng khớp cụ thể, lấy dòng mặc định ('Tất cả', 'Tất cả', 'Tất cả')
-      if (!matchedRow) {
-        matchedRow = candidates.find(c => 
-          isConditionAll(c.sanPham) && 
-          isConditionAll(c.loaiCan) && 
-          isConditionAll(c.khoangGia)
-        ) || candidates[0];
-      }
-
-      if (matchedRow) {
-        if (matchedRow.monthScores.has(monthKey) && matchedRow.monthScores.get(monthKey) !== '' && matchedRow.monthScores.get(monthKey) !== null) {
-          baseScore = matchedRow.monthScores.get(monthKey);
-        } else {
-          // Nếu tháng giao dịch chưa có điểm trên bảng Tổng hợp: ưu tiên kế thừa điểm của tháng đã cấu hình gần nhất
-          let foundScore = null;
-          for (const m of ctx.thMonthsList) {
-            if (matchedRow.monthScores.has(m.key) && matchedRow.monthScores.get(m.key) !== '' && matchedRow.monthScores.get(m.key) !== null) {
-              foundScore = matchedRow.monthScores.get(m.key);
-              break;
-            }
+  // 3. ƯU TIÊN HÀNG ĐẦU: Khớp điểm theo Chiến Dịch (nếu ngày báo cáo nằm trong thời gian chiến dịch)
+  let isCampaignMatched = false;
+  if (ctx.campaignConfig && ctx.campaignConfig.active) {
+    if (dateBC >= ctx.campaignConfig.startDate && dateBC <= ctx.campaignConfig.endDate) {
+      const duAnKey = duAn.toLowerCase();
+      let candidates = ctx.campaignConfig.map.get(duAnKey) || [];
+      if (candidates.length === 0) {
+        for (const [code, list] of ctx.campaignConfig.map.entries()) {
+          if (duAnKey.includes(code) || code.includes(duAnKey)) {
+            candidates = list;
+            break;
           }
-          baseScore = foundScore !== null ? foundScore : 2;
         }
       }
-    } else {
-      // Dự án Quỹ NW chưa có cấu hình riêng trong bảng Tổng hợp (vd: TPV, S-Light,...):
-      // Áp dụng điểm mặc định 2 điểm cho Quỹ NW (theo cơ chế R035)
-      baseScore = 2;
+
+      if (candidates.length > 0) {
+        let matchedRow = null;
+        for (const cand of candidates) {
+          if (matchRules(cand.sanPham, cand.loaiCan, cand.khoangGia, sanPham, loaiCan, valInBillion)) {
+            matchedRow = cand;
+            break;
+          }
+        }
+        if (!matchedRow) {
+          matchedRow = candidates.find(c => 
+            isConditionAll(c.sanPham) && 
+            isConditionAll(c.loaiCan) && 
+            isConditionAll(c.khoangGia)
+          ) || candidates[0];
+        }
+
+        if (matchedRow && matchedRow.score !== '' && matchedRow.score !== null && !isNaN(matchedRow.score) && Number(matchedRow.score) > 0) {
+          baseScore = Number(matchedRow.score);
+          isCampaignMatched = true;
+        }
+      }
     }
   }
 
-  // 4. Các điểm thưởng & hệ số đặc thù
+  // 4. Nếu không thuộc chiến dịch, tính theo bảng điểm tháng thông thường
+  if (!isCampaignMatched) {
+    if (loaiQuy === 'Quỹ Chéo') {
+      // Tra cứu trong bảng Dự án F2
+      const duAnKey = duAn.toLowerCase();
+      if (ctx.f2Map.has(duAnKey)) {
+        const monthScores = ctx.f2Map.get(duAnKey);
+        if (monthScores.has(monthKey)) {
+          baseScore = monthScores.get(monthKey);
+        } else {
+          // Lấy tháng gần nhất
+          const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
+          baseScore = (latestKey && monthScores.has(latestKey)) ? monthScores.get(latestKey) : 1;
+        }
+      } else {
+        baseScore = 1; // Mặc định Quỹ chéo không thuộc danh sách F2 là 1 điểm
+      }
+    } else {
+      // Quỹ NW: Tra cứu trong bảng Tổng Hợp
+      const duAnKey = duAn.toLowerCase();
+      let candidates = ctx.thMap.get(duAnKey) || [];
+
+      // Nếu không tìm thấy bằng tên dự án, thử tìm bằng mã căn hoặc từ khóa
+      if (candidates.length === 0) {
+        for (const [code, list] of ctx.thMap.entries()) {
+          if (duAnKey.includes(code) || code.includes(duAnKey)) {
+            candidates = list;
+            break;
+          }
+        }
+      }
+
+      if (candidates.length > 0) {
+        let matchedRow = null;
+
+        // Ưu tiên dòng khớp cả 3 tiêu chí Sản phẩm, Loại căn, Khoảng giá trước
+        for (const cand of candidates) {
+          if (matchRules(cand.sanPham, cand.loaiCan, cand.khoangGia, sanPham, loaiCan, valInBillion)) {
+            matchedRow = cand;
+            break;
+          }
+        }
+
+        // Nếu không có dòng khớp cụ thể, lấy dòng mặc định ('Tất cả', 'Tất cả', 'Tất cả')
+        if (!matchedRow) {
+          matchedRow = candidates.find(c => 
+            isConditionAll(c.sanPham) && 
+            isConditionAll(c.loaiCan) && 
+            isConditionAll(c.khoangGia)
+          ) || candidates[0];
+        }
+
+        if (matchedRow) {
+          if (matchedRow.monthScores.has(monthKey) && matchedRow.monthScores.get(monthKey) !== '' && matchedRow.monthScores.get(monthKey) !== null) {
+            baseScore = matchedRow.monthScores.get(monthKey);
+          } else {
+            // Nếu tháng giao dịch chưa có điểm trên bảng Tổng hợp: ưu tiên kế thừa điểm của tháng đã cấu hình gần nhất
+            let foundScore = null;
+            for (const m of ctx.thMonthsList) {
+              if (matchedRow.monthScores.has(m.key) && matchedRow.monthScores.get(m.key) !== '' && matchedRow.monthScores.get(m.key) !== null) {
+                foundScore = matchedRow.monthScores.get(m.key);
+                break;
+              }
+            }
+            baseScore = foundScore !== null ? foundScore : 2;
+          }
+        }
+      } else {
+        // Dự án Quỹ NW chưa có cấu hình riêng trong bảng Tổng hợp (vd: TPV, S-Light,...):
+        // Áp dụng điểm mặc định 2 điểm cho Quỹ NW (theo cơ chế R035)
+        baseScore = 2;
+      }
+    }
+  }
+
+  // 5. Các điểm thưởng & hệ số đặc thù
   let bonusScore = 0;
 
   // Căn đặc biệt MAS VCG (8 điểm)
@@ -1258,9 +1549,9 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
 
   const baseVal = baseScore + bonusScore;
 
-  // Hệ số chiến dịch thời gian (14/02/2026 - 28/02/2026)
+  // Hệ số chiến dịch thời gian (chỉ áp dụng dự phòng nếu chưa có điểm chiến dịch riêng)
   let timeMultiplier = 1;
-  if (dateBC >= new Date(2026, 1, 14) && dateBC <= new Date(2026, 1, 28)) {
+  if (!isCampaignMatched && dateBC >= new Date(2026, 1, 14) && dateBC <= new Date(2026, 1, 28)) {
     timeMultiplier = 2;
   }
 
