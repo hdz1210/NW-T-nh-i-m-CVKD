@@ -264,7 +264,78 @@ function normalizeUnit(u) {
 }
 
 /**
+ * Chuẩn hóa khoảng giá thành định dạng toán học: >= 10, < 10, = 10, 10 - 20, Tất cả...
+ * Không sử dụng định dạng ngôn ngữ tự nhiên.
+ */
+function formatPriceRange(min, max, isDat) {
+  const prefix = isDat ? 'Giá đất ' : '';
+  const minVal = (min !== '' && min !== null && min !== undefined) ? Number(min) : 0;
+  const maxVal = (max !== '' && max !== null && max !== undefined) ? Number(max) : 999;
+
+  const cleanMin = isNaN(minVal) ? 0 : minVal;
+  const cleanMax = isNaN(maxVal) ? 999 : maxVal;
+
+  if (cleanMin <= 0 && cleanMax >= 999) {
+    return 'Tất cả';
+  }
+  if (cleanMin === cleanMax) {
+    return `${prefix}= ${cleanMin}`;
+  }
+  if (cleanMin <= 0 && cleanMax < 999) {
+    return `${prefix}< ${cleanMax}`;
+  }
+  if (cleanMin > 0 && cleanMax >= 999) {
+    return `${prefix}>= ${cleanMin}`;
+  }
+  return `${prefix}${cleanMin} - ${cleanMax}`;
+}
+
+/**
+ * Hàm chuyển đổi mọi chuỗi khoảng giá (cũ tự nhiên hoặc mới toán học) sang chuẩn toán học:
+ * >= 10, < 10, = 10, 10 - 20, Tất cả...
+ */
+function canonicalKhoangGia(val) {
+  if (isConditionAll(val)) return 'Tất cả';
+  const s = String(val).trim();
+  const sLow = s.toLowerCase();
+  const isDat = sLow.includes('giá đất');
+  const prefix = isDat ? 'Giá đất ' : '';
+
+  // 1. Dạng khoảng: 10 - 20 hoặc Từ 10 - 20 tỷ hoặc 10-20
+  const mRange = sLow.match(/(?:từ\s*)?(\d+(?:[.,]\d+)?)\s*(?:-|đến)\s*(\d+(?:[.,]\d+)?)/i);
+  if (mRange) {
+    const minP = parseFloat(mRange[1].replace(',', '.'));
+    const maxP = parseFloat(mRange[2].replace(',', '.'));
+    return `${prefix}${minP} - ${maxP}`;
+  }
+
+  // 2. Dạng lớn hơn / trên / từ X trở lên: >= 10, > 10, trên 10, từ 10 tỷ trở lên
+  const mAbove = sLow.match(/(?:\>=\s*(\d+(?:[.,]\d+)?))|(?:\>\s*(\d+(?:[.,]\d+)?))|(?:trên\s*(\d+(?:[.,]\d+)?))|(?:từ\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]\s*trở\s*lên)/i);
+  if (mAbove) {
+    const minP = parseFloat((mAbove[1] || mAbove[2] || mAbove[3] || mAbove[4]).replace(',', '.'));
+    return `${prefix}>= ${minP}`;
+  }
+
+  // 3. Dạng nhỏ hơn / dưới: <= 10, < 10, dưới 10
+  const mBelow = sLow.match(/(?:\<=\s*(\d+(?:[.,]\d+)?))|(?:\<\s*(\d+(?:[.,]\d+)?))|(?:dưới\s*(\d+(?:[.,]\d+)?))/i);
+  if (mBelow) {
+    const maxP = parseFloat((mBelow[1] || mBelow[2] || mBelow[3]).replace(',', '.'));
+    return `${prefix}< ${maxP}`;
+  }
+
+  // 4. Dạng bằng: = 10 (chắc chắn không phải >= hay <=)
+  const mEq = sLow.match(/(?:^|[^<>!])=\s*(\d+(?:[.,]\d+)?)/);
+  if (mEq) {
+    const p = parseFloat(mEq[1].replace(',', '.'));
+    return `${prefix}= ${p}`;
+  }
+
+  return s;
+}
+
+/**
  * Hàm phân tích chuỗi điều kiện cũ thành 3 giá trị chuẩn { sanPham, loaiCan, khoangGia }
+ * Trong đó khoangGia luôn được chuẩn hóa sang dạng toán học (>= 10, < 10, = 10, 10 - 20, Tất cả)
  */
 function parseConditionToThreeFields(cStr) {
   if (isConditionAll(cStr)) {
@@ -283,20 +354,22 @@ function parseConditionToThreeFields(cStr) {
 
   // 2. Khoảng Giá
   let gia = 'Tất cả';
+  let rawGiaMatch = null;
   const pricePatterns = [
-    /giá đất dưới\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]/i,
-    /giá đất trên\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]/i,
+    /giá đất\s*(?:<=|<|>=|>|=)\s*(\d+(?:[.,]\d+)?)/i,
+    /giá đất\s*(\d+(?:[.,]\d+)?)\s*(?:-|đến)\s*(\d+(?:[.,]\d+)?)/i,
+    /giá đất\s*(?:dưới|trên)\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]/i,
+    /(?:<=|<|>=|>|=)\s*(\d+(?:[.,]\d+)?)/i,
+    /(\d+(?:[.,]\d+)?)\s*(?:-|đến)\s*(\d+(?:[.,]\d+)?)\s*(?:t[ỷỉ])?/i,
     /dưới\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]/i,
     /trên\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]/i,
-    /từ\s*(\d+(?:[.,]\d+)?)\s*(?:-|đến)\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]/i,
     /từ\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]\s*trở\s*lên/i
   ];
   for (const pat of pricePatterns) {
     const m = c.match(pat);
     if (m) {
-      let gStr = m[0].trim();
-      gStr = gStr.charAt(0).toUpperCase() + gStr.slice(1);
-      gia = gStr;
+      rawGiaMatch = m[0];
+      gia = canonicalKhoangGia(m[0]);
       break;
     }
   }
@@ -307,8 +380,8 @@ function parseConditionToThreeFields(cStr) {
   if (sp !== 'Tất cả') {
     temp = temp.replace(/thấp tầng|cao tầng/gi, '');
   }
-  if (gia !== 'Tất cả') {
-    const escGia = gia.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (rawGiaMatch) {
+    const escGia = rawGiaMatch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     temp = temp.replace(new RegExp(escGia, 'gi'), '');
     temp = temp.replace(/giá đất/gi, '');
   }
@@ -619,7 +692,7 @@ function fetchMonthlyConfigData() {
 
       const sanPham = isConditionAll(r[6]) ? 'Tất cả' : String(r[6]).trim();
       const loaiCan = isConditionAll(r[7]) ? 'Tất cả' : String(r[7]).trim();
-      const khoangGia = isConditionAll(r[8]) ? 'Tất cả' : String(r[8]).trim();
+      const khoangGia = isConditionAll(r[8]) ? 'Tất cả' : canonicalKhoangGia(r[8]);
 
       thRows.push({
         rowIdx: rowNumber,
@@ -727,7 +800,7 @@ function saveMonthlyConfigData(payload) {
           nr.status, nr.cdt, nr.code, nr.name, nr.region, nr.fund,
           isConditionAll(nr.sanPham) ? 'Tất cả' : nr.sanPham,
           isConditionAll(nr.loaiCan) ? 'Tất cả' : nr.loaiCan,
-          isConditionAll(nr.khoangGia) ? 'Tất cả' : nr.khoangGia
+          canonicalKhoangGia(nr.khoangGia)
         ];
         payload.thMonths.forEach(m => {
           const s = nr.scores && nr.scores[m.dateStr];
@@ -804,7 +877,7 @@ function updateMonthlyConfigRow(tab, rowIdx, data) {
         data.fund || 'Quỹ NW',
         isConditionAll(data.sanPham) ? 'Tất cả' : data.sanPham,
         isConditionAll(data.loaiCan) ? 'Tất cả' : data.loaiCan,
-        isConditionAll(data.khoangGia) ? 'Tất cả' : data.khoangGia
+        canonicalKhoangGia(data.khoangGia)
       ];
       sheet.getRange(rowIdx, 1, 1, 9).setValues([rowVals]);
     } else {
@@ -944,21 +1017,33 @@ function matchRules(candSp, candLc, candGia, txSp, txLc, txPrice) {
   // 2. Khớp theo Khoảng Giá (Bỏ qua nếu là 'Tất cả' hoặc rỗng)
   if (!isConditionAll(candGia)) {
     const gia = String(candGia).trim().toLowerCase();
-    const rangeMatch = gia.match(/(?:từ\s*)?(\d+(?:[.,]\d+)?)\s*(?:-|đến)\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]/i);
+
+    // 2.1 Dạng khoảng: 10 - 20 hoặc Từ 10 - 20 tỷ hoặc 10-20
+    const rangeMatch = gia.match(/(?:từ\s*)?(\d+(?:[.,]\d+)?)\s*(?:-|đến)\s*(\d+(?:[.,]\d+)?)/i);
     if (rangeMatch) {
       const minP = parseFloat(rangeMatch[1].replace(',', '.'));
       const maxP = parseFloat(rangeMatch[2].replace(',', '.'));
       if (p < minP || p > maxP) return false;
     } else {
-      const fromMatch = gia.match(/(?:từ\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]\s*trở\s*lên)|(?:trên\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ])/i);
+      // 2.2 Dạng lớn hơn / trên / từ X trở lên: >= 10, > 10, trên 10, từ 10 tỷ trở lên
+      const fromMatch = gia.match(/(?:\>=\s*(\d+(?:[.,]\d+)?))|(?:\>\s*(\d+(?:[.,]\d+)?))|(?:trên\s*(\d+(?:[.,]\d+)?))|(?:từ\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]\s*trở\s*lên)/i);
       if (fromMatch) {
-        const minP = parseFloat((fromMatch[1] || fromMatch[2]).replace(',', '.'));
+        const minP = parseFloat((fromMatch[1] || fromMatch[2] || fromMatch[3] || fromMatch[4]).replace(',', '.'));
         if (p < minP) return false;
-      }
-      const toMatch = gia.match(/dưới\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]/i);
-      if (toMatch) {
-        const maxP = parseFloat(toMatch[1].replace(',', '.'));
-        if (p >= maxP) return false;
+      } else {
+        // 2.3 Dạng nhỏ hơn / dưới: <= 10, < 10, dưới 10
+        const toMatch = gia.match(/(?:\<=\s*(\d+(?:[.,]\d+)?))|(?:\<\s*(\d+(?:[.,]\d+)?))|(?:dưới\s*(\d+(?:[.,]\d+)?))/i);
+        if (toMatch) {
+          const maxP = parseFloat((toMatch[1] || toMatch[2] || toMatch[3]).replace(',', '.'));
+          if (p >= maxP) return false;
+        } else {
+          // 2.4 Dạng bằng: = 10
+          const eqMatch = gia.match(/(?:^|[^<>!])=\s*(\d+(?:[.,]\d+)?)/);
+          if (eqMatch) {
+            const targetP = parseFloat(eqMatch[1].replace(',', '.'));
+            if (Math.abs(p - targetP) > 0.05) return false;
+          }
+        }
       }
     }
   }

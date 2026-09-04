@@ -1666,8 +1666,164 @@
       }
     }
 
-    function onManualPriceInput(prefix) {
-      // Cho phép gõ trực tiếp vào ô Khoảng Giá
+    function parseKhoangGiaToMinMax(val) {
+      if (!val || val === '*' || val === 'Tất cả' || val === 'tat ca' || val === 'all' || val === 'none') {
+        return { min: 0, max: 999, isDat: false, preset: 'all', label: 'Tất cả' };
+      }
+      const s = String(val).trim();
+      const sLow = s.toLowerCase();
+      const isDat = sLow.includes('giá đất');
+      const prefix = isDat ? 'Giá đất ' : '';
+
+      // 1. X - Y hoặc Từ X-Y
+      const mRange = sLow.match(/(?:từ\s*)?(\d+(?:[.,]\d+)?)\s*(?:-|đến)\s*(\d+(?:[.,]\d+)?)/i);
+      if (mRange) {
+        const minP = parseFloat(mRange[1].replace(',', '.'));
+        const maxP = parseFloat(mRange[2].replace(',', '.'));
+        let preset = 'custom';
+        if (minP === 10 && maxP === 20 && !isDat) preset = '10-20';
+        else if (minP === 20 && maxP === 30 && !isDat) preset = '20-30';
+        return { min: minP, max: maxP, isDat: isDat, preset: preset, label: prefix + minP + ' - ' + maxP };
+      }
+
+      // 2. >= X, > X, Trên X, Từ X trở lên
+      const mAbove = sLow.match(/(?:\>=\s*(\d+(?:[.,]\d+)?))|(?:\>\s*(\d+(?:[.,]\d+)?))|(?:trên\s*(\d+(?:[.,]\d+)?))|(?:từ\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]\s*trở\s*lên)/i);
+      if (mAbove) {
+        const minP = parseFloat((mAbove[1] || mAbove[2] || mAbove[3] || mAbove[4]).replace(',', '.'));
+        let preset = 'custom';
+        if (minP === 30 && !isDat) preset = 'gte30';
+        else if (minP === 10 && !isDat) preset = 'gte10';
+        else if (minP === 10 && isDat) preset = 'dat_gte10';
+        return { min: minP, max: 999, isDat: isDat, preset: preset, label: prefix + '>= ' + minP };
+      }
+
+      // 3. <= X, < X, Dưới X
+      const mBelow = sLow.match(/(?:\<=\s*(\d+(?:[.,]\d+)?))|(?:\<\s*(\d+(?:[.,]\d+)?))|(?:dưới\s*(\d+(?:[.,]\d+)?))/i);
+      if (mBelow) {
+        const maxP = parseFloat((mBelow[1] || mBelow[2] || mBelow[3]).replace(',', '.'));
+        let preset = 'custom';
+        if (maxP === 10 && !isDat) preset = 'lt10';
+        else if (maxP === 20 && !isDat) preset = 'lt20';
+        else if (maxP === 10 && isDat) preset = 'dat_lt10';
+        return { min: 0, max: maxP, isDat: isDat, preset: preset, label: prefix + '< ' + maxP };
+      }
+
+      // 4. = X (chắc chắn không phải >= hay <=)
+      const mEq = sLow.match(/(?:^|[^<>!])=\s*(\d+(?:[.,]\d+)?)/);
+      if (mEq) {
+        const p = parseFloat(mEq[1].replace(',', '.'));
+        return { min: p, max: p, isDat: isDat, preset: 'custom', label: prefix + '= ' + p };
+      }
+
+      return { min: 0, max: 999, isDat: isDat, preset: 'custom', label: s };
+    }
+
+    function formatPriceRangeOutput(min, max, isDat) {
+      const prefix = isDat ? 'Giá đất ' : '';
+      const minVal = (min !== '' && min !== null && min !== undefined) ? Number(min) : 0;
+      const maxVal = (max !== '' && max !== null && max !== undefined) ? Number(max) : 999;
+
+      const cleanMin = isNaN(minVal) ? 0 : minVal;
+      const cleanMax = isNaN(maxVal) ? 999 : maxVal;
+
+      if (cleanMin <= 0 && cleanMax >= 999) {
+        return 'Tất cả';
+      }
+      if (cleanMin === cleanMax) {
+        return `${prefix}= ${cleanMin}`;
+      }
+      if (cleanMin <= 0 && cleanMax < 999) {
+        return `${prefix}< ${cleanMax}`;
+      }
+      if (cleanMin > 0 && cleanMax >= 999) {
+        return `${prefix}>= ${cleanMin}`;
+      }
+      return `${prefix}${cleanMin} - ${cleanMax}`;
+    }
+
+    function onKhoangGiaPresetChange(prefix) {
+      const sel = document.getElementById(prefix + 'KhoangGiaPreset');
+      const minEl = document.getElementById(prefix + 'GiaTu');
+      const maxEl = document.getElementById(prefix + 'GiaDen');
+      const datEl = document.getElementById(prefix + 'IsDat');
+      if (!sel || !minEl || !maxEl) return;
+
+      const val = sel.value;
+      if (val === 'all') {
+        minEl.value = 0;
+        maxEl.value = 999;
+        if (datEl) datEl.checked = false;
+      } else if (val === 'lt10') {
+        minEl.value = 0;
+        maxEl.value = 10;
+        if (datEl) datEl.checked = false;
+      } else if (val === '10-20') {
+        minEl.value = 10;
+        maxEl.value = 20;
+        if (datEl) datEl.checked = false;
+      } else if (val === 'lt20') {
+        minEl.value = 0;
+        maxEl.value = 20;
+        if (datEl) datEl.checked = false;
+      } else if (val === '20-30') {
+        minEl.value = 20;
+        maxEl.value = 30;
+        if (datEl) datEl.checked = false;
+      } else if (val === 'gte30') {
+        minEl.value = 30;
+        maxEl.value = 999;
+        if (datEl) datEl.checked = false;
+      } else if (val === 'gte10') {
+        minEl.value = 10;
+        maxEl.value = 999;
+        if (datEl) datEl.checked = false;
+      } else if (val === 'dat_lt10') {
+        minEl.value = 0;
+        maxEl.value = 10;
+        if (datEl) datEl.checked = true;
+      } else if (val === 'dat_gte10') {
+        minEl.value = 10;
+        maxEl.value = 999;
+        if (datEl) datEl.checked = true;
+      }
+      onPriceInputChange(prefix, false);
+    }
+
+    function onPriceInputChange(prefix, updatePreset) {
+      if (updatePreset === undefined) updatePreset = true;
+      const minEl = document.getElementById(prefix + 'GiaTu');
+      const maxEl = document.getElementById(prefix + 'GiaDen');
+      const datEl = document.getElementById(prefix + 'IsDat');
+      const previewEl = document.getElementById(prefix + 'KhoangGiaPreview');
+      const inputEl = document.getElementById(prefix + 'KhoangGiaInput');
+      const selEl = document.getElementById(prefix + 'KhoangGiaPreset');
+
+      const minVal = minEl ? minEl.value : 0;
+      const maxVal = maxEl ? maxEl.value : 999;
+      const isDat = datEl ? datEl.checked : false;
+
+      const outStr = formatPriceRangeOutput(minVal, maxVal, isDat);
+
+      if (previewEl) {
+        previewEl.innerText = outStr;
+        if (outStr === 'Tất cả') {
+          previewEl.style.color = 'var(--text-tertiary)';
+          previewEl.style.background = 'var(--bg-muted)';
+          previewEl.style.borderColor = 'var(--border-subtle)';
+        } else {
+          previewEl.style.color = '#92400e';
+          previewEl.style.background = '#fef3c7';
+          previewEl.style.borderColor = '#fde68a';
+        }
+      }
+      if (inputEl) {
+        inputEl.value = outStr;
+      }
+
+      if (updatePreset && selEl) {
+        const parsed = parseKhoangGiaToMinMax(outStr);
+        selEl.value = parsed.preset;
+      }
     }
 
     function updateConditionCombined(prefix) {
@@ -1678,24 +1834,7 @@
       if (lcInput) {
         lcInput.value = selectedUnits.length > 0 ? selectedUnits.join(', ') : 'Tất cả';
       }
-
-      const giaTuEl = document.getElementById(prefix === 'add' ? 'addGiaTu' : 'editGiaTu');
-      const giaDenEl = document.getElementById(prefix === 'add' ? 'addGiaDen' : 'editGiaDen');
-      const giaTu = giaTuEl ? giaTuEl.value.trim() : '';
-      const giaDen = giaDenEl ? giaDenEl.value.trim() : '';
-      const giaInput = document.getElementById(prefix + 'KhoangGiaInput');
-
-      if (giaInput) {
-        if (giaTu && giaDen) {
-          giaInput.value = `Từ ${giaTu} - ${giaDen} tỷ`;
-        } else if (giaTu) {
-          giaInput.value = `Từ ${giaTu} tỷ trở lên`;
-        } else if (giaDen) {
-          giaInput.value = `Dưới ${giaDen} tỷ`;
-        } else {
-          giaInput.value = 'Tất cả';
-        }
-      }
+      onPriceInputChange(prefix, true);
     }
 
     function getThreeFieldValues(prefix) {
@@ -1840,15 +1979,44 @@
                 <input type="text" class="filter-input" style="width:100%; margin-top:4px; font-size:12px;" id="addLoaiCanInput" placeholder="Ví dụ: Studio, 1PN, 2PN..." value="Tất cả" oninput="onManualUnitInput('add')">
               </div>
 
-              <!-- 3. Khoảng Giá (Bắt đầu - Kết thúc) -->
+              <!-- 3. Khoảng Giá (Toán học: >= 10, < 10, 10 - 20...) -->
               <div class="form-group">
-                <label class="field-label">3. Khoảng Giá</label>
+                <label class="field-label" style="display:flex; justify-content:space-between; align-items:center;">
+                  <span>3. Khoảng Giá (tỷ VNĐ)</span>
+                  <span id="addKhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">Tất cả</span>
+                </label>
+                <select class="filter-select" id="addKhoangGiaPreset" style="width:100%; font-size:12px; height:32px; margin-bottom:6px;" onchange="onKhoangGiaPresetChange('add')">
+                  <option value="all" selected>🌐 Mọi mức giá (Min: 0, Max: 999)</option>
+                  <option value="lt10">🔻 &lt; 10 (Dưới 10 tỷ)</option>
+                  <option value="10-20">↔️ 10 - 20 (Từ 10 đến 20 tỷ)</option>
+                  <option value="lt20">🔻 &lt; 20 (Dưới 20 tỷ)</option>
+                  <option value="20-30">↔️ 20 - 30 (Từ 20 đến 30 tỷ)</option>
+                  <option value="gte30">🔺 &gt;= 30 (Trên 30 tỷ)</option>
+                  <option value="gte10">🔺 &gt;= 10 (Trên 10 tỷ)</option>
+                  <option value="dat_lt10">🏞️ Giá đất &lt; 10 (VHHVB)</option>
+                  <option value="dat_gte10">🏞️ Giá đất &gt;= 10 (VHHVB)</option>
+                  <option value="custom">✏️ Tùy chỉnh (Nhập Min - Max bên dưới)...</option>
+                </select>
                 <div style="display: flex; align-items: center; gap: 4px;">
-                  <input type="number" step="0.5" min="0" class="filter-input" style="width:50%; padding:4px 6px;" id="addGiaTu" placeholder="Từ (tỷ)" oninput="updateConditionCombined('add')">
-                  <span style="color: var(--text-tertiary); font-weight:700;">-</span>
-                  <input type="number" step="0.5" min="0" class="filter-input" style="width:50%; padding:4px 6px;" id="addGiaDen" placeholder="Đến (tỷ)" oninput="updateConditionCombined('add')">
+                  <div style="flex:1;">
+                    <span style="font-size:10px; color:var(--text-tertiary); font-weight:700;">Min (tỷ):</span>
+                    <input type="number" step="0.5" min="0" max="999" class="filter-input" style="width:100%; padding:4px 6px; font-weight:700;" id="addGiaTu" placeholder="0" value="0" oninput="onPriceInputChange('add')">
+                  </div>
+                  <span style="color: var(--text-tertiary); font-weight:700; padding-top:14px;">-</span>
+                  <div style="flex:1;">
+                    <span style="font-size:10px; color:var(--text-tertiary); font-weight:700;">Max (tỷ):</span>
+                    <input type="number" step="0.5" min="0" max="999" class="filter-input" style="width:100%; padding:4px 6px; font-weight:700;" id="addGiaDen" placeholder="999" value="999" oninput="onPriceInputChange('add')">
+                  </div>
                 </div>
-                <input type="text" class="filter-input" style="width:100%; margin-top:4px; font-size:12px;" id="addKhoangGiaInput" placeholder="Ví dụ: Dưới 10 tỷ..." value="Tất cả" oninput="onManualPriceInput('add')">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                  <label style="font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; color:var(--text-secondary);">
+                    <input type="checkbox" id="addIsDat" onchange="onPriceInputChange('add')"> Chỉ tính tiền đất (VHHVB)
+                  </label>
+                  <input type="hidden" id="addKhoangGiaInput" value="Tất cả">
+                </div>
+                <div style="font-size:10px; color:var(--text-tertiary); margin-top:2px;">
+                  💡 Tự động so khớp với Cột L (Giá gồm VAT + KPBT) sheet Data.
+                </div>
               </div>
             </div>
           </div>
@@ -1979,17 +2147,7 @@
         const lcVal = (row.loaiCan && row.loaiCan !== '*' && row.loaiCan !== 'Tất cả') ? row.loaiCan : 'Tất cả';
         const giaVal = (row.khoangGia && row.khoangGia !== '*' && row.khoangGia !== 'Tất cả') ? row.khoangGia : 'Tất cả';
 
-        let parsedGiaTu = '', parsedGiaDen = '';
-        const rm = giaVal.match(/(?:từ\s*)?(\d+(?:[.,]\d+)?)\s*(?:-|đến)\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]/i);
-        if (rm) {
-          parsedGiaTu = rm[1];
-          parsedGiaDen = rm[2];
-        } else {
-          const fm = giaVal.match(/(?:từ\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]\s*trở\s*lên)|(?:trên\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ])/i);
-          if (fm) parsedGiaTu = fm[1] || fm[2];
-          const tm = giaVal.match(/dưới\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]/i);
-          if (tm) parsedGiaDen = tm[1];
-        }
+        const parsedPrice = parseKhoangGiaToMinMax(row.khoangGia);
 
         const existingUnits = ALL_UNIT_TYPES.filter(u => {
           const escapedU = u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -2087,15 +2245,44 @@
                 <input type="text" class="filter-input" style="width:100%; margin-top:4px; font-size:12px;" id="editLoaiCanInput" placeholder="Ví dụ: Studio hoặc Từ 1PN trở lên..." value="${escapeHtml(lcVal)}" oninput="onManualUnitInput('edit')">
               </div>
 
-              <!-- 3. Khoảng Giá (Bắt đầu - Kết thúc) -->
+              <!-- 3. Khoảng Giá (Toán học: >= 10, < 10, 10 - 20...) -->
               <div class="form-group">
-                <label class="field-label">3. Khoảng Giá</label>
+                <label class="field-label" style="display:flex; justify-content:space-between; align-items:center;">
+                  <span>3. Khoảng Giá (tỷ VNĐ)</span>
+                  <span id="editKhoangGiaPreview" style="font-size:11px; font-weight:800; color:${parsedPrice.label === 'Tất cả' ? 'var(--text-tertiary)' : '#92400e'}; background:${parsedPrice.label === 'Tất cả' ? 'var(--bg-muted)' : '#fef3c7'}; padding:2px 8px; border-radius:4px; border:1px solid ${parsedPrice.label === 'Tất cả' ? 'var(--border-subtle)' : '#fde68a'};">${escapeHtml(parsedPrice.label)}</span>
+                </label>
+                <select class="filter-select" id="editKhoangGiaPreset" style="width:100%; font-size:12px; height:32px; margin-bottom:6px;" onchange="onKhoangGiaPresetChange('edit')">
+                  <option value="all" ${parsedPrice.preset === 'all' ? 'selected' : ''}>🌐 Mọi mức giá (Min: 0, Max: 999)</option>
+                  <option value="lt10" ${parsedPrice.preset === 'lt10' ? 'selected' : ''}>🔻 &lt; 10 (Dưới 10 tỷ)</option>
+                  <option value="10-20" ${parsedPrice.preset === '10-20' ? 'selected' : ''}>↔️ 10 - 20 (Từ 10 đến 20 tỷ)</option>
+                  <option value="lt20" ${parsedPrice.preset === 'lt20' ? 'selected' : ''}>🔻 &lt; 20 (Dưới 20 tỷ)</option>
+                  <option value="20-30" ${parsedPrice.preset === '20-30' ? 'selected' : ''}>↔️ 20 - 30 (Từ 20 đến 30 tỷ)</option>
+                  <option value="gte30" ${parsedPrice.preset === 'gte30' ? 'selected' : ''}>🔺 &gt;= 30 (Trên 30 tỷ)</option>
+                  <option value="gte10" ${parsedPrice.preset === 'gte10' ? 'selected' : ''}>🔺 &gt;= 10 (Trên 10 tỷ)</option>
+                  <option value="dat_lt10" ${parsedPrice.preset === 'dat_lt10' ? 'selected' : ''}>🏞️ Giá đất &lt; 10 (VHHVB)</option>
+                  <option value="dat_gte10" ${parsedPrice.preset === 'dat_gte10' ? 'selected' : ''}>🏞️ Giá đất &gt;= 10 (VHHVB)</option>
+                  <option value="custom" ${parsedPrice.preset === 'custom' ? 'selected' : ''}>✏️ Tùy chỉnh (Nhập Min - Max bên dưới)...</option>
+                </select>
                 <div style="display: flex; align-items: center; gap: 4px;">
-                  <input type="number" step="0.5" min="0" class="filter-input" style="width:50%; padding:4px 6px;" id="editGiaTu" placeholder="Từ (tỷ)" value="${parsedGiaTu}" oninput="updateConditionCombined('edit')">
-                  <span style="color: var(--text-tertiary); font-weight:700;">-</span>
-                  <input type="number" step="0.5" min="0" class="filter-input" style="width:50%; padding:4px 6px;" id="editGiaDen" placeholder="Đến (tỷ)" value="${parsedGiaDen}" oninput="updateConditionCombined('edit')">
+                  <div style="flex:1;">
+                    <span style="font-size:10px; color:var(--text-tertiary); font-weight:700;">Min (tỷ):</span>
+                    <input type="number" step="0.5" min="0" max="999" class="filter-input" style="width:100%; padding:4px 6px; font-weight:700;" id="editGiaTu" placeholder="0" value="${parsedPrice.min}" oninput="onPriceInputChange('edit')">
+                  </div>
+                  <span style="color: var(--text-tertiary); font-weight:700; padding-top:14px;">-</span>
+                  <div style="flex:1;">
+                    <span style="font-size:10px; color:var(--text-tertiary); font-weight:700;">Max (tỷ):</span>
+                    <input type="number" step="0.5" min="0" max="999" class="filter-input" style="width:100%; padding:4px 6px; font-weight:700;" id="editGiaDen" placeholder="999" value="${parsedPrice.max}" oninput="onPriceInputChange('edit')">
+                  </div>
                 </div>
-                <input type="text" class="filter-input" style="width:100%; margin-top:4px; font-size:12px;" id="editKhoangGiaInput" placeholder="Ví dụ: Dưới 10 tỷ..." value="${escapeHtml(giaVal)}" oninput="onManualPriceInput('edit')">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                  <label style="font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; color:var(--text-secondary);">
+                    <input type="checkbox" id="editIsDat" ${parsedPrice.isDat ? 'checked' : ''} onchange="onPriceInputChange('edit')"> Chỉ tính tiền đất (VHHVB)
+                  </label>
+                  <input type="hidden" id="editKhoangGiaInput" value="${escapeHtml(parsedPrice.label)}">
+                </div>
+                <div style="font-size:10px; color:var(--text-tertiary); margin-top:2px;">
+                  💡 Tự động so khớp với Cột L (Giá gồm VAT + KPBT) sheet Data.
+                </div>
               </div>
             </div>
           </div>
