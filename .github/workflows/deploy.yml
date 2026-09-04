@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -21,8 +22,10 @@ jobs:
         run: npm install -g @google/clasp
 
       - name: Authenticate with Google
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
         run: |
-          echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
+          echo "$CLASPRC_JSON" > ~/.clasprc.json
 
       - name: Push code to Apps Script
         run: clasp push --force
