@@ -469,24 +469,43 @@
     th.freeze-col, td.freeze-col {
       position: sticky;
       left: 0;
-      z-index: 2;
-      background-color: inherit;
+      width: 42px;
+      min-width: 42px;
+      max-width: 42px;
+      z-index: 4;
+      text-align: center;
+      background-color: #ffffff !important;
     }
     th.freeze-col-actions, td.freeze-col-actions {
       position: sticky;
-      left: 38px;
-      z-index: 2;
-      background-color: inherit;
+      left: 42px;
+      width: 106px;
+      min-width: 106px;
+      max-width: 106px;
+      z-index: 4;
+      text-align: center;
+      background-color: #ffffff !important;
+      padding: 4px 6px !important;
     }
     th.freeze-col-2, td.freeze-col-2 {
       position: sticky;
-      left: 108px;
-      z-index: 2;
-      background-color: inherit;
+      left: 148px;
+      z-index: 4;
+      background-color: #ffffff !important;
+      border-right: 2px solid #cbd5e1 !important;
+      box-shadow: 2px 0 4px rgba(15, 23, 42, 0.06);
     }
+
+    tr:hover td.freeze-col, 
+    tr:hover td.freeze-col-actions, 
+    tr:hover td.freeze-col-2 {
+      background-color: #f8fafc !important;
+    }
+
     thead th.freeze-col, thead th.freeze-col-actions, thead th.freeze-col-2 {
-      z-index: 12;
-      background-color: var(--bg-muted);
+      z-index: 25 !important;
+      background-color: #f1f5f9 !important;
+      border-bottom: 2px solid #cbd5e1;
     }
 
     /* Action Buttons */
@@ -496,6 +515,8 @@
       justify-content: center;
       width: 26px;
       height: 26px;
+      min-width: 26px;
+      max-width: 26px;
       border-radius: var(--radius-sm);
       border: 1px solid var(--border-subtle);
       background: var(--bg-surface);
@@ -503,7 +524,8 @@
       font-size: 12px;
       transition: all 0.15s ease;
       padding: 0;
-      margin: 0 1px;
+      margin: 0;
+      flex-shrink: 0;
     }
     .btn-action:hover {
       background: var(--bg-muted);
@@ -1359,9 +1381,9 @@
 
       // Header row
       let headHtml = `<tr>
-        <th class="freeze-col" style="width:36px; text-align:center;">#</th>
-        <th class="freeze-col-actions" style="width:70px; text-align:center;">Thao Tác</th>
-        <th class="freeze-col-2" style="width:90px;">Mã DA</th>
+        <th class="freeze-col">#</th>
+        <th class="freeze-col-actions">Thao Tác</th>
+        <th class="freeze-col-2" style="width:90px; min-width:90px;">Mã DA</th>
         <th style="min-width:180px;">Tên Dự Án</th>
         <th style="min-width:110px;">CĐT</th>
         <th style="width:90px;">Miền</th>
@@ -1418,11 +1440,13 @@
           : `<span class="badge" style="background:var(--bg-muted); color:var(--text-tertiary); font-size:11px; font-weight:600;">Tất cả</span>`;
 
         bodyHtml += `<tr>
-          <td class="freeze-col" style="text-align:center; color:var(--text-tertiary); font-size:11px;">${idx + 1}</td>
-          <td class="freeze-col-actions" style="text-align:center; white-space:nowrap; padding:4px 6px;">
-            <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('th', ${r.rowIdx})" title="Chỉnh sửa dòng này">✏️</button>
-            <button type="button" class="btn-action" style="color:#ea580c; border-color:#fdba74; background:#fff7ed;" onclick="pickThRowToCampaign(${r.rowIdx})" title="Sao chép dòng này sang Điểm Chiến Dịch">🔥</button>
-            <button type="button" class="btn-action btn-action-del" onclick="deleteRow('th', ${r.rowIdx}, '${escapeHtml(r.code)} - ${escapeHtml(r.name)}')" title="Xóa dòng này">🗑️</button>
+          <td class="freeze-col" style="color:var(--text-tertiary); font-size:11px;">${idx + 1}</td>
+          <td class="freeze-col-actions">
+            <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
+              <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('th', ${r.rowIdx})" title="Chỉnh sửa dòng này">✏️</button>
+              <button type="button" class="btn-action" style="color:#ea580c; border-color:#fdba74; background:#fff7ed;" onclick="pickThRowToCampaign(${r.rowIdx})" title="Sao chép dòng này sang Điểm Chiến Dịch">🔥</button>
+              <button type="button" class="btn-action btn-action-del" onclick="deleteRow('th', ${r.rowIdx}, '${escapeHtml(r.code)} - ${escapeHtml(r.name)}')" title="Xóa dòng này">🗑️</button>
+            </div>
           </td>
           <td class="freeze-col-2" style="font-weight:700; font-family:var(--font-mono); color:var(--brand);">${escapeHtml(r.code)}</td>
           <td style="font-weight:600;">${escapeHtml(r.name)}</td>
@@ -1458,9 +1482,9 @@
       const displayMonths = (selMonth === 'ALL') ? allMonths : allMonths.filter(m => m.dateStr === selMonth);
 
       let headHtml = `<tr>
-        <th class="freeze-col" style="width:36px; text-align:center;">#</th>
-        <th class="freeze-col-actions" style="width:70px; text-align:center;">Thao Tác</th>
-        <th class="freeze-col-2" style="min-width:220px;">Tên Dự Án (F2)</th>
+        <th class="freeze-col">#</th>
+        <th class="freeze-col-actions">Thao Tác</th>
+        <th class="freeze-col-2" style="min-width:200px;">Tên Dự Án (F2)</th>
         <th style="width:120px;">Loại Quỹ</th>`;
 
       displayMonths.forEach(m => {
@@ -1487,10 +1511,12 @@
       let bodyHtml = '';
       filtered.forEach((r, idx) => {
         bodyHtml += `<tr>
-          <td class="freeze-col" style="text-align:center; color:var(--text-tertiary); font-size:11px;">${idx + 1}</td>
-          <td class="freeze-col-actions" style="text-align:center; white-space:nowrap; padding:4px 6px;">
-            <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('f2', ${r.rowIdx})" title="Chỉnh sửa tên dự án">✏️</button>
-            <button type="button" class="btn-action btn-action-del" onclick="deleteRow('f2', ${r.rowIdx}, '${escapeHtml(r.name)}')" title="Xóa dự án F2 này">🗑️</button>
+          <td class="freeze-col" style="color:var(--text-tertiary); font-size:11px;">${idx + 1}</td>
+          <td class="freeze-col-actions">
+            <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
+              <button type="button" class="btn-action btn-action-edit" onclick="openEditRowModal('f2', ${r.rowIdx})" title="Chỉnh sửa tên dự án">✏️</button>
+              <button type="button" class="btn-action btn-action-del" onclick="deleteRow('f2', ${r.rowIdx}, '${escapeHtml(r.name)}')" title="Xóa dự án F2 này">🗑️</button>
+            </div>
           </td>
           <td class="freeze-col-2" style="font-weight:700;">${escapeHtml(r.name)}</td>
           <td><span class="badge badge-fund-cross">Quỹ chéo</span></td>`;
