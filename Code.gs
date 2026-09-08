@@ -901,6 +901,13 @@ function updateMonthlyConfigRow(tab, rowIdx, data) {
       }
     } else {
       sheet.getRange(targetRow, 1).setValue(data.name || '');
+      if (data.monthUpdates && data.monthUpdates.length > 0) {
+        data.monthUpdates.forEach(u => {
+          if (u.colIdx >= 3) {
+            sheet.getRange(targetRow, u.colIdx).setValue(u.score !== '' ? cleanScore(u.score) : '').setNumberFormat('0.##').setHorizontalAlignment('center');
+          }
+        });
+      }
     }
 
     return { success: true, targetRow: targetRow };
@@ -1811,20 +1818,37 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
     if (loaiQuy === 'Quỹ Chéo') {
       // 4.1 Tra cứu trong bảng Dự án F2
       const duAnKey = duAn.toLowerCase();
+      let matchedScore = null;
       if (ctx.f2Map && ctx.f2Map.has(duAnKey) && ctx.f2Map.get(duAnKey).has(monthKey)) {
-        baseScore = ctx.f2Map.get(duAnKey).get(monthKey);
+        matchedScore = ctx.f2Map.get(duAnKey).get(monthKey);
       } else if (ctx.f2Map && ctx.f2Map.has(duAnKey) && monthKey < '2026-09') {
         const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
-        baseScore = (latestKey && ctx.f2Map.get(duAnKey).has(latestKey)) ? ctx.f2Map.get(duAnKey).get(latestKey) : 1;
+        matchedScore = (latestKey && ctx.f2Map.get(duAnKey).has(latestKey)) ? ctx.f2Map.get(duAnKey).get(latestKey) : 1;
+      }
+
+      if (matchedScore !== null) {
+        baseScore = calculateProgressiveScore(valInBillion, matchedScore, 'Tất cả', monthKey);
       } else {
-        // Kiểm tra rule chung Quỹ Chéo (ví dụ: bảng quy đổi điểm Tháng 9)
+        // Kiểm tra rule Quỹ Chéo trong sheet Tổng Hợp (rule riêng hoặc rule chung theo khoảng giá)
         let matchedQCheo = null;
-        const genRules = ctx.generalRules || [];
-        for (const r of genRules) {
-          if (r.fund === 'Quỹ Chéo' && r.monthScores.has(monthKey)) {
-            if (matchRules(r.sanPham, r.loaiCan, r.khoangGia, sanPham, loaiCan, valInBillion)) {
-              matchedQCheo = r;
-              break;
+        if (ctx.thMap && ctx.thMap.has(duAnKey)) {
+          for (const r of ctx.thMap.get(duAnKey)) {
+            if (r.fund === 'Quỹ Chéo' && r.monthScores.has(monthKey)) {
+              if (matchRules(r.sanPham, r.loaiCan, r.khoangGia, sanPham, loaiCan, valInBillion)) {
+                matchedQCheo = r;
+                break;
+              }
+            }
+          }
+        }
+        if (!matchedQCheo) {
+          const genRules = ctx.generalRules || [];
+          for (const r of genRules) {
+            if (r.fund === 'Quỹ Chéo' && r.monthScores.has(monthKey)) {
+              if (matchRules(r.sanPham, r.loaiCan, r.khoangGia, sanPham, loaiCan, valInBillion)) {
+                matchedQCheo = r;
+                break;
+              }
             }
           }
         }
