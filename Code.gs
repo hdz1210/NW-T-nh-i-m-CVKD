@@ -885,6 +885,14 @@ function updateMonthlyConfigRow(tab, rowIdx, data) {
         canonicalKhoangGia(data.khoangGia)
       ];
       sheet.getRange(rowIdx, 1, 1, 9).setValues([rowVals]);
+
+      if (data.monthUpdates && data.monthUpdates.length > 0) {
+        data.monthUpdates.forEach(u => {
+          if (u.colIdx >= 10) {
+            sheet.getRange(rowIdx, u.colIdx).setValue(u.score !== '' ? cleanScore(u.score) : '').setNumberFormat('0.##').setHorizontalAlignment('center');
+          }
+        });
+      }
     } else {
       sheet.getRange(rowIdx, 1).setValue(data.name || '');
     }
