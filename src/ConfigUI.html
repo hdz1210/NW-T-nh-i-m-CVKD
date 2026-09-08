@@ -3016,6 +3016,7 @@
         toggleMultiSelectCdt(p, true);
         toggleMultiSelectRegion(p, true);
         toggleMultiSelectTenDuAn(p, true);
+        toggleMultiSelectDuAnF2(p, true);
       });
       document.querySelectorAll('.multi-select-dropdown').forEach(dd => {
         dd.style.display = 'none';
@@ -3157,6 +3158,179 @@
       addCustomDuAn(prefix, val);
       input.value = '';
       onSpecificTenDuAnChange(prefix, val);
+    }
+
+    // --- DỰ ÁN F2 MULTI-SELECT ---
+    function buildDuAnF2MultiSelect(prefix, selectedVal) {
+      const container = document.getElementById(prefix + 'DuAnF2Options');
+      if (!container) return;
+
+      const isAll = isConditionAll(selectedVal);
+      const selectedList = !isAll && selectedVal ? String(selectedVal).split(/[,;\n]/).map(s => s.trim().toLowerCase()).filter(s => s) : [];
+      const selectedSet = new Set(selectedList);
+
+      const f2Projects = getExistingF2Projects();
+      const allChecked = isAll || (f2Projects.length > 0 && f2Projects.every(p => selectedSet.has(p.toLowerCase())));
+
+      let html = `
+        <label class="multi-select-option" data-text="tất cả all *" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; margin-bottom: 4px; font-weight: 700;">
+          <input type="checkbox" class="${prefix}-duanf2-cb" id="${prefix}DuAnF2CbAll" value="Tất cả" ${allChecked ? 'checked' : ''} onchange="onToggleAllDuAnF2('${prefix}', this)">
+          <span>Tất cả dự án F2 (Toàn bộ)</span>
+        </label>
+      `;
+
+      f2Projects.forEach(name => {
+        const isChecked = allChecked || selectedSet.has(name.toLowerCase());
+        html += `
+          <label class="multi-select-option" data-text="${name.toLowerCase()}">
+            <input type="checkbox" class="${prefix}-duanf2-cb ${prefix}-specific-duanf2-cb" value="${escapeHtml(name)}" data-name="${escapeHtml(name)}" ${isChecked ? 'checked' : ''} onchange="onSpecificDuAnF2Change('${prefix}')">
+            <span style="font-weight:700; color:var(--brand);">${escapeHtml(name)}</span>
+          </label>
+        `;
+      });
+
+      if (!isAll && selectedList.length > 0) {
+        selectedList.forEach(rawName => {
+          if (!f2Projects.some(p => p.toLowerCase() === rawName)) {
+            html += `
+              <label class="multi-select-option" data-text="${rawName}">
+                <input type="checkbox" class="${prefix}-duanf2-cb ${prefix}-specific-duanf2-cb" value="${rawName}" data-name="${rawName}" checked onchange="onSpecificDuAnF2Change('${prefix}')">
+                <span style="font-weight:700; color:var(--brand);">${rawName}</span>
+              </label>
+            `;
+          }
+        });
+      }
+
+      container.innerHTML = html;
+      updateDuAnF2TriggerLabel(prefix);
+    }
+
+    function onToggleAllDuAnF2(prefix, sender) {
+      const cbAll = document.getElementById(prefix + 'DuAnF2CbAll');
+      const shouldCheck = sender ? sender.checked : (cbAll && cbAll.checked);
+      if (cbAll) cbAll.checked = shouldCheck;
+
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duanf2-cb`);
+      specificCbs.forEach(cb => cb.checked = shouldCheck);
+
+      updateDuAnF2TriggerLabel(prefix);
+    }
+
+    function onSpecificDuAnF2Change(prefix) {
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duanf2-cb`);
+      const checkedCbs = document.querySelectorAll(`.${prefix}-specific-duanf2-cb:checked`);
+      const cbAll = document.getElementById(prefix + 'DuAnF2CbAll');
+
+      const isAllChecked = (specificCbs.length > 0 && checkedCbs.length === specificCbs.length);
+      if (cbAll) cbAll.checked = isAllChecked;
+
+      updateDuAnF2TriggerLabel(prefix);
+    }
+
+    function selectAllDuAnF2(prefix) {
+      const cbAll = document.getElementById(prefix + 'DuAnF2CbAll');
+      if (cbAll) cbAll.checked = true;
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duanf2-cb`);
+      specificCbs.forEach(cb => {
+        if (!cb.closest('.multi-select-option') || cb.closest('.multi-select-option').style.display !== 'none') {
+          cb.checked = true;
+        }
+      });
+      updateDuAnF2TriggerLabel(prefix);
+    }
+
+    function clearAllDuAnF2(prefix) {
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duanf2-cb`);
+      specificCbs.forEach(cb => cb.checked = false);
+      const cbAll = document.getElementById(prefix + 'DuAnF2CbAll');
+      if (cbAll) cbAll.checked = false;
+      updateDuAnF2TriggerLabel(prefix);
+    }
+
+    function updateDuAnF2TriggerLabel(prefix) {
+      const cbAll = document.getElementById(prefix + 'DuAnF2CbAll');
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duanf2-cb`);
+      const checkedCbs = document.querySelectorAll(`.${prefix}-specific-duanf2-cb:checked`);
+      const labelEl = document.getElementById(prefix + 'DuAnF2Label');
+      const nameInput = document.getElementById(prefix + 'NameF2');
+      if (!labelEl) return;
+
+      if ((cbAll && cbAll.checked) || (specificCbs.length > 0 && checkedCbs.length === specificCbs.length)) {
+        labelEl.innerText = 'Tất cả (Mọi dự án F2)';
+        labelEl.style.color = 'var(--text-primary)';
+        if (nameInput) nameInput.value = 'Tất cả';
+      } else if (checkedCbs.length === 0) {
+        labelEl.innerText = '(Chưa chọn dự án F2)';
+        labelEl.style.color = 'var(--text-tertiary)';
+        if (nameInput) nameInput.value = '';
+      } else {
+        const selectedNames = Array.from(checkedCbs).map(cb => cb.value);
+        if (selectedNames.length === 1) {
+          labelEl.innerText = selectedNames[0];
+        } else if (selectedNames.length <= 3) {
+          labelEl.innerText = selectedNames.join(', ');
+        } else {
+          labelEl.innerText = `Đã chọn (${selectedNames.length}): ${selectedNames.slice(0, 2).join(', ')}...`;
+        }
+        labelEl.style.color = 'var(--brand)';
+        if (nameInput) nameInput.value = selectedNames.join(', ');
+      }
+    }
+
+    function addCustomDuAnF2(prefix, customName) {
+      const input = document.getElementById(prefix + 'CustomDuAnF2Input');
+      const val = (customName || (input ? input.value : '')).trim();
+      if (!val) return;
+
+      const container = document.getElementById(prefix + 'DuAnF2Options');
+      if (!container) return;
+
+      const existing = container.querySelector(`input[value="${val}"]`);
+      if (existing) {
+        existing.checked = true;
+      } else {
+        const label = document.createElement('label');
+        label.className = 'multi-select-option';
+        label.setAttribute('data-text', val.toLowerCase());
+        label.innerHTML = `
+          <input type="checkbox" class="${prefix}-duanf2-cb ${prefix}-specific-duanf2-cb" value="${escapeHtml(val)}" data-name="${escapeHtml(val)}" checked onchange="onSpecificDuAnF2Change('${prefix}')">
+          <span style="font-weight:700; color:var(--brand);">${escapeHtml(val)}</span>
+        `;
+        container.appendChild(label);
+      }
+
+      if (input && !customName) input.value = '';
+      onSpecificDuAnF2Change(prefix);
+    }
+
+    function toggleMultiSelectDuAnF2(prefix, forceClose) {
+      const dropdown = document.getElementById(prefix + 'DuAnF2Dropdown');
+      if (!dropdown) return;
+      if (forceClose === true) {
+        dropdown.style.display = 'none';
+        return;
+      }
+      const isVisible = (dropdown.style.display === 'flex');
+      closeAllMultiSelects();
+      if (!isVisible) {
+        dropdown.style.display = 'flex';
+        const search = document.getElementById(prefix + 'DuAnF2Search');
+        if (search) {
+          search.value = '';
+          filterMultiSelectDuAnF2(prefix);
+          search.focus();
+        }
+      }
+    }
+
+    function filterMultiSelectDuAnF2(prefix) {
+      const q = (document.getElementById(prefix + 'DuAnF2Search').value || '').trim().toLowerCase();
+      const options = document.querySelectorAll(`#${prefix}DuAnF2Options .multi-select-option`);
+      options.forEach(opt => {
+        const text = opt.getAttribute('data-text') || '';
+        opt.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
+      });
     }
 
     // --- DỰ ÁN (MÃ DỰ ÁN) MULTI-SELECT ---
@@ -4324,13 +4498,33 @@
         });
 
         container.innerHTML = `
-          <!-- Tên Dự Án F2 -->
-          <div class="form-group">
-            <label class="field-label" for="addNameF2" style="font-weight:700;">Tên Dự Án F2 <span style="color:var(--danger)">*</span></label>
-            <div class="autocomplete-container">
-              <input type="text" class="filter-input" style="width:100%; height:38px; font-weight:700;" id="addNameF2" placeholder="Ví dụ: Eaton Park, The Gió, Eco Central Park, Tất cả..." autocomplete="off" oninput="showF2NameSuggest('add')" onfocus="showF2NameSuggest('add')" required>
-              <div class="autocomplete-dropdown" id="addNameF2_dropdown"></div>
+          <!-- Tên Dự Án F2 Multi-select Droplist -->
+          <div class="form-group" style="position: relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="field-label" style="margin-bottom:0; font-weight:700;">Tên Dự Án F2 <span style="color:var(--danger)">*</span></label>
+              <span style="font-size:10px; color:var(--text-tertiary);">Chọn 1, nhiều hoặc Tất cả</span>
             </div>
+            <div class="multi-select-container" id="addDuAnF2Container">
+              <div class="multi-select-trigger" id="addDuAnF2Trigger" onclick="toggleMultiSelectDuAnF2('add')">
+                <span class="multi-select-label" id="addDuAnF2Label">Tất cả (Mọi dự án F2)</span>
+                <span class="multi-select-arrow">▼</span>
+              </div>
+              <div class="multi-select-dropdown" id="addDuAnF2Dropdown" style="min-width: 320px;">
+                <div class="multi-select-search-box">
+                  <input type="text" class="multi-select-search" id="addDuAnF2Search" placeholder="Tìm tên dự án F2..." oninput="filterMultiSelectDuAnF2('add')">
+                </div>
+                <div class="multi-select-actions">
+                  <span class="multi-select-btn-link" onclick="selectAllDuAnF2('add')">Chọn tất cả</span>
+                  <span class="multi-select-btn-link" onclick="clearAllDuAnF2('add')">Bỏ chọn</span>
+                </div>
+                <div class="multi-select-options" id="addDuAnF2Options"></div>
+                <div class="multi-select-custom-box">
+                  <input type="text" id="addCustomDuAnF2Input" class="multi-select-search" placeholder="+ Nhập tên dự án F2 mới..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addCustomDuAnF2('add');}">
+                  <button type="button" class="btn btn-secondary" style="height:26px; padding:0 8px; font-size:11px;" onclick="addCustomDuAnF2('add')">+ Thêm</button>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="addNameF2" value="Tất cả">
           </div>
 
           <!-- Khoảng Giá (Tỷ VNĐ) -->
@@ -4385,6 +4579,7 @@
             </div>
           </div>
         `;
+        buildDuAnF2MultiSelect('add', 'Tất cả');
         onScoreMonthChange('addF2');
       }
     }
@@ -4584,44 +4779,49 @@
           });
         }
 
-        newRowsF2.push({
-          name: name,
-          fund: 'Quỹ chéo',
-          scores: scoresObj,
-          khoangGia: khoangGia
-        });
+        const isAllProjs = isConditionAll(name);
+        const projList = isAllProjs ? ['Tất cả'] : name.split(/[,;\n]/).map(s => s.trim()).filter(s => s);
 
-        configData.f2Rows.push({
-          rowIdx: configData.f2Rows.length + 4,
-          name: name,
-          fund: 'Quỹ chéo',
-          scores: scoresObj,
-          khoangGia: khoangGia
-        });
+        projList.forEach(projName => {
+          newRowsF2.push({
+            name: projName,
+            fund: 'Quỹ chéo',
+            scores: Object.assign({}, scoresObj),
+            khoangGia: khoangGia
+          });
 
-        // Nếu người dùng chọn khoảng giá khác 'Tất cả' hoặc nhập rule chung, đồng bộ thêm vào Tổng hợp để engine tính điểm khớp tuyệt đối
-        if (khoangGia !== 'Tất cả' || name.toLowerCase() === 'tất cả') {
-          const thScoresObj = {};
-          if (scoreMonth === 'ALL') {
-            configData.thMonths.forEach(m => { thScoresObj[m.dateStr] = score; });
-          } else {
-            configData.thMonths.forEach(m => {
-              thScoresObj[m.dateStr] = (m.dateStr === scoreMonth) ? score : '';
+          configData.f2Rows.push({
+            rowIdx: configData.f2Rows.length + 4,
+            name: projName,
+            fund: 'Quỹ chéo',
+            scores: Object.assign({}, scoresObj),
+            khoangGia: khoangGia
+          });
+
+          // Nếu người dùng chọn khoảng giá khác 'Tất cả' hoặc nhập rule chung, đồng bộ thêm vào Tổng hợp để engine tính điểm khớp tuyệt đối
+          if (khoangGia !== 'Tất cả' || projName.toLowerCase() === 'tất cả') {
+            const thScoresObj = {};
+            if (scoreMonth === 'ALL') {
+              configData.thMonths.forEach(m => { thScoresObj[m.dateStr] = score; });
+            } else {
+              configData.thMonths.forEach(m => {
+                thScoresObj[m.dateStr] = (m.dateStr === scoreMonth) ? score : '';
+              });
+            }
+            newRowsTH.push({
+              status: 'Đang bán',
+              cdt: 'Tất cả',
+              code: projName,
+              name: projName,
+              region: 'Toàn quốc',
+              fund: 'Quỹ Chéo',
+              sanPham: 'Tất cả',
+              loaiCan: 'Tất cả',
+              khoangGia: khoangGia,
+              scores: thScoresObj
             });
           }
-          newRowsTH.push({
-            status: 'Đang bán',
-            cdt: 'Tất cả',
-            code: name,
-            name: name,
-            region: 'Toàn quốc',
-            fund: 'Quỹ Chéo',
-            sanPham: 'Tất cả',
-            loaiCan: 'Tất cả',
-            khoangGia: khoangGia,
-            scores: thScoresObj
-          });
-        }
+        });
 
         // Switch to F2 tab if user was on TH tab
         if (activeTab !== 'f2') {
@@ -5391,12 +5591,33 @@
           <input type="hidden" id="editRowIdx" value="${rowIdx}">
           <input type="hidden" id="editTab" value="f2">
 
-          <div class="form-group">
-            <label class="field-label" for="editNameF2" style="font-weight:700;">Tên Dự Án F2 <span style="color:var(--danger)">*</span></label>
-            <div class="autocomplete-container">
-              <input type="text" class="filter-input" style="width:100%; height:38px; font-weight:700;" id="editNameF2" value="${escapeHtml(row.name)}" autocomplete="off" oninput="showF2NameSuggest('edit')" onfocus="showF2NameSuggest('edit')" required>
-              <div class="autocomplete-dropdown" id="editNameF2_dropdown"></div>
+          <!-- Tên Dự Án F2 Multi-select Droplist -->
+          <div class="form-group" style="position: relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="field-label" style="margin-bottom:0; font-weight:700;">Tên Dự Án F2 <span style="color:var(--danger)">*</span></label>
+              <span style="font-size:10px; color:var(--text-tertiary);">Chọn 1, nhiều hoặc Tất cả</span>
             </div>
+            <div class="multi-select-container" id="editDuAnF2Container">
+              <div class="multi-select-trigger" id="editDuAnF2Trigger" onclick="toggleMultiSelectDuAnF2('edit')">
+                <span class="multi-select-label" id="editDuAnF2Label">${escapeHtml(row.name)}</span>
+                <span class="multi-select-arrow">▼</span>
+              </div>
+              <div class="multi-select-dropdown" id="editDuAnF2Dropdown" style="min-width: 320px;">
+                <div class="multi-select-search-box">
+                  <input type="text" class="multi-select-search" id="editDuAnF2Search" placeholder="Tìm tên dự án F2..." oninput="filterMultiSelectDuAnF2('edit')">
+                </div>
+                <div class="multi-select-actions">
+                  <span class="multi-select-btn-link" onclick="selectAllDuAnF2('edit')">Chọn tất cả</span>
+                  <span class="multi-select-btn-link" onclick="clearAllDuAnF2('edit')">Bỏ chọn</span>
+                </div>
+                <div class="multi-select-options" id="editDuAnF2Options"></div>
+                <div class="multi-select-custom-box">
+                  <input type="text" id="editCustomDuAnF2Input" class="multi-select-search" placeholder="+ Nhập tên dự án F2 mới..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addCustomDuAnF2('edit');}">
+                  <button type="button" class="btn btn-secondary" style="height:26px; padding:0 8px; font-size:11px;" onclick="addCustomDuAnF2('edit')">+ Thêm</button>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="editNameF2" value="${escapeHtml(row.name)}">
           </div>
 
           <!-- Khoảng Giá (Tỷ VNĐ) -->
@@ -5451,6 +5672,7 @@
             </div>
           </div>
         `;
+        buildDuAnF2MultiSelect('edit', row.name);
         if (selMonthOnToolbar !== 'ALL') {
           onEditScoreMonthChangeF2(rowIdx);
         }
