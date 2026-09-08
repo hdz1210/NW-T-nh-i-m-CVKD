@@ -2983,13 +2983,15 @@
       if (configData && configData.thRows) {
         configData.thRows.forEach(r => {
           const c = (r.cdt || '').trim();
-          if (c && !isConditionAll(c)) set.add(c);
+          if (c && !isConditionAll(c) && !c.toLowerCase().includes('khác') && !c.toLowerCase().includes('khac')) {
+            set.add(c);
+          }
         });
       }
       const fallback = [
         'Masterise', 'Masterise Homes', 'Vinhomes', 'Capitaland',
         'Gamuda Land', 'MIK Group', 'Sun Group', 'Ecopark',
-        'Khang Điền', 'Nam Long', 'Các CĐT Khác'
+        'Khang Điền', 'Nam Long', 'Sơn Kim Land', 'Kim Long Nam', 'NewX'
       ];
       fallback.forEach(c => set.add(c));
       return Array.from(set).sort();
@@ -3001,6 +3003,7 @@
         toggleMultiSelectDuAn(p, true);
         toggleMultiSelectCdt(p, true);
         toggleMultiSelectRegion(p, true);
+        toggleMultiSelectTenDuAn(p, true);
       });
       document.querySelectorAll('.multi-select-dropdown').forEach(dd => {
         dd.style.display = 'none';
@@ -3008,6 +3011,141 @@
     }
 
     // --- DỰ ÁN MULTI-SELECT ---
+    
+    // --- TÊN DỰ ÁN MULTI-SELECT & ĐỒNG BỘ MÃ - TÊN ---
+    function buildTenDuAnMultiSelect(prefix, selectedVal) {
+      const container = document.getElementById(prefix + 'TenDuAnOptions');
+      if (!container) return;
+
+      const isAll = isConditionAll(selectedVal);
+      const selectedList = !isAll && selectedVal ? String(selectedVal).split(',').map(s => s.trim().toLowerCase()) : [];
+      const selectedSet = new Set(selectedList);
+
+      const projects = getAllProjectList();
+
+      let html = `
+        <label class="multi-select-option" data-text="tất cả all *" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; margin-bottom: 4px; font-weight: 700;">
+          <input type="checkbox" class="${prefix}-tenduan-cb" id="${prefix}TenDuAnCbAll" value="Tất cả" ${isAll ? 'checked' : ''} onchange="onToggleAllDuAn('${prefix}')">
+          <span>Tất cả dự án (Toàn bộ)</span>
+        </label>
+      `;
+
+      projects.forEach(p => {
+        const isChecked = !isAll && (selectedSet.has(p.code.toLowerCase()) || selectedSet.has(p.name.toLowerCase()));
+        html += `
+          <label class="multi-select-option" data-text="${p.name.toLowerCase()} ${p.code.toLowerCase()}">
+            <input type="checkbox" class="${prefix}-tenduan-cb ${prefix}-specific-tenduan-cb" value="${p.code}" data-name="${escapeHtml(p.name)}" ${isChecked ? 'checked' : ''} onchange="onSpecificTenDuAnChange('${prefix}', '${p.code}')">
+            <div style="display:flex; flex-direction:column; line-height:1.2;">
+              <span style="font-weight:700; color:var(--text-primary); font-size:12px;">${escapeHtml(p.name)}</span>
+              <span style="font-family:var(--font-mono); font-size:11px; color:var(--brand);">${escapeHtml(p.code)}</span>
+            </div>
+          </label>
+        `;
+      });
+
+      container.innerHTML = html;
+      updateTenDuAnTriggerLabel(prefix);
+    }
+
+    function onSpecificTenDuAnChange(prefix, code) {
+      const tenCb = document.querySelector(`.${prefix}-specific-tenduan-cb[value="${code}"]`);
+      const maCb = document.querySelector(`.${prefix}-specific-duan-cb[value="${code}"]`);
+      if (tenCb && maCb) {
+        maCb.checked = tenCb.checked;
+      }
+      const specificTenCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb:checked`);
+      const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
+      const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
+      const hasChecked = (specificTenCbs.length > 0);
+      if (cbAllTen) cbAllTen.checked = !hasChecked;
+      if (cbAllMa) cbAllMa.checked = !hasChecked;
+
+      updateDuAnTriggerLabel(prefix);
+      updateTenDuAnTriggerLabel(prefix);
+    }
+
+    function updateTenDuAnTriggerLabel(prefix) {
+      const cbAll = document.getElementById(prefix + 'TenDuAnCbAll');
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb:checked`);
+      const labelEl = document.getElementById(prefix + 'TenDuAnLabel');
+      const nameInput = document.getElementById(prefix + 'Name');
+      if (!labelEl) return;
+
+      if (!cbAll || cbAll.checked || specificCbs.length === 0) {
+        labelEl.innerText = 'Tất cả (Mọi dự án)';
+        labelEl.style.color = 'var(--text-tertiary)';
+        if (nameInput) nameInput.value = 'Tất cả';
+      } else {
+        const selectedNames = Array.from(specificCbs).map(cb => cb.getAttribute('data-name') || cb.value);
+        if (selectedNames.length === 1) {
+          labelEl.innerText = selectedNames[0];
+        } else if (selectedNames.length <= 2) {
+          labelEl.innerText = selectedNames.join(', ');
+        } else {
+          labelEl.innerText = `Đã chọn (${selectedNames.length}): ${selectedNames.slice(0, 2).join(', ')}...`;
+        }
+        labelEl.style.color = 'var(--brand)';
+        if (nameInput) nameInput.value = selectedNames.join(', ');
+      }
+    }
+
+    function toggleMultiSelectTenDuAn(prefix, forceClose) {
+      const dropdown = document.getElementById(prefix + 'TenDuAnDropdown');
+      if (!dropdown) return;
+      if (forceClose === true) {
+        dropdown.style.display = 'none';
+        return;
+      }
+      const isVisible = (dropdown.style.display === 'flex');
+      closeAllMultiSelects();
+      if (!isVisible) {
+        dropdown.style.display = 'flex';
+        const search = document.getElementById(prefix + 'TenDuAnSearch');
+        if (search) {
+          search.value = '';
+          filterMultiSelectTenDuAn(prefix);
+          search.focus();
+        }
+      }
+    }
+
+    function filterMultiSelectTenDuAn(prefix) {
+      const q = (document.getElementById(prefix + 'TenDuAnSearch').value || '').trim().toLowerCase();
+      const options = document.querySelectorAll(`#${prefix}TenDuAnOptions .multi-select-option`);
+      options.forEach(opt => {
+        const text = opt.getAttribute('data-text') || '';
+        opt.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
+      });
+    }
+
+    function addCustomTenDuAn(prefix) {
+      const input = document.getElementById(prefix + 'CustomTenDuAnInput');
+      if (!input) return;
+      const val = input.value.trim();
+      if (!val) return;
+
+      const container = document.getElementById(prefix + 'TenDuAnOptions');
+      const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
+      const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
+      if (cbAllTen) cbAllTen.checked = false;
+      if (cbAllMa) cbAllMa.checked = false;
+
+      const label = document.createElement('label');
+      label.className = 'multi-select-option';
+      label.setAttribute('data-text', val.toLowerCase());
+      label.innerHTML = `
+        <input type="checkbox" class="${prefix}-tenduan-cb ${prefix}-specific-tenduan-cb" value="${val}" data-name="${val}" checked onchange="onSpecificTenDuAnChange('${prefix}', '${val}')">
+        <span style="font-weight:700; color:var(--text-primary); font-size:12px;">${val}</span>
+      `;
+      container.appendChild(label);
+
+      // Also add to Ma Du An if not present
+      addCustomDuAn(prefix, val);
+
+      input.value = '';
+      updateTenDuAnTriggerLabel(prefix);
+    }
+
     function buildDuAnMultiSelect(prefix, selectedVal) {
       const container = document.getElementById(prefix + 'DuAnOptions');
       if (!container) return;
@@ -3029,7 +3167,7 @@
         const isChecked = !isAll && selectedSet.has(p.code.toLowerCase());
         html += `
           <label class="multi-select-option" data-text="${p.code.toLowerCase()} ${p.name.toLowerCase()}">
-            <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${p.code}" data-name="${escapeHtml(p.name)}" ${isChecked ? 'checked' : ''} onchange="onSpecificDuAnChange('${prefix}')">
+            <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${p.code}" data-name="${escapeHtml(p.name)}" ${isChecked ? 'checked' : ''} onchange="onSpecificDuAnChange('${prefix}', '${p.code}')">
             <div style="display:flex; flex-direction:column; line-height:1.2;">
               <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand);">${escapeHtml(p.code)}</span>
               <span style="font-size:11px; color:var(--text-secondary);">${escapeHtml(p.name !== p.code ? p.name : '')}</span>
@@ -3043,7 +3181,7 @@
           if (!projects.some(p => p.code.toLowerCase() === rawCode)) {
             html += `
               <label class="multi-select-option" data-text="${rawCode}">
-                <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${rawCode.toUpperCase()}" data-name="${rawCode.toUpperCase()}" checked onchange="onSpecificDuAnChange('${prefix}')">
+                <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${rawCode.toUpperCase()}" data-name="${rawCode.toUpperCase()}" checked onchange="onSpecificDuAnChange('${prefix}', '${p.code}')">
                 <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand);">${rawCode.toUpperCase()}</span>
               </label>
             `;
@@ -3056,45 +3194,78 @@
     }
 
     function onToggleAllDuAn(prefix) {
-      const cbAll = document.getElementById(prefix + 'DuAnCbAll');
-      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb`);
-      if (!cbAll) return;
-      if (cbAll.checked) {
-        specificCbs.forEach(cb => cb.checked = false);
+      const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
+      const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
+      const specificMaCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb`);
+      const specificTenCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb`);
+
+      const shouldCheckAll = (cbAllMa && cbAllMa.checked) || (cbAllTen && cbAllTen.checked);
+      if (cbAllMa) cbAllMa.checked = shouldCheckAll;
+      if (cbAllTen) cbAllTen.checked = shouldCheckAll;
+
+      if (shouldCheckAll) {
+        specificMaCbs.forEach(cb => cb.checked = false);
+        specificTenCbs.forEach(cb => cb.checked = false);
       } else {
-        const anyChecked = Array.from(specificCbs).some(cb => cb.checked);
-        if (!anyChecked) cbAll.checked = true;
+        const anyChecked = Array.from(specificMaCbs).some(cb => cb.checked);
+        if (!anyChecked) {
+          if (cbAllMa) cbAllMa.checked = true;
+          if (cbAllTen) cbAllTen.checked = true;
+        }
       }
       updateDuAnTriggerLabel(prefix);
+      updateTenDuAnTriggerLabel(prefix);
     }
 
-    function onSpecificDuAnChange(prefix) {
-      const cbAll = document.getElementById(prefix + 'DuAnCbAll');
-      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb:checked`);
-      if (cbAll) {
-        cbAll.checked = (specificCbs.length === 0);
+    function onSpecificDuAnChange(prefix, code) {
+      const maCb = document.querySelector(`.${prefix}-specific-duan-cb[value="${code}"]`);
+      const tenCb = document.querySelector(`.${prefix}-specific-tenduan-cb[value="${code}"]`);
+      if (maCb && tenCb) {
+        tenCb.checked = maCb.checked;
       }
+      const specificMaCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb:checked`);
+      const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
+      const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
+      const hasChecked = (specificMaCbs.length > 0);
+      if (cbAllMa) cbAllMa.checked = !hasChecked;
+      if (cbAllTen) cbAllTen.checked = !hasChecked;
+
       updateDuAnTriggerLabel(prefix);
+      updateTenDuAnTriggerLabel(prefix);
     }
 
     function selectAllDuAn(prefix) {
-      const cbAll = document.getElementById(prefix + 'DuAnCbAll');
-      if (cbAll) cbAll.checked = false;
-      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb`);
-      specificCbs.forEach(cb => {
-        if (cb.closest('.multi-select-option').style.display !== 'none') {
+      const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
+      const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
+      if (cbAllMa) cbAllMa.checked = false;
+      if (cbAllTen) cbAllTen.checked = false;
+      const specificMaCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb`);
+      const specificTenCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb`);
+      specificMaCbs.forEach(cb => {
+        if (!cb.closest('.multi-select-option') || cb.closest('.multi-select-option').style.display !== 'none') {
+          cb.checked = true;
+        }
+      });
+      specificTenCbs.forEach(cb => {
+        if (!cb.closest('.multi-select-option') || cb.closest('.multi-select-option').style.display !== 'none') {
           cb.checked = true;
         }
       });
       updateDuAnTriggerLabel(prefix);
+      updateTenDuAnTriggerLabel(prefix);
     }
 
     function clearAllDuAn(prefix) {
-      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb`);
-      specificCbs.forEach(cb => cb.checked = false);
-      const cbAll = document.getElementById(prefix + 'DuAnCbAll');
-      if (cbAll) cbAll.checked = true;
+      const specificMaCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb`);
+      const specificTenCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb`);
+      specificMaCbs.forEach(cb => cb.checked = false);
+      specificTenCbs.forEach(cb => cb.checked = false);
+      const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
+      const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
+      if (cbAllMa) cbAllMa.checked = true;
+      if (cbAllTen) cbAllTen.checked = true;
       updateDuAnTriggerLabel(prefix);
+      updateTenDuAnTriggerLabel(prefix);
     }
 
     function updateDuAnTriggerLabel(prefix) {
@@ -3122,7 +3293,7 @@
           if (nameInput) nameInput.value = selectedNames.join(', ');
         } else {
           labelEl.innerText = `Đã chọn (${selectedCodes.length}): ${selectedCodes.slice(0, 2).join(', ')}...`;
-          if (nameInput) nameInput.value = `(${selectedCodes.length} dự án đã chọn)`;
+          if (nameInput) nameInput.value = selectedNames.join(', ');
         }
         labelEl.style.color = 'var(--brand)';
         if (codeInput) codeInput.value = selectedCodes.join(', ');
@@ -3147,7 +3318,7 @@
         label.className = 'multi-select-option';
         label.setAttribute('data-text', val.toLowerCase());
         label.innerHTML = `
-          <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${val}" data-name="${val}" checked onchange="onSpecificDuAnChange('${prefix}')">
+          <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${val}" data-name="${val}" checked onchange="onSpecificDuAnChange('${prefix}', '${p.code}')">
           <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand);">${val}</span>
         `;
         container.appendChild(label);
@@ -3206,9 +3377,8 @@
 
       cdts.forEach(c => {
         const isChecked = !isAll && selectedSet.has(c.toLowerCase());
-        const isSpecialOther = (c === 'Các CĐT Khác');
         html += `
-          <label class="multi-select-option" data-text="${c.toLowerCase()}" style="${isSpecialOther ? 'color:#b45309; font-weight:700; background:#fffbeb; border-radius:4px;' : ''}">
+          <label class="multi-select-option" data-text="${c.toLowerCase()}">
             <input type="checkbox" class="${prefix}-cdt-cb ${prefix}-specific-cdt-cb" value="${c}" ${isChecked ? 'checked' : ''} onchange="onSpecificCdtChange('${prefix}')">
             <span>${escapeHtml(c)}</span>
           </label>
@@ -3757,7 +3927,6 @@
               <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:5px;">
                 <span class="chip-btn" onclick="selectCdtChip('add', 'Tất cả')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:#e0e7ff; color:#3730a3; cursor:pointer; font-weight:700; border:1px solid #c7d2fe;" title="Áp dụng cho mọi CĐT">⭐ Tất cả CĐT</span>
                 <span class="chip-btn" onclick="selectCdtChip('add', 'Masterise Homes')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:#fef3c7; color:#92400e; cursor:pointer; font-weight:700; border:1px solid #fde68a;">🏢 Masterise Homes</span>
-                <span class="chip-btn" onclick="selectCdtChip('add', 'Các CĐT Khác')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:#dcfce7; color:#166534; cursor:pointer; font-weight:700; border:1px solid #bbf7d0;" title="Áp dụng mọi CĐT trừ Masterise">🏘️ Các CĐT Khác</span>
                 <span class="chip-btn" onclick="toggleCdtOption('add', 'Vinhomes')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:var(--bg-muted); color:var(--text-secondary); cursor:pointer; font-weight:600; border:1px solid var(--border-subtle);">Vinhomes</span>
                 <span class="chip-btn" onclick="toggleCdtOption('add', 'Capitaland')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:var(--bg-muted); color:var(--text-secondary); cursor:pointer; font-weight:600; border:1px solid var(--border-subtle);">Capitaland</span>
                 <span class="chip-btn" onclick="toggleCdtOption('add', 'Gamuda Land')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:var(--bg-muted); color:var(--text-secondary); cursor:pointer; font-weight:600; border:1px solid var(--border-subtle);">Gamuda</span>
@@ -3781,13 +3950,7 @@
                 <option value="Miền Trung">Miền Trung</option>
                 <option value="Miền Bắc, Miền Nam">Miền Bắc & Miền Nam</option>
               </select>
-              <div style="margin-top: 8px;">
-                <label class="field-label" for="addFundInTH" style="margin-bottom:3px; font-size:11px;">Loại Quỹ</label>
-                <select class="filter-select" style="width:100%; font-weight:600; height:32px;" id="addFundInTH">
-                  <option value="Quỹ NW" selected>Quỹ NW (Độc quyền Masterise / CĐT khác)</option>
-                  <option value="Quỹ Chéo">Quỹ Chéo (Bảng quy đổi điểm Quỹ Chéo)</option>
-                </select>
-              </div>
+              
             </div>
           </div>
 
@@ -3912,9 +4075,33 @@
               <input type="hidden" id="addCode" value="Tất cả">
             </div>
 
-            <div class="form-group">
-              <label class="field-label" for="addName">Tên Dự Án</label>
-              <input type="text" class="filter-input" style="width:100%; height:36px;" id="addName" placeholder="Tên dự án hoặc để trống..." value="Tất cả">
+            <!-- 2. Tên Dự Án Multi-select Droplist -->
+            <div class="form-group" style="position: relative;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label class="field-label" style="margin-bottom:0;">Tên Dự Án</label>
+                <span style="font-size:10px; color:var(--text-tertiary);">Chọn 1, nhiều hoặc Tất cả</span>
+              </div>
+              <div class="multi-select-container" id="addTenDuAnContainer">
+                <div class="multi-select-trigger" id="addTenDuAnTrigger" onclick="toggleMultiSelectTenDuAn('add')">
+                  <span class="multi-select-label" id="addTenDuAnLabel">Tất cả (Mọi dự án)</span>
+                  <span class="multi-select-arrow">▼</span>
+                </div>
+                <div class="multi-select-dropdown" id="addTenDuAnDropdown" style="min-width: 320px;">
+                  <div class="multi-select-search-box">
+                    <input type="text" class="multi-select-search" id="addTenDuAnSearch" placeholder="Tìm theo tên dự án..." oninput="filterMultiSelectTenDuAn('add')">
+                  </div>
+                  <div class="multi-select-actions">
+                    <span class="multi-select-btn-link" onclick="selectAllDuAn('add')">Chọn tất cả</span>
+                    <span class="multi-select-btn-link" onclick="clearAllDuAn('add')">Bỏ chọn</span>
+                  </div>
+                  <div class="multi-select-options" id="addTenDuAnOptions"></div>
+                  <div class="multi-select-custom-box">
+                    <input type="text" id="addCustomTenDuAnInput" class="multi-select-search" placeholder="+ Nhập tên dự án mới..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addCustomTenDuAn('add');}">
+                    <button type="button" class="btn btn-secondary" style="height:26px; padding:0 8px; font-size:11px;" onclick="addCustomTenDuAn('add')">+ Thêm</button>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" id="addName" value="Tất cả">
             </div>
           </div>
 
@@ -3967,13 +4154,7 @@
                 </div>
               </div>
               <input type="hidden" id="addRegion" value="Miền Bắc">
-              <div style="margin-top: 6px;">
-                <label class="field-label" for="addFundInTH" style="margin-bottom:2px; font-size:11px;">Loại Quỹ</label>
-                <select class="filter-select" style="width:100%; font-weight:600; height:32px;" id="addFundInTH">
-                  <option value="Quỹ NW" selected>Quỹ NW (Độc quyền Masterise / CĐT khác)</option>
-                  <option value="Quỹ Chéo">Quỹ Chéo (Bảng quy đổi điểm Quỹ Chéo)</option>
-                </select>
-              </div>
+
             </div>
           </div>
 
@@ -4077,6 +4258,7 @@
           </div>
         `;
         buildDuAnMultiSelect('add', 'Tất cả');
+        buildTenDuAnMultiSelect('add', 'Tất cả');
         buildCdtMultiSelect('add', 'Tất cả');
         buildRegionMultiSelect('add', 'Miền Bắc');
         buildMultiSelectOptions('add', []);
@@ -4209,7 +4391,7 @@
         const name = (document.getElementById('addName') && document.getElementById('addName').value.trim()) || code;
         const cdt = (document.getElementById('addCdt') && document.getElementById('addCdt').value.trim()) || 'Tất cả';
         const region = document.getElementById('addRegion') ? document.getElementById('addRegion').value : 'Tất cả';
-        const fundInTH = (document.getElementById('addFundInTH') ? document.getElementById('addFundInTH').value : 'Quỹ NW');
+        const fundInTH = 'Quỹ NW';
         const vals = getThreeFieldValues('add');
         const scoreEl = document.getElementById('addScore');
         const scoreVal = scoreEl ? scoreEl.value.trim() : '';
@@ -4587,9 +4769,33 @@
               <input type="hidden" id="editCode" value="${escapeHtml(row.code || 'Tất cả')}">
             </div>
 
-            <div class="form-group">
-              <label class="field-label" for="editName">Tên Dự Án</label>
-              <input type="text" class="filter-input" style="width:100%; height:36px;" id="editName" value="${escapeHtml(row.name || '')}">
+            <!-- 2. Tên Dự Án Multi-select Droplist -->
+            <div class="form-group" style="position: relative;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label class="field-label" style="margin-bottom:0;">Tên Dự Án</label>
+                <span style="font-size:10px; color:var(--text-tertiary);">Chọn 1, nhiều hoặc Tất cả</span>
+              </div>
+              <div class="multi-select-container" id="editTenDuAnContainer">
+                <div class="multi-select-trigger" id="editTenDuAnTrigger" onclick="toggleMultiSelectTenDuAn('edit')">
+                  <span class="multi-select-label" id="editTenDuAnLabel">${escapeHtml(row.name || 'Tất cả')}</span>
+                  <span class="multi-select-arrow">▼</span>
+                </div>
+                <div class="multi-select-dropdown" id="editTenDuAnDropdown" style="min-width: 320px;">
+                  <div class="multi-select-search-box">
+                    <input type="text" class="multi-select-search" id="editTenDuAnSearch" placeholder="Tìm theo tên dự án..." oninput="filterMultiSelectTenDuAn('edit')">
+                  </div>
+                  <div class="multi-select-actions">
+                    <span class="multi-select-btn-link" onclick="selectAllDuAn('edit')">Chọn tất cả</span>
+                    <span class="multi-select-btn-link" onclick="clearAllDuAn('edit')">Bỏ chọn</span>
+                  </div>
+                  <div class="multi-select-options" id="editTenDuAnOptions"></div>
+                  <div class="multi-select-custom-box">
+                    <input type="text" id="editCustomTenDuAnInput" class="multi-select-search" placeholder="+ Nhập tên dự án mới..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addCustomTenDuAn('edit');}">
+                    <button type="button" class="btn btn-secondary" style="height:26px; padding:0 8px; font-size:11px;" onclick="addCustomTenDuAn('edit')">+ Thêm</button>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" id="editName" value="${escapeHtml(row.name || 'Tất cả')}">
             </div>
           </div>
 
@@ -4802,9 +5008,33 @@
               <input type="hidden" id="editCode" value="${escapeHtml(row.code || 'Tất cả')}">
             </div>
 
-            <div class="form-group">
-              <label class="field-label" for="editName">Tên Dự Án</label>
-              <input type="text" class="filter-input" style="width:100%; height:36px;" id="editName" value="${escapeHtml(row.name || '')}">
+            <!-- 2. Tên Dự Án Multi-select Droplist -->
+            <div class="form-group" style="position: relative;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label class="field-label" style="margin-bottom:0;">Tên Dự Án</label>
+                <span style="font-size:10px; color:var(--text-tertiary);">Chọn 1, nhiều hoặc Tất cả</span>
+              </div>
+              <div class="multi-select-container" id="editTenDuAnContainer">
+                <div class="multi-select-trigger" id="editTenDuAnTrigger" onclick="toggleMultiSelectTenDuAn('edit')">
+                  <span class="multi-select-label" id="editTenDuAnLabel">${escapeHtml(row.name || 'Tất cả')}</span>
+                  <span class="multi-select-arrow">▼</span>
+                </div>
+                <div class="multi-select-dropdown" id="editTenDuAnDropdown" style="min-width: 320px;">
+                  <div class="multi-select-search-box">
+                    <input type="text" class="multi-select-search" id="editTenDuAnSearch" placeholder="Tìm theo tên dự án..." oninput="filterMultiSelectTenDuAn('edit')">
+                  </div>
+                  <div class="multi-select-actions">
+                    <span class="multi-select-btn-link" onclick="selectAllDuAn('edit')">Chọn tất cả</span>
+                    <span class="multi-select-btn-link" onclick="clearAllDuAn('edit')">Bỏ chọn</span>
+                  </div>
+                  <div class="multi-select-options" id="editTenDuAnOptions"></div>
+                  <div class="multi-select-custom-box">
+                    <input type="text" id="editCustomTenDuAnInput" class="multi-select-search" placeholder="+ Nhập tên dự án mới..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addCustomTenDuAn('edit');}">
+                    <button type="button" class="btn btn-secondary" style="height:26px; padding:0 8px; font-size:11px;" onclick="addCustomTenDuAn('edit')">+ Thêm</button>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" id="editName" value="${escapeHtml(row.name || 'Tất cả')}">
             </div>
           </div>
 
@@ -4863,13 +5093,7 @@
                 <option value="Đang bán" ${row.status === 'Đang bán' ? 'selected' : ''}>Đang bán</option>
                 <option value="Sold out" ${row.status === 'Sold out' ? 'selected' : ''}>Sold out</option>
               </select>
-              <div style="margin-top:4px;">
-                <label class="field-label" for="editFundInTH" style="font-size:10px; margin-bottom:2px;">Loại Quỹ</label>
-                <select class="filter-select" id="editFundInTH" style="height:28px; font-size:11px;">
-                  <option value="Quỹ NW" ${row.fund !== 'Quỹ Chéo' ? 'selected' : ''}>Quỹ NW</option>
-                  <option value="Quỹ Chéo" ${row.fund === 'Quỹ Chéo' ? 'selected' : ''}>Quỹ Chéo</option>
-                </select>
-              </div>
+
             </div>
           </div>
 
@@ -4972,6 +5196,7 @@
           </div>
         `;
         buildDuAnMultiSelect('edit', row.code);
+        buildTenDuAnMultiSelect('edit', row.name || row.code);
         buildCdtMultiSelect('edit', row.cdt);
         buildRegionMultiSelect('edit', row.region);
         buildMultiSelectOptions('edit', existingUnits);
@@ -5054,7 +5279,7 @@
         const name = document.getElementById('editName').value.trim() || code;
         const cdt = document.getElementById('editCdt').value.trim() || 'Tất cả';
         const region = document.getElementById('editRegion').value;
-        const fundInTH = document.getElementById('editFundInTH') ? document.getElementById('editFundInTH').value : 'Quỹ NW';
+        const fundInTH = (row && row.fund) ? row.fund : 'Quỹ NW';
         const status = document.getElementById('editStatus').value;
         const vals = getThreeFieldValues('edit');
         const scoreEl = document.getElementById('editScoreCampaign');
@@ -5170,7 +5395,7 @@
         const cdt = document.getElementById('editCdt').value.trim();
         const region = document.getElementById('editRegion').value;
         const status = document.getElementById('editStatus').value;
-        const fundInTH = document.getElementById('editFundInTH') ? document.getElementById('editFundInTH').value : 'Quỹ NW';
+        const fundInTH = (row && row.fund) ? row.fund : 'Quỹ NW';
         const vals = getThreeFieldValues('edit');
 
         // Check if score changed in modal
@@ -5487,7 +5712,7 @@
       const cdtEl = document.getElementById(prefix + 'Cdt');
       if (!cdtEl) return;
       let cur = cdtEl.value.trim();
-      if (!cur || cur === 'Tất cả' || cur === 'Các CĐT Khác') {
+      if (!cur || isConditionAll(cur)) {
         cdtEl.value = cdtValue;
       } else {
         const list = cur.split(/[,;]/).map(s => s.trim()).filter(s => s);
