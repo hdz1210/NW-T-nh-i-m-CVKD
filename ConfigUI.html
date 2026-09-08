@@ -3464,7 +3464,6 @@
     function onScoreMonthChange(prefix) {
       const select = document.getElementById(prefix + 'ScoreMonth');
       const badge = document.getElementById(prefix + 'ScoreMonthBadge');
-      const note = document.getElementById(prefix + 'ScoreMonthNote');
       if (!select) return;
 
       const val = select.value;
@@ -3475,24 +3474,15 @@
           badge.style.color = '#1d4ed8';
           badge.style.borderColor = '#bfdbfe';
         }
-        if (note) {
-          note.innerHTML = '💡 Mặc định điểm sẽ được ghi đồng đều vào tất cả các cột tháng trong sheet Tổng Hợp.';
-          note.style.color = 'var(--text-tertiary)';
-          note.style.fontWeight = 'normal';
-        }
       } else {
         const selectedOption = select.options[select.selectedIndex];
-        const monthText = selectedOption ? selectedOption.text.replace('Chỉ ', '') : val;
+        const rawText = selectedOption ? selectedOption.text.replace('Chỉ ', '') : val;
+        const cleanMonth = rawText.replace(/\s*\(.*\)/, '').trim();
         if (badge) {
-          badge.innerText = `⚡ CHỈ ${monthText.toUpperCase()}`;
+          badge.innerText = `⚡ CHỈ ${cleanMonth.toUpperCase()}`;
           badge.style.background = '#fff7ed';
           badge.style.color = '#9a3412';
           badge.style.borderColor = '#fdba74';
-        }
-        if (note) {
-          note.innerHTML = `🔒 <b>Bảo toàn tháng cũ</b>: Điểm sẽ CHỈ được ghi vào cột <b>${monthText}</b>. Cột điểm các tháng cũ sẽ <b>để trống</b>, tuyệt đối không ảnh hưởng tới kết quả tính điểm của các đơn hàng tháng cũ!`;
-          note.style.color = '#9a3412';
-          note.style.fontWeight = '600';
         }
       }
     }
@@ -4072,20 +4062,18 @@
             </div>
             <div class="form-row-2">
               <div class="form-group" style="margin-bottom:0;">
-                <label class="field-label" for="addScoreMonth" style="font-weight:700; color:var(--text-secondary);">Tháng Áp Dụng Rule (*)</label>
+                <label class="field-label" for="addScoreMonth" style="font-weight:700; color:var(--text-secondary);">Tháng Áp Dụng Rule <span style="color:var(--danger)">*</span></label>
                 <select class="filter-select" id="addScoreMonth" style="width:100%; height:36px; font-weight:700; background:#ffffff;" onchange="onScoreMonthChange('add')">
                   <option value="ALL">Tất cả các tháng (Mặc định)</option>
                   ${monthOptionsHtml}
                 </select>
               </div>
               <div class="form-group" style="margin-bottom:0;">
-                <label class="field-label" for="addScore" style="font-weight:800; color:var(--text-primary);">Điểm Cơ Sở (*)</label>
-                <input type="number" step="0.5" class="filter-input" style="width:100%; height:36px; font-weight:800; font-size:15px; text-align:center;" id="addScore" placeholder="Ví dụ: 3.0" value="3.0">
+                <label class="field-label" for="addScore" style="font-weight:800; color:var(--text-primary);">Điểm Cơ Sở <span style="color:var(--danger)">*</span></label>
+                <input type="number" step="0.5" class="filter-input" style="width:100%; height:36px; font-weight:800; font-size:15px; text-align:center;" id="addScore" placeholder="Ví dụ: 3.0" value="">
               </div>
             </div>
-            <div id="addScoreMonthNote" style="font-size:11.5px; color:var(--text-tertiary); line-height:1.4;">
-              💡 Mặc định điểm sẽ được ghi đồng đều vào tất cả các cột tháng trong sheet Tổng Hợp.
-            </div>
+
           </div>
         `;
         buildDuAnMultiSelect('add', 'Tất cả');
@@ -4167,7 +4155,14 @@
         const cdt = (document.getElementById('addCdt') && document.getElementById('addCdt').value.trim()) || '';
         const region = document.getElementById('addRegion') ? document.getElementById('addRegion').value : 'Miền Bắc';
         const vals = getThreeFieldValues('add');
-        const score = parseFloat(document.getElementById('addScore').value) || 0;
+        const scoreEl = document.getElementById('addScore');
+        const scoreVal = scoreEl ? scoreEl.value.trim() : '';
+        if (scoreVal === '') {
+          showToast('Vui lòng nhập Điểm Cơ Sở!', true);
+          if (scoreEl) scoreEl.focus();
+          return;
+        }
+        const score = parseFloat(scoreVal) || 0;
 
         if (!configData.campaign) configData.campaign = { rows: [] };
         if (!configData.campaign.rows) configData.campaign.rows = [];
@@ -4216,7 +4211,14 @@
         const region = document.getElementById('addRegion') ? document.getElementById('addRegion').value : 'Tất cả';
         const fundInTH = (document.getElementById('addFundInTH') ? document.getElementById('addFundInTH').value : 'Quỹ NW');
         const vals = getThreeFieldValues('add');
-        const score = parseFloat(document.getElementById('addScore').value) || 0;
+        const scoreEl = document.getElementById('addScore');
+        const scoreVal = scoreEl ? scoreEl.value.trim() : '';
+        if (scoreVal === '') {
+          showToast('Vui lòng nhập Điểm Cơ Sở!', true);
+          if (scoreEl) scoreEl.focus();
+          return;
+        }
+        const score = parseFloat(scoreVal) || 0;
 
         const scoreMonth = document.getElementById('addScoreMonth') ? document.getElementById('addScoreMonth').value : 'ALL';
         const scoresObj = {};
