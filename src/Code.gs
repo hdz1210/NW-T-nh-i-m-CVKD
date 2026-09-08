@@ -1924,7 +1924,14 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
       // Nếu chưa tìm thấy dòng khớp theo dự án cụ thể, xét bảng quy tắc chung (CĐT, Miền, Khoảng giá)
       if (!matchedRow && ctx.generalRules && ctx.generalRules.length > 0) {
         const genCandidates = [];
-        const txCdt = String(row[22] || '').trim();
+        let txCdt = String(row[22] || '').trim();
+        // Nếu Cột CĐT trong sheet Data không phải tên CĐT thực (ví dụ: "Check", rỗng),
+        // tự động lấy CĐT từ bảng Tổng Hợp dựa trên mã dự án đã tra ở trên
+        if (!txCdt || /^check$/i.test(txCdt)) {
+          if (candidates.length > 0 && candidates[0].cdt) {
+            txCdt = candidates[0].cdt;
+          }
+        }
         const txMien = String(row[4] || '').trim();
 
         for (const r of ctx.generalRules) {
