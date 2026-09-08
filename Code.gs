@@ -846,11 +846,14 @@ function deleteMonthlyConfigRow(tab, rowIdx) {
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) return { success: false, error: 'Không tìm thấy sheet ' + sheetName };
 
-    if (rowIdx < 4 || rowIdx > sheet.getLastRow()) {
+    if (!rowIdx || rowIdx < 4) {
       return { success: false, error: 'Chỉ số dòng không hợp lệ: ' + rowIdx };
     }
 
-    sheet.deleteRow(rowIdx);
+    const lastRow = sheet.getLastRow();
+    if (rowIdx <= lastRow) {
+      sheet.deleteRow(rowIdx);
+    }
     return { success: true };
   } catch (err) {
     Logger.log('Lỗi deleteMonthlyConfigRow: ' + err.toString());
@@ -868,9 +871,12 @@ function updateMonthlyConfigRow(tab, rowIdx, data) {
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) return { success: false, error: 'Không tìm thấy sheet ' + sheetName };
 
-    if (rowIdx < 4 || rowIdx > sheet.getLastRow()) {
+    if (!rowIdx || rowIdx < 4) {
       return { success: false, error: 'Chỉ số dòng không hợp lệ: ' + rowIdx };
     }
+
+    const lastRow = sheet.getLastRow();
+    const targetRow = (rowIdx > lastRow) ? (lastRow + 1) : rowIdx;
 
     if (tab === 'th') {
       const rowVals = [
@@ -884,20 +890,20 @@ function updateMonthlyConfigRow(tab, rowIdx, data) {
         isConditionAll(data.loaiCan) ? 'Tất cả' : data.loaiCan,
         canonicalKhoangGia(data.khoangGia)
       ];
-      sheet.getRange(rowIdx, 1, 1, 9).setValues([rowVals]);
+      sheet.getRange(targetRow, 1, 1, 9).setValues([rowVals]);
 
       if (data.monthUpdates && data.monthUpdates.length > 0) {
         data.monthUpdates.forEach(u => {
           if (u.colIdx >= 10) {
-            sheet.getRange(rowIdx, u.colIdx).setValue(u.score !== '' ? cleanScore(u.score) : '').setNumberFormat('0.##').setHorizontalAlignment('center');
+            sheet.getRange(targetRow, u.colIdx).setValue(u.score !== '' ? cleanScore(u.score) : '').setNumberFormat('0.##').setHorizontalAlignment('center');
           }
         });
       }
     } else {
-      sheet.getRange(rowIdx, 1).setValue(data.name || '');
+      sheet.getRange(targetRow, 1).setValue(data.name || '');
     }
 
-    return { success: true };
+    return { success: true, targetRow: targetRow };
   } catch (err) {
     Logger.log('Lỗi updateMonthlyConfigRow: ' + err.toString());
     return { success: false, error: err.toString() };

@@ -687,13 +687,13 @@
 
     .form-row-2 {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 12px;
     }
 
     .form-row-3 {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr);
       gap: 10px;
     }
 
@@ -4817,45 +4817,48 @@
             </div>
           </div>
 
-          <!-- Hàng 2: Chủ Đầu Tư (Multi-select), Miền (Multi-select), Trạng Thái -->
-          <div class="form-row-3">
-            <div class="form-group" style="position: relative;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <label class="field-label" style="margin-bottom:0;">Chủ Đầu Tư (CĐT)</label>
-              </div>
-              <div class="multi-select-container" id="editCdtContainer">
-                <div class="multi-select-trigger" id="editCdtTrigger" onclick="toggleMultiSelectCdt('edit')">
-                  <span class="multi-select-label" id="editCdtLabel">${escapeHtml(row.cdt || 'Tất cả')}</span>
-                  <span class="multi-select-arrow">▼</span>
-                </div>
-                <div class="multi-select-dropdown" id="editCdtDropdown" style="min-width: 280px;">
-                  <div class="multi-select-search-box">
-                    <input type="text" class="multi-select-search" id="editCdtSearch" placeholder="Tìm chủ đầu tư..." oninput="filterMultiSelectCdt('edit')">
-                  </div>
-                  <div class="multi-select-actions">
-                    <span class="multi-select-btn-link" onclick="selectAllCdt('edit')">Chọn tất cả</span>
-                    <span class="multi-select-btn-link" onclick="clearAllCdt('edit')">Bỏ chọn</span>
-                  </div>
-                  <div class="multi-select-options" id="editCdtOptions"></div>
-                  <div class="multi-select-custom-box">
-                    <input type="text" id="editCustomCdtInput" class="multi-select-search" placeholder="+ Nhập CĐT mới..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addCustomCdt('edit');}">
-                    <button type="button" class="btn btn-secondary" style="height:26px; padding:0 8px; font-size:11px;" onclick="addCustomCdt('edit')">+ Thêm</button>
-                  </div>
-                </div>
-              </div>
-              <input type="hidden" id="editCdt" value="${escapeHtml(row.cdt || 'Tất cả')}">
+          <!-- Hàng 2: Chủ Đầu Tư (Multi-select) Rộng Rãi Toàn Chiều Ngang -->
+          <div class="form-group" style="position: relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="field-label" style="margin-bottom:0;">Chủ Đầu Tư (CĐT)</label>
+              <span style="font-size:10px; color:var(--text-tertiary);">Chọn 1, nhiều hoặc Tất cả</span>
             </div>
+            <div class="multi-select-container" id="editCdtContainer">
+              <div class="multi-select-trigger" id="editCdtTrigger" onclick="toggleMultiSelectCdt('edit')">
+                <span class="multi-select-label" id="editCdtLabel">${escapeHtml(row.cdt || 'Tất cả')}</span>
+                <span class="multi-select-arrow">▼</span>
+              </div>
+              <div class="multi-select-dropdown" id="editCdtDropdown" style="min-width: 320px;">
+                <div class="multi-select-search-box">
+                  <input type="text" class="multi-select-search" id="editCdtSearch" placeholder="Tìm chủ đầu tư..." oninput="filterMultiSelectCdt('edit')">
+                </div>
+                <div class="multi-select-actions">
+                  <span class="multi-select-btn-link" onclick="selectAllCdt('edit')">Chọn tất cả</span>
+                  <span class="multi-select-btn-link" onclick="clearAllCdt('edit')">Bỏ chọn</span>
+                </div>
+                <div class="multi-select-options" id="editCdtOptions"></div>
+                <div class="multi-select-custom-box">
+                  <input type="text" id="editCustomCdtInput" class="multi-select-search" placeholder="+ Nhập CĐT mới..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addCustomCdt('edit');}">
+                  <button type="button" class="btn btn-secondary" style="height:26px; padding:0 8px; font-size:11px;" onclick="addCustomCdt('edit')">+ Thêm</button>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="editCdt" value="${escapeHtml(row.cdt || 'Tất cả')}">
+          </div>
 
+          <!-- Hàng 3: Miền & Trạng Thái Cân Đối Thoải Mái, Không Bị Tràn -->
+          <div class="form-row-2">
             <div class="form-group" style="position: relative;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                 <label class="field-label" style="margin-bottom:0;">Miền</label>
+                <span style="font-size:10px; color:var(--text-tertiary);">Bắc, Nam, Trung</span>
               </div>
               <div class="multi-select-container" id="editRegionContainer">
                 <div class="multi-select-trigger" id="editRegionTrigger" onclick="toggleMultiSelectRegion('edit')">
                   <span class="multi-select-label" id="editRegionLabel">${escapeHtml(row.region || 'Miền Bắc')}</span>
                   <span class="multi-select-arrow">▼</span>
                 </div>
-                <div class="multi-select-dropdown" id="editRegionDropdown" style="min-width: 220px;">
+                <div class="multi-select-dropdown" id="editRegionDropdown" style="min-width: 260px;">
                   <div class="multi-select-actions">
                     <span class="multi-select-btn-link" onclick="selectAllRegion('edit')">Chọn tất cả</span>
                     <span class="multi-select-btn-link" onclick="clearAllRegion('edit')">Bỏ chọn</span>
@@ -4868,7 +4871,7 @@
 
             <div class="form-group">
               <label class="field-label" for="editStatus">Trạng Thái</label>
-              <select class="filter-select" id="editStatus" style="height:36px;">
+              <select class="filter-select" id="editStatus" style="width:100%; height:36px;">
                 <option value="Đang bán" ${row.status === 'Đang bán' ? 'selected' : ''}>Đang bán</option>
                 <option value="Sold out" ${row.status === 'Sold out' ? 'selected' : ''}>Sold out</option>
               </select>
@@ -5056,45 +5059,48 @@
             </div>
           </div>
 
-          <!-- Hàng 2: Chủ Đầu Tư (Multi-select), Miền (Multi-select), Trạng Thái -->
-          <div class="form-row-3">
-            <div class="form-group" style="position: relative;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <label class="field-label" style="margin-bottom:0;">Chủ Đầu Tư (CĐT)</label>
-              </div>
-              <div class="multi-select-container" id="editCdtContainer">
-                <div class="multi-select-trigger" id="editCdtTrigger" onclick="toggleMultiSelectCdt('edit')">
-                  <span class="multi-select-label" id="editCdtLabel">${escapeHtml(row.cdt || 'Tất cả')}</span>
-                  <span class="multi-select-arrow">▼</span>
-                </div>
-                <div class="multi-select-dropdown" id="editCdtDropdown" style="min-width: 280px;">
-                  <div class="multi-select-search-box">
-                    <input type="text" class="multi-select-search" id="editCdtSearch" placeholder="Tìm chủ đầu tư..." oninput="filterMultiSelectCdt('edit')">
-                  </div>
-                  <div class="multi-select-actions">
-                    <span class="multi-select-btn-link" onclick="selectAllCdt('edit')">Chọn tất cả</span>
-                    <span class="multi-select-btn-link" onclick="clearAllCdt('edit')">Bỏ chọn</span>
-                  </div>
-                  <div class="multi-select-options" id="editCdtOptions"></div>
-                  <div class="multi-select-custom-box">
-                    <input type="text" id="editCustomCdtInput" class="multi-select-search" placeholder="+ Nhập CĐT mới..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addCustomCdt('edit');}">
-                    <button type="button" class="btn btn-secondary" style="height:26px; padding:0 8px; font-size:11px;" onclick="addCustomCdt('edit')">+ Thêm</button>
-                  </div>
-                </div>
-              </div>
-              <input type="hidden" id="editCdt" value="${escapeHtml(row.cdt || 'Tất cả')}">
+          <!-- Hàng 2: Chủ Đầu Tư (Multi-select) Rộng Rãi Toàn Chiều Ngang -->
+          <div class="form-group" style="position: relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label class="field-label" style="margin-bottom:0;">Chủ Đầu Tư (CĐT)</label>
+              <span style="font-size:10px; color:var(--text-tertiary);">Chọn 1, nhiều hoặc Tất cả</span>
             </div>
+            <div class="multi-select-container" id="editCdtContainer">
+              <div class="multi-select-trigger" id="editCdtTrigger" onclick="toggleMultiSelectCdt('edit')">
+                <span class="multi-select-label" id="editCdtLabel">${escapeHtml(row.cdt || 'Tất cả')}</span>
+                <span class="multi-select-arrow">▼</span>
+              </div>
+              <div class="multi-select-dropdown" id="editCdtDropdown" style="min-width: 320px;">
+                <div class="multi-select-search-box">
+                  <input type="text" class="multi-select-search" id="editCdtSearch" placeholder="Tìm chủ đầu tư..." oninput="filterMultiSelectCdt('edit')">
+                </div>
+                <div class="multi-select-actions">
+                  <span class="multi-select-btn-link" onclick="selectAllCdt('edit')">Chọn tất cả</span>
+                  <span class="multi-select-btn-link" onclick="clearAllCdt('edit')">Bỏ chọn</span>
+                </div>
+                <div class="multi-select-options" id="editCdtOptions"></div>
+                <div class="multi-select-custom-box">
+                  <input type="text" id="editCustomCdtInput" class="multi-select-search" placeholder="+ Nhập CĐT mới..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addCustomCdt('edit');}">
+                  <button type="button" class="btn btn-secondary" style="height:26px; padding:0 8px; font-size:11px;" onclick="addCustomCdt('edit')">+ Thêm</button>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="editCdt" value="${escapeHtml(row.cdt || 'Tất cả')}">
+          </div>
 
+          <!-- Hàng 3: Miền & Trạng Thái Cân Đối Thoải Mái, Không Bị Tràn -->
+          <div class="form-row-2">
             <div class="form-group" style="position: relative;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                 <label class="field-label" style="margin-bottom:0;">Miền</label>
+                <span style="font-size:10px; color:var(--text-tertiary);">Bắc, Nam, Trung</span>
               </div>
               <div class="multi-select-container" id="editRegionContainer">
                 <div class="multi-select-trigger" id="editRegionTrigger" onclick="toggleMultiSelectRegion('edit')">
                   <span class="multi-select-label" id="editRegionLabel">${escapeHtml(row.region || 'Miền Bắc')}</span>
                   <span class="multi-select-arrow">▼</span>
                 </div>
-                <div class="multi-select-dropdown" id="editRegionDropdown" style="min-width: 220px;">
+                <div class="multi-select-dropdown" id="editRegionDropdown" style="min-width: 260px;">
                   <div class="multi-select-actions">
                     <span class="multi-select-btn-link" onclick="selectAllRegion('edit')">Chọn tất cả</span>
                     <span class="multi-select-btn-link" onclick="clearAllRegion('edit')">Bỏ chọn</span>
@@ -5107,11 +5113,10 @@
 
             <div class="form-group">
               <label class="field-label" for="editStatus">Trạng Thái</label>
-              <select class="filter-select" id="editStatus" style="height:36px;">
+              <select class="filter-select" id="editStatus" style="width:100%; height:36px;">
                 <option value="Đang bán" ${row.status === 'Đang bán' ? 'selected' : ''}>Đang bán</option>
                 <option value="Sold out" ${row.status === 'Sold out' ? 'selected' : ''}>Sold out</option>
               </select>
-
             </div>
           </div>
 
