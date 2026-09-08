@@ -2927,23 +2927,30 @@
       const map = new Map();
       if (configData && configData.thRows) {
         configData.thRows.forEach(r => {
-          const code = (r.code || '').trim();
-          const name = (r.name || '').trim();
-          if (code && !isConditionAll(code)) {
-            if (!map.has(code.toUpperCase())) {
-              map.set(code.toUpperCase(), { code: code, name: name || code });
+          const rawCodes = (r.code || '').split(/[,;\n]/);
+          const rawNames = (r.name || '').split(/[,;\n]/);
+          rawCodes.forEach((c, idx) => {
+            const code = c.trim();
+            const name = (rawNames[idx] || rawNames[0] || code).trim();
+            if (code && !isConditionAll(code)) {
+              if (!map.has(code.toUpperCase())) {
+                map.set(code.toUpperCase(), { code: code, name: name || code });
+              }
             }
-          }
+          });
         });
       }
       if (configData && configData.f2Rows) {
         configData.f2Rows.forEach(r => {
-          const name = (r.name || '').trim();
-          if (name && !isConditionAll(name)) {
-            if (!map.has(name.toUpperCase())) {
-              map.set(name.toUpperCase(), { code: name, name: name });
+          const rawNames = (r.name || '').split(/[,;\n]/);
+          rawNames.forEach(n => {
+            const name = n.trim();
+            if (name && !isConditionAll(name)) {
+              if (!map.has(name.toUpperCase())) {
+                map.set(name.toUpperCase(), { code: name, name: name });
+              }
             }
-          }
+          });
         });
       }
       const fallback = [
@@ -2983,8 +2990,13 @@
       if (configData && configData.thRows) {
         configData.thRows.forEach(r => {
           const c = (r.cdt || '').trim();
-          if (c && !isConditionAll(c) && !c.toLowerCase().includes('khác') && !c.toLowerCase().includes('khac')) {
-            set.add(c);
+          if (c && !isConditionAll(c)) {
+            c.split(/[,;\n]/).forEach(part => {
+              const item = part.trim();
+              if (item && !isConditionAll(item) && !item.toLowerCase().includes('khác') && !item.toLowerCase().includes('khac')) {
+                set.add(item);
+              }
+            });
           }
         });
       }
@@ -2994,7 +3006,7 @@
         'Khang Điền', 'Nam Long', 'Sơn Kim Land', 'Kim Long Nam', 'NewX'
       ];
       fallback.forEach(c => set.add(c));
-      return Array.from(set).sort();
+      return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'));
     }
 
     function closeAllMultiSelects() {
@@ -3018,20 +3030,21 @@
       if (!container) return;
 
       const isAll = isConditionAll(selectedVal);
-      const selectedList = !isAll && selectedVal ? String(selectedVal).split(',').map(s => s.trim().toLowerCase()) : [];
+      const selectedList = !isAll && selectedVal ? String(selectedVal).split(/[,;\n]/).map(s => s.trim().toLowerCase()).filter(s => s) : [];
       const selectedSet = new Set(selectedList);
 
       const projects = getAllProjectList();
+      const allChecked = isAll || (projects.length > 0 && projects.every(p => selectedSet.has(p.code.toLowerCase()) || selectedSet.has(p.name.toLowerCase())));
 
       let html = `
         <label class="multi-select-option" data-text="tất cả all *" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; margin-bottom: 4px; font-weight: 700;">
-          <input type="checkbox" class="${prefix}-tenduan-cb" id="${prefix}TenDuAnCbAll" value="Tất cả" ${isAll ? 'checked' : ''} onchange="onToggleAllDuAn('${prefix}')">
+          <input type="checkbox" class="${prefix}-tenduan-cb" id="${prefix}TenDuAnCbAll" value="Tất cả" ${allChecked ? 'checked' : ''} onchange="onToggleAllDuAn('${prefix}', this)">
           <span>Tất cả dự án (Toàn bộ)</span>
         </label>
       `;
 
       projects.forEach(p => {
-        const isChecked = !isAll && (selectedSet.has(p.code.toLowerCase()) || selectedSet.has(p.name.toLowerCase()));
+        const isChecked = allChecked || selectedSet.has(p.code.toLowerCase()) || selectedSet.has(p.name.toLowerCase());
         html += `
           <label class="multi-select-option" data-text="${p.name.toLowerCase()} ${p.code.toLowerCase()}">
             <input type="checkbox" class="${prefix}-tenduan-cb ${prefix}-specific-tenduan-cb" value="${p.code}" data-name="${escapeHtml(p.name)}" ${isChecked ? 'checked' : ''} onchange="onSpecificTenDuAnChange('${prefix}', '${p.code}')">
@@ -3053,12 +3066,14 @@
       if (tenCb && maCb) {
         maCb.checked = tenCb.checked;
       }
-      const specificTenCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb:checked`);
+      const specificTenCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb`);
+      const checkedTenCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb:checked`);
       const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
       const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
-      const hasChecked = (specificTenCbs.length > 0);
-      if (cbAllTen) cbAllTen.checked = !hasChecked;
-      if (cbAllMa) cbAllMa.checked = !hasChecked;
+
+      const isAllChecked = (specificTenCbs.length > 0 && checkedTenCbs.length === specificTenCbs.length);
+      if (cbAllTen) cbAllTen.checked = isAllChecked;
+      if (cbAllMa) cbAllMa.checked = isAllChecked;
 
       updateDuAnTriggerLabel(prefix);
       updateTenDuAnTriggerLabel(prefix);
@@ -3066,17 +3081,22 @@
 
     function updateTenDuAnTriggerLabel(prefix) {
       const cbAll = document.getElementById(prefix + 'TenDuAnCbAll');
-      const specificCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb:checked`);
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb`);
+      const checkedCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb:checked`);
       const labelEl = document.getElementById(prefix + 'TenDuAnLabel');
       const nameInput = document.getElementById(prefix + 'Name');
       if (!labelEl) return;
 
-      if (!cbAll || cbAll.checked || specificCbs.length === 0) {
+      if ((cbAll && cbAll.checked) || (specificCbs.length > 0 && checkedCbs.length === specificCbs.length)) {
         labelEl.innerText = 'Tất cả (Mọi dự án)';
-        labelEl.style.color = 'var(--text-tertiary)';
+        labelEl.style.color = 'var(--text-primary)';
         if (nameInput) nameInput.value = 'Tất cả';
+      } else if (checkedCbs.length === 0) {
+        labelEl.innerText = '(Chưa chọn dự án)';
+        labelEl.style.color = 'var(--text-tertiary)';
+        if (nameInput) nameInput.value = '';
       } else {
-        const selectedNames = Array.from(specificCbs).map(cb => cb.getAttribute('data-name') || cb.value);
+        const selectedNames = Array.from(checkedCbs).map(cb => cb.getAttribute('data-name') || cb.value);
         if (selectedNames.length === 1) {
           labelEl.innerText = selectedNames[0];
         } else if (selectedNames.length <= 2) {
@@ -3125,46 +3145,41 @@
       if (!val) return;
 
       const container = document.getElementById(prefix + 'TenDuAnOptions');
-      const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
-      const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
-      if (cbAllTen) cbAllTen.checked = false;
-      if (cbAllMa) cbAllMa.checked = false;
-
       const label = document.createElement('label');
       label.className = 'multi-select-option';
       label.setAttribute('data-text', val.toLowerCase());
       label.innerHTML = `
-        <input type="checkbox" class="${prefix}-tenduan-cb ${prefix}-specific-tenduan-cb" value="${val}" data-name="${val}" checked onchange="onSpecificTenDuAnChange('${prefix}', '${val}')">
-        <span style="font-weight:700; color:var(--text-primary); font-size:12px;">${val}</span>
+        <input type="checkbox" class="${prefix}-tenduan-cb ${prefix}-specific-tenduan-cb" value="${val}" data-name="${escapeHtml(val)}" checked onchange="onSpecificTenDuAnChange('${prefix}', '${val}')">
+        <span style="font-weight:700; color:var(--text-primary); font-size:12px;">${escapeHtml(val)}</span>
       `;
       container.appendChild(label);
 
-      // Also add to Ma Du An if not present
       addCustomDuAn(prefix, val);
-
       input.value = '';
-      updateTenDuAnTriggerLabel(prefix);
+      onSpecificTenDuAnChange(prefix, val);
     }
 
+    // --- DỰ ÁN (MÃ DỰ ÁN) MULTI-SELECT ---
     function buildDuAnMultiSelect(prefix, selectedVal) {
       const container = document.getElementById(prefix + 'DuAnOptions');
       if (!container) return;
 
       const isAll = isConditionAll(selectedVal);
-      const selectedList = !isAll && selectedVal ? String(selectedVal).split(',').map(s => s.trim().toLowerCase()) : [];
+      const selectedList = !isAll && selectedVal ? String(selectedVal).split(/[,;\n]/).map(s => s.trim().toLowerCase()).filter(s => s) : [];
       const selectedSet = new Set(selectedList);
 
       const projects = getAllProjectList();
+      const allChecked = isAll || (projects.length > 0 && projects.every(p => selectedSet.has(p.code.toLowerCase()) || selectedSet.has(p.name.toLowerCase())));
 
       let html = `
         <label class="multi-select-option" data-text="tất cả all *" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; margin-bottom: 4px; font-weight: 700;">
-          <input type="checkbox" class="${prefix}-duan-cb" id="${prefix}DuAnCbAll" value="Tất cả" ${isAll ? 'checked' : ''} onchange="onToggleAllDuAn('${prefix}')">
+          <input type="checkbox" class="${prefix}-duan-cb" id="${prefix}DuAnCbAll" value="Tất cả" ${allChecked ? 'checked' : ''} onchange="onToggleAllDuAn('${prefix}', this)">
           <span>Tất cả dự án (Toàn bộ)</span>
         </label>
       `;
 
       projects.forEach(p => {
-        const isChecked = !isAll && selectedSet.has(p.code.toLowerCase());
+        const isChecked = allChecked || selectedSet.has(p.code.toLowerCase()) || selectedSet.has(p.name.toLowerCase());
         html += `
           <label class="multi-select-option" data-text="${p.code.toLowerCase()} ${p.name.toLowerCase()}">
             <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${p.code}" data-name="${escapeHtml(p.name)}" ${isChecked ? 'checked' : ''} onchange="onSpecificDuAnChange('${prefix}', '${p.code}')">
@@ -3181,7 +3196,7 @@
           if (!projects.some(p => p.code.toLowerCase() === rawCode)) {
             html += `
               <label class="multi-select-option" data-text="${rawCode}">
-                <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${rawCode.toUpperCase()}" data-name="${rawCode.toUpperCase()}" checked onchange="onSpecificDuAnChange('${prefix}', '${p.code}')">
+                <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${rawCode.toUpperCase()}" data-name="${rawCode.toUpperCase()}" checked onchange="onSpecificDuAnChange('${prefix}', '${rawCode.toUpperCase()}')">
                 <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand);">${rawCode.toUpperCase()}</span>
               </label>
             `;
@@ -3193,26 +3208,20 @@
       updateDuAnTriggerLabel(prefix);
     }
 
-    function onToggleAllDuAn(prefix) {
+    function onToggleAllDuAn(prefix, sender) {
       const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
       const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
+      const shouldCheck = sender ? sender.checked : (cbAllMa && cbAllMa.checked);
+
+      if (cbAllMa) cbAllMa.checked = shouldCheck;
+      if (cbAllTen) cbAllTen.checked = shouldCheck;
+
       const specificMaCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb`);
       const specificTenCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb`);
 
-      const shouldCheckAll = (cbAllMa && cbAllMa.checked) || (cbAllTen && cbAllTen.checked);
-      if (cbAllMa) cbAllMa.checked = shouldCheckAll;
-      if (cbAllTen) cbAllTen.checked = shouldCheckAll;
+      specificMaCbs.forEach(cb => cb.checked = shouldCheck);
+      specificTenCbs.forEach(cb => cb.checked = shouldCheck);
 
-      if (shouldCheckAll) {
-        specificMaCbs.forEach(cb => cb.checked = false);
-        specificTenCbs.forEach(cb => cb.checked = false);
-      } else {
-        const anyChecked = Array.from(specificMaCbs).some(cb => cb.checked);
-        if (!anyChecked) {
-          if (cbAllMa) cbAllMa.checked = true;
-          if (cbAllTen) cbAllTen.checked = true;
-        }
-      }
       updateDuAnTriggerLabel(prefix);
       updateTenDuAnTriggerLabel(prefix);
     }
@@ -3223,12 +3232,14 @@
       if (maCb && tenCb) {
         tenCb.checked = maCb.checked;
       }
-      const specificMaCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb:checked`);
+      const specificMaCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb`);
+      const checkedMaCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb:checked`);
       const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
       const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
-      const hasChecked = (specificMaCbs.length > 0);
-      if (cbAllMa) cbAllMa.checked = !hasChecked;
-      if (cbAllTen) cbAllTen.checked = !hasChecked;
+
+      const isAllChecked = (specificMaCbs.length > 0 && checkedMaCbs.length === specificMaCbs.length);
+      if (cbAllMa) cbAllMa.checked = isAllChecked;
+      if (cbAllTen) cbAllTen.checked = isAllChecked;
 
       updateDuAnTriggerLabel(prefix);
       updateTenDuAnTriggerLabel(prefix);
@@ -3237,8 +3248,8 @@
     function selectAllDuAn(prefix) {
       const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
       const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
-      if (cbAllMa) cbAllMa.checked = false;
-      if (cbAllTen) cbAllTen.checked = false;
+      if (cbAllMa) cbAllMa.checked = true;
+      if (cbAllTen) cbAllTen.checked = true;
       const specificMaCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb`);
       const specificTenCbs = document.querySelectorAll(`.${prefix}-specific-tenduan-cb`);
       specificMaCbs.forEach(cb => {
@@ -3262,53 +3273,55 @@
       specificTenCbs.forEach(cb => cb.checked = false);
       const cbAllMa = document.getElementById(prefix + 'DuAnCbAll');
       const cbAllTen = document.getElementById(prefix + 'TenDuAnCbAll');
-      if (cbAllMa) cbAllMa.checked = true;
-      if (cbAllTen) cbAllTen.checked = true;
+      if (cbAllMa) cbAllMa.checked = false;
+      if (cbAllTen) cbAllTen.checked = false;
       updateDuAnTriggerLabel(prefix);
       updateTenDuAnTriggerLabel(prefix);
     }
 
     function updateDuAnTriggerLabel(prefix) {
       const cbAll = document.getElementById(prefix + 'DuAnCbAll');
-      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb:checked`);
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb`);
+      const checkedCbs = document.querySelectorAll(`.${prefix}-specific-duan-cb:checked`);
       const labelEl = document.getElementById(prefix + 'DuAnLabel');
       const codeInput = document.getElementById(prefix + 'Code');
       const nameInput = document.getElementById(prefix + 'Name');
       if (!labelEl) return;
 
-      if (!cbAll || cbAll.checked || specificCbs.length === 0) {
+      if ((cbAll && cbAll.checked) || (specificCbs.length > 0 && checkedCbs.length === specificCbs.length)) {
         labelEl.innerText = 'Tất cả (Mọi dự án)';
-        labelEl.style.color = 'var(--text-tertiary)';
+        labelEl.style.color = 'var(--text-primary)';
         if (codeInput) codeInput.value = 'Tất cả';
-        if (nameInput && (!nameInput.value || nameInput.value.startsWith('('))) nameInput.value = 'Tất cả';
+        if (nameInput) nameInput.value = 'Tất cả';
+      } else if (checkedCbs.length === 0) {
+        labelEl.innerText = '(Chưa chọn dự án)';
+        labelEl.style.color = 'var(--text-tertiary)';
+        if (codeInput) codeInput.value = '';
+        if (nameInput) nameInput.value = '';
       } else {
-        const selectedCodes = Array.from(specificCbs).map(cb => cb.value);
-        const selectedNames = Array.from(specificCbs).map(cb => cb.getAttribute('data-name') || cb.value);
+        const selectedCodes = Array.from(checkedCbs).map(cb => cb.value);
+        const selectedNames = Array.from(checkedCbs).map(cb => cb.getAttribute('data-name') || cb.value);
 
         if (selectedCodes.length === 1) {
           labelEl.innerText = selectedCodes[0];
-          if (nameInput) nameInput.value = selectedNames[0];
         } else if (selectedCodes.length <= 3) {
           labelEl.innerText = selectedCodes.join(', ');
-          if (nameInput) nameInput.value = selectedNames.join(', ');
         } else {
           labelEl.innerText = `Đã chọn (${selectedCodes.length}): ${selectedCodes.slice(0, 2).join(', ')}...`;
-          if (nameInput) nameInput.value = selectedNames.join(', ');
         }
         labelEl.style.color = 'var(--brand)';
         if (codeInput) codeInput.value = selectedCodes.join(', ');
+        if (nameInput) nameInput.value = selectedNames.join(', ');
       }
     }
 
-    function addCustomDuAn(prefix) {
+    function addCustomDuAn(prefix, customCode) {
       const input = document.getElementById(prefix + 'CustomDuAnInput');
-      if (!input) return;
-      const val = input.value.trim().toUpperCase();
+      const val = (customCode || (input ? input.value : '')).trim().toUpperCase();
       if (!val) return;
 
       const container = document.getElementById(prefix + 'DuAnOptions');
-      const cbAll = document.getElementById(prefix + 'DuAnCbAll');
-      if (cbAll) cbAll.checked = false;
+      if (!container) return;
 
       const existing = container.querySelector(`input[value="${val}"]`);
       if (existing) {
@@ -3318,14 +3331,14 @@
         label.className = 'multi-select-option';
         label.setAttribute('data-text', val.toLowerCase());
         label.innerHTML = `
-          <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${val}" data-name="${val}" checked onchange="onSpecificDuAnChange('${prefix}', '${p.code}')">
-          <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand);">${val}</span>
+          <input type="checkbox" class="${prefix}-duan-cb ${prefix}-specific-duan-cb" value="${val}" data-name="${escapeHtml(val)}" checked onchange="onSpecificDuAnChange('${prefix}', '${val}')">
+          <span style="font-family:var(--font-mono); font-weight:700; color:var(--brand);">${escapeHtml(val)}</span>
         `;
         container.appendChild(label);
       }
 
-      input.value = '';
-      updateDuAnTriggerLabel(prefix);
+      if (input && !customCode) input.value = '';
+      onSpecificDuAnChange(prefix, val);
     }
 
     function toggleMultiSelectDuAn(prefix, forceClose) {
@@ -3356,27 +3369,39 @@
         opt.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
       });
     }
-
     // --- CHỦ ĐẦU TƯ MULTI-SELECT ---
     function buildCdtMultiSelect(prefix, selectedVal) {
       const container = document.getElementById(prefix + 'CdtOptions');
       if (!container) return;
 
       const isAll = isConditionAll(selectedVal);
-      const selectedList = !isAll && selectedVal ? String(selectedVal).split(',').map(s => s.trim().toLowerCase()) : [];
+      const selectedList = !isAll && selectedVal ? String(selectedVal).split(/[,;\n]/).map(s => s.trim().toLowerCase()).filter(s => s) : [];
       const selectedSet = new Set(selectedList);
 
       const cdts = getAllCdtList();
 
+      // If user had custom CĐT in selectedVal that isn't in cdts, add them as individual items
+      selectedList.forEach(rawItem => {
+        if (!cdts.some(c => c.toLowerCase() === rawItem)) {
+          const original = String(selectedVal).split(/[,;\n]/).map(s => s.trim()).find(s => s.toLowerCase() === rawItem);
+          if (original && !isConditionAll(original) && !original.toLowerCase().includes('khác')) {
+            cdts.push(original);
+          }
+        }
+      });
+      cdts.sort((a, b) => a.localeCompare(b, 'vi'));
+
+      const allChecked = isAll || (cdts.length > 0 && cdts.every(c => selectedSet.has(c.toLowerCase())));
+
       let html = `
         <label class="multi-select-option" data-text="tất cả all *" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; margin-bottom: 4px; font-weight: 700;">
-          <input type="checkbox" class="${prefix}-cdt-cb" id="${prefix}CdtCbAll" value="Tất cả" ${isAll ? 'checked' : ''} onchange="onToggleAllCdt('${prefix}')">
+          <input type="checkbox" class="${prefix}-cdt-cb" id="${prefix}CdtCbAll" value="Tất cả" ${allChecked ? 'checked' : ''} onchange="onToggleAllCdt('${prefix}')">
           <span>Tất cả CĐT (Toàn bộ)</span>
         </label>
       `;
 
       cdts.forEach(c => {
-        const isChecked = !isAll && selectedSet.has(c.toLowerCase());
+        const isChecked = allChecked || selectedSet.has(c.toLowerCase());
         html += `
           <label class="multi-select-option" data-text="${c.toLowerCase()}">
             <input type="checkbox" class="${prefix}-cdt-cb ${prefix}-specific-cdt-cb" value="${c}" ${isChecked ? 'checked' : ''} onchange="onSpecificCdtChange('${prefix}')">
@@ -3384,19 +3409,6 @@
           </label>
         `;
       });
-
-      if (!isAll && selectedList.length > 0) {
-        selectedList.forEach(rawC => {
-          if (!cdts.some(c => c.toLowerCase() === rawC)) {
-            html += `
-              <label class="multi-select-option" data-text="${rawC}">
-                <input type="checkbox" class="${prefix}-cdt-cb ${prefix}-specific-cdt-cb" value="${rawC}" checked onchange="onSpecificCdtChange('${prefix}')">
-                <span>${rawC}</span>
-              </label>
-            `;
-          }
-        });
-      }
 
       container.innerHTML = html;
       updateCdtTriggerLabel(prefix);
@@ -3406,30 +3418,28 @@
       const cbAll = document.getElementById(prefix + 'CdtCbAll');
       const specificCbs = document.querySelectorAll(`.${prefix}-specific-cdt-cb`);
       if (!cbAll) return;
-      if (cbAll.checked) {
-        specificCbs.forEach(cb => cb.checked = false);
-      } else {
-        const anyChecked = Array.from(specificCbs).some(cb => cb.checked);
-        if (!anyChecked) cbAll.checked = true;
-      }
+      const shouldCheck = cbAll.checked;
+      specificCbs.forEach(cb => cb.checked = shouldCheck);
       updateCdtTriggerLabel(prefix);
     }
 
     function onSpecificCdtChange(prefix) {
       const cbAll = document.getElementById(prefix + 'CdtCbAll');
-      const specificCbs = document.querySelectorAll(`.${prefix}-specific-cdt-cb:checked`);
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-cdt-cb`);
+      const checkedCbs = document.querySelectorAll(`.${prefix}-specific-cdt-cb:checked`);
+
       if (cbAll) {
-        cbAll.checked = (specificCbs.length === 0);
+        cbAll.checked = (specificCbs.length > 0 && checkedCbs.length === specificCbs.length);
       }
       updateCdtTriggerLabel(prefix);
     }
 
     function selectAllCdt(prefix) {
       const cbAll = document.getElementById(prefix + 'CdtCbAll');
-      if (cbAll) cbAll.checked = false;
+      if (cbAll) cbAll.checked = true;
       const specificCbs = document.querySelectorAll(`.${prefix}-specific-cdt-cb`);
       specificCbs.forEach(cb => {
-        if (cb.closest('.multi-select-option').style.display !== 'none') {
+        if (!cb.closest('.multi-select-option') || cb.closest('.multi-select-option').style.display !== 'none') {
           cb.checked = true;
         }
       });
@@ -3437,33 +3447,40 @@
     }
 
     function clearAllCdt(prefix) {
+      const cbAll = document.getElementById(prefix + 'CdtCbAll');
+      if (cbAll) cbAll.checked = false;
       const specificCbs = document.querySelectorAll(`.${prefix}-specific-cdt-cb`);
       specificCbs.forEach(cb => cb.checked = false);
-      const cbAll = document.getElementById(prefix + 'CdtCbAll');
-      if (cbAll) cbAll.checked = true;
       updateCdtTriggerLabel(prefix);
     }
 
     function updateCdtTriggerLabel(prefix) {
       const cbAll = document.getElementById(prefix + 'CdtCbAll');
-      const specificCbs = document.querySelectorAll(`.${prefix}-specific-cdt-cb:checked`);
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-cdt-cb`);
+      const checkedCbs = document.querySelectorAll(`.${prefix}-specific-cdt-cb:checked`);
       const labelEl = document.getElementById(prefix + 'CdtLabel');
       const inputEl = document.getElementById(prefix + 'Cdt');
       if (!labelEl) return;
 
-      if (!cbAll || cbAll.checked || specificCbs.length === 0) {
+      if ((cbAll && cbAll.checked) || (specificCbs.length > 0 && checkedCbs.length === specificCbs.length)) {
         labelEl.innerText = 'Tất cả CĐT';
-        labelEl.style.color = 'var(--text-tertiary)';
+        labelEl.style.color = 'var(--text-primary)';
         if (inputEl) inputEl.value = 'Tất cả';
+      } else if (checkedCbs.length === 0) {
+        labelEl.innerText = '(Chưa chọn CĐT)';
+        labelEl.style.color = 'var(--text-tertiary)';
+        if (inputEl) inputEl.value = '';
       } else {
-        const selected = Array.from(specificCbs).map(cb => cb.value);
-        if (selected.length <= 2) {
-          labelEl.innerText = selected.join(', ');
+        const selectedList = Array.from(checkedCbs).map(cb => cb.value);
+        if (selectedList.length === 1) {
+          labelEl.innerText = selectedList[0];
+        } else if (selectedList.length <= 2) {
+          labelEl.innerText = selectedList.join(', ');
         } else {
-          labelEl.innerText = `Đã chọn (${selected.length}): ${selected.slice(0, 2).join(', ')}...`;
+          labelEl.innerText = `Đã chọn (${selectedList.length}): ${selectedList.slice(0, 2).join(', ')}...`;
         }
         labelEl.style.color = 'var(--brand)';
-        if (inputEl) inputEl.value = selected.join(', ');
+        if (inputEl) inputEl.value = selectedList.join(', ');
       }
     }
 
@@ -3474,8 +3491,7 @@
       if (!val) return;
 
       const container = document.getElementById(prefix + 'CdtOptions');
-      const cbAll = document.getElementById(prefix + 'CdtCbAll');
-      if (cbAll) cbAll.checked = false;
+      if (!container) return;
 
       const existing = container.querySelector(`input[value="${val}"]`);
       if (existing) {
@@ -3486,13 +3502,13 @@
         label.setAttribute('data-text', val.toLowerCase());
         label.innerHTML = `
           <input type="checkbox" class="${prefix}-cdt-cb ${prefix}-specific-cdt-cb" value="${val}" checked onchange="onSpecificCdtChange('${prefix}')">
-          <span>${val}</span>
+          <span>${escapeHtml(val)}</span>
         `;
         container.appendChild(label);
       }
 
       input.value = '';
-      updateCdtTriggerLabel(prefix);
+      onSpecificCdtChange(prefix);
     }
 
     function toggleMultiSelectCdt(prefix, forceClose) {
@@ -3523,7 +3539,6 @@
         opt.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
       });
     }
-
     // --- MIỀN MULTI-SELECT ---
     function buildRegionMultiSelect(prefix, selectedVal) {
       const container = document.getElementById(prefix + 'RegionOptions');
@@ -3532,25 +3547,26 @@
       const isAll = isConditionAll(selectedVal);
       let selectedList = [];
       if (!isAll && selectedVal) {
-        selectedList = String(selectedVal).split(',').map(s => s.trim().toLowerCase());
+        selectedList = String(selectedVal).split(/[,;\n]/).map(s => s.trim().toLowerCase()).filter(s => s);
       } else if (!selectedVal && prefix === 'add') {
         selectedList = ['miền bắc'];
       }
       const selectedSet = new Set(selectedList);
+      const allChecked = isAll || (ALL_REGIONS.length > 0 && ALL_REGIONS.every(r => selectedSet.has(r.toLowerCase())));
 
       let html = `
         <label class="multi-select-option" data-text="tất cả toàn quốc all *" style="border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; margin-bottom: 4px; font-weight: 700;">
-          <input type="checkbox" class="${prefix}-region-cb" id="${prefix}RegionCbAll" value="Tất cả" ${isAll ? 'checked' : ''} onchange="onToggleAllRegion('${prefix}')">
+          <input type="checkbox" class="${prefix}-region-cb" id="${prefix}RegionCbAll" value="Tất cả" ${allChecked ? 'checked' : ''} onchange="onToggleAllRegion('${prefix}')">
           <span>Tất cả các miền (Toàn quốc)</span>
         </label>
       `;
 
       ALL_REGIONS.forEach(reg => {
-        const isChecked = !isAll && selectedSet.has(reg.toLowerCase());
+        const isChecked = allChecked || selectedSet.has(reg.toLowerCase());
         html += `
           <label class="multi-select-option" data-text="${reg.toLowerCase()}">
             <input type="checkbox" class="${prefix}-region-cb ${prefix}-specific-region-cb" value="${reg}" ${isChecked ? 'checked' : ''} onchange="onSpecificRegionChange('${prefix}')">
-            <span>${reg}</span>
+            <span>${escapeHtml(reg)}</span>
           </label>
         `;
       });
@@ -3563,20 +3579,18 @@
       const cbAll = document.getElementById(prefix + 'RegionCbAll');
       const specificCbs = document.querySelectorAll(`.${prefix}-specific-region-cb`);
       if (!cbAll) return;
-      if (cbAll.checked) {
-        specificCbs.forEach(cb => cb.checked = false);
-      } else {
-        const anyChecked = Array.from(specificCbs).some(cb => cb.checked);
-        if (!anyChecked) cbAll.checked = true;
-      }
+      const shouldCheck = cbAll.checked;
+      specificCbs.forEach(cb => cb.checked = shouldCheck);
       updateRegionTriggerLabel(prefix);
     }
 
     function onSpecificRegionChange(prefix) {
       const cbAll = document.getElementById(prefix + 'RegionCbAll');
-      const specificCbs = document.querySelectorAll(`.${prefix}-specific-region-cb:checked`);
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-region-cb`);
+      const checkedCbs = document.querySelectorAll(`.${prefix}-specific-region-cb:checked`);
+
       if (cbAll) {
-        cbAll.checked = (specificCbs.length === 0 || specificCbs.length === ALL_REGIONS.length);
+        cbAll.checked = (specificCbs.length > 0 && checkedCbs.length === specificCbs.length);
       }
       updateRegionTriggerLabel(prefix);
     }
@@ -3585,37 +3599,41 @@
       const cbAll = document.getElementById(prefix + 'RegionCbAll');
       if (cbAll) cbAll.checked = true;
       const specificCbs = document.querySelectorAll(`.${prefix}-specific-region-cb`);
-      specificCbs.forEach(cb => cb.checked = false);
+      specificCbs.forEach(cb => cb.checked = true);
       updateRegionTriggerLabel(prefix);
     }
 
     function clearAllRegion(prefix) {
+      const cbAll = document.getElementById(prefix + 'RegionCbAll');
+      if (cbAll) cbAll.checked = false;
       const specificCbs = document.querySelectorAll(`.${prefix}-specific-region-cb`);
       specificCbs.forEach(cb => cb.checked = false);
-      const cbAll = document.getElementById(prefix + 'RegionCbAll');
-      if (cbAll) cbAll.checked = true;
       updateRegionTriggerLabel(prefix);
     }
 
     function updateRegionTriggerLabel(prefix) {
       const cbAll = document.getElementById(prefix + 'RegionCbAll');
-      const specificCbs = document.querySelectorAll(`.${prefix}-specific-region-cb:checked`);
+      const specificCbs = document.querySelectorAll(`.${prefix}-specific-region-cb`);
+      const checkedCbs = document.querySelectorAll(`.${prefix}-specific-region-cb:checked`);
       const labelEl = document.getElementById(prefix + 'RegionLabel');
       const inputEl = document.getElementById(prefix + 'Region');
       if (!labelEl) return;
 
-      if (!cbAll || cbAll.checked || specificCbs.length === 0 || specificCbs.length === ALL_REGIONS.length) {
+      if ((cbAll && cbAll.checked) || (specificCbs.length > 0 && checkedCbs.length === specificCbs.length)) {
         labelEl.innerText = 'Tất cả các miền (Toàn quốc)';
-        labelEl.style.color = 'var(--text-tertiary)';
+        labelEl.style.color = 'var(--text-primary)';
         if (inputEl) inputEl.value = 'Tất cả';
+      } else if (checkedCbs.length === 0) {
+        labelEl.innerText = '(Chưa chọn miền)';
+        labelEl.style.color = 'var(--text-tertiary)';
+        if (inputEl) inputEl.value = '';
       } else {
-        const selected = Array.from(specificCbs).map(cb => cb.value);
-        labelEl.innerText = selected.join(', ');
+        const selectedList = Array.from(checkedCbs).map(cb => cb.value);
+        labelEl.innerText = selectedList.join(', ');
         labelEl.style.color = 'var(--brand)';
-        if (inputEl) inputEl.value = selected.join(', ');
+        if (inputEl) inputEl.value = selectedList.join(', ');
       }
     }
-
     function toggleMultiSelectRegion(prefix, forceClose) {
       const dropdown = document.getElementById(prefix + 'RegionDropdown');
       if (!dropdown) return;
@@ -5279,7 +5297,7 @@
         const name = document.getElementById('editName').value.trim() || code;
         const cdt = document.getElementById('editCdt').value.trim() || 'Tất cả';
         const region = document.getElementById('editRegion').value;
-        const fundInTH = (row && row.fund) ? row.fund : 'Quỹ NW';
+        const fundInTH = 'Quỹ NW';
         const status = document.getElementById('editStatus').value;
         const vals = getThreeFieldValues('edit');
         const scoreEl = document.getElementById('editScoreCampaign');
@@ -5389,6 +5407,7 @@
       if (!rowIdx) return;
 
       if (tab === 'th') {
+        const row = configData.thRows.find(r => r.rowIdx === rowIdx);
         const code = document.getElementById('editCode').value.trim();
         if (!code) { showToast('Vui lòng chọn hoặc nhập Mã Dự Án!', true); return; }
         const name = document.getElementById('editName').value.trim() || code;
@@ -5399,7 +5418,6 @@
         const vals = getThreeFieldValues('edit');
 
         // Check if score changed in modal
-        const row = configData.thRows.find(r => r.rowIdx === rowIdx);
         const editScoreMonth = document.getElementById('editScoreMonth') ? document.getElementById('editScoreMonth').value : 'ALL';
         const editScoreValEl = document.getElementById('editScoreVal');
         const newScoreVal = editScoreValEl ? editScoreValEl.value.trim() : '';
