@@ -673,14 +673,14 @@ function fetchMonthlyConfigData() {
     for (let i = 0; i < thDataRows.length; i++) {
       const r = thDataRows[i];
       const rowNumber = i + 4;
-      if (r[2]) {
+      if (r[2] || r[1]) {
         currentProj = {
-          status: String(r[0] || 'Đang bán').trim(),
-          cdt: String(r[1] || '').trim(),
-          code: String(r[2] || '').trim(),
-          name: String(r[3] || '').trim(),
-          region: String(r[4] || '').trim(),
-          fund: String(r[5] || 'Quỹ NW').trim()
+          status: String(r[0] || currentProj.status || 'Đang bán').trim(),
+          cdt: String(r[1] || currentProj.cdt || '').trim(),
+          code: String(r[2] || currentProj.code || 'Tất cả').trim(),
+          name: String(r[3] || currentProj.name || '').trim(),
+          region: String(r[4] || currentProj.region || 'Tất cả').trim(),
+          fund: String(r[5] || currentProj.fund || 'Quỹ NW').trim()
         };
       }
 
@@ -1317,7 +1317,10 @@ function getRuleEngineContext(ss) {
   }
 
   // 2. Tải bảng Tổng hợp (Quỹ NW)
-  const thMap = new Map(); // key: proj_code_lower -> list of { sanPham, loaiCan, khoangGia, monthScores }
+  // 2. Tải bảng Tổng hợp (Quỹ NW & Quỹ Chéo)
+  const thMap = new Map(); // key: proj_code_lower -> list of rule objects
+  const generalRules = []; // list of rules where code is 'Tất cả' or '*'
+  const allRulesList = []; // flat list of all rules
   const thSheet = ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP);
   let thMonthsList = [];
 
@@ -1334,11 +1337,20 @@ function getRuleEngineContext(ss) {
     }
 
     const thRowsData = thSheet.getRange(4, 1, thSheet.getLastRow() - 3, thLastCol).getValues();
+    let currentCdt = '';
     let currentCode = '';
+    let currentName = '';
+    let currentRegion = '';
+    let currentFund = 'Quỹ NW';
 
     thRowsData.forEach(r => {
-      if (r[2]) currentCode = String(r[2]).trim().toLowerCase();
-      if (!currentCode) return;
+      if (r[1]) currentCdt = String(r[1]).trim();
+      if (r[2]) currentCode = String(r[2]).trim();
+      if (r[3]) currentName = String(r[3]).trim();
+      if (r[4]) currentRegion = String(r[4]).trim();
+      if (r[5]) currentFund = String(r[5]).trim();
+
+      if (!currentCode && !currentCdt) return;
 
       const sanPham = String(r[6] || '*').trim();
       const loaiCan = String(r[7] || '*').trim();
@@ -1350,8 +1362,27 @@ function getRuleEngineContext(ss) {
         if (s !== '' && s !== null && !isNaN(s)) monthScores.set(m.key, Number(s));
       });
 
-      if (!thMap.has(currentCode)) thMap.set(currentCode, []);
-      thMap.get(currentCode).push({ sanPham, loaiCan, khoangGia, monthScores });
+      const ruleObj = {
+        cdt: currentCdt,
+        code: currentCode,
+        name: currentName,
+        region: currentRegion,
+        fund: currentFund || 'Quỹ NW',
+        sanPham: sanPham,
+        loaiCan: loaiCan,
+        khoangGia: khoangGia,
+        monthScores: monthScores
+      };
+
+      allRulesList.push(ruleObj);
+
+      const codeLower = currentCode.toLowerCase();
+      if (isConditionAll(currentCode) || codeLower === 'tất cả' || codeLower === 'all') {
+        generalRules.push(ruleObj);
+      } else {
+        if (!thMap.has(codeLower)) thMap.set(codeLower, []);
+        thMap.get(codeLower).push(ruleObj);
+      }
     });
   }
 
@@ -1485,7 +1516,60 @@ function getRuleEngineContext(ss) {
     map: activeCampaigns[0].map
   } : null;
 
-  return { f2Map, f2MonthsList, thMap, thMonthsList, masVCGSet, gianXayMap, cbnvMap, campaignConfig, activeCampaigns };
+  return { 
+    f2Map, 
+    f2MonthsList, 
+    thMap, 
+    generalRules, 
+    allRulesList, 
+    thMonthsList, 
+    masVCGSet, 
+    gianXayMap, 
+    cbnvMap, 
+    campaignConfig, 
+    activeCampaigns 
+  };
+}
+
+/**
+ * Hàm khớp Chủ đầu tư (hỗ trợ Tất cả, Các CĐT Khác, danh sách nhiều CĐT phân tách bằng dấu phẩy)
+ */
+function matchCdt(ruleCdt, txCdt) {
+  if (!ruleCdt || isConditionAll(ruleCdt)) return true;
+  const rc = String(ruleCdt).trim().toLowerCase();
+  const tc = String(txCdt || '').trim().toLowerCase();
+  if (!tc) return true;
+  if (rc.includes('khác') || rc.includes('khac')) {
+    return !tc.includes('masterise');
+  }
+  const tokens = String(ruleCdt).split(/[,;]/).map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+  return tokens.some(t => tc.includes(t) || t.includes(tc));
+}
+
+/**
+ * Hàm khớp Miền (hỗ trợ Tất cả, danh sách nhiều miền phân tách bằng dấu phẩy)
+ */
+function matchRegion(ruleRegion, txRegion) {
+  if (!ruleRegion || isConditionAll(ruleRegion)) return true;
+  const rr = String(ruleRegion).trim().toLowerCase();
+  const tr = String(txRegion || '').trim().toLowerCase();
+  if (!tr) return true;
+  const tokens = String(ruleRegion).split(/[,;]/).map(t => t.trim().toLowerCase()).filter(t => t.length > 0);
+  return tokens.some(t => tr.includes(t) || t.includes(tr));
+}
+
+/**
+ * Hàm tính điểm lũy tiến cho các căn trên 50 tỷ từ Tháng 9/2026 (+1 điểm mỗi 10 tỷ tiếp theo)
+ */
+function calculateProgressiveScore(valInBillion, baseScore, khoangGia, monthKey) {
+  if (monthKey >= '2026-09' && valInBillion > 50) {
+    const kg = String(khoangGia || '').toLowerCase();
+    if (kg.includes('50') || kg.includes('> 50') || kg.includes('trên 50') || isConditionAll(khoangGia)) {
+      const extra = Math.floor((valInBillion - 50.0001) / 10) + 1;
+      return baseScore + extra;
+    }
+  }
+  return baseScore;
 }
 
 /**
@@ -1512,7 +1596,11 @@ function matchRules(candSp, candLc, candGia, txSp, txLc, txPrice) {
     if (rangeMatch) {
       const minP = parseFloat(rangeMatch[1].replace(',', '.'));
       const maxP = parseFloat(rangeMatch[2].replace(',', '.'));
-      if (p < minP || p > maxP) return false;
+      if (maxP === 50 && p > 50) {
+        // Khớp thang trên cùng 50 tỷ để áp dụng lũy tiến
+      } else if (p < minP || p > maxP) {
+        return false;
+      }
     } else {
       // 2.2 Dạng lớn hơn / trên / từ X trở lên: >= 10, > 10, trên 10, từ 10 tỷ trở lên
       const fromMatch = gia.match(/(?:\>=\s*(\d+(?:[.,]\d+)?))|(?:\>\s*(\d+(?:[.,]\d+)?))|(?:trên\s*(\d+(?:[.,]\d+)?))|(?:từ\s*(\d+(?:[.,]\d+)?)\s*t[ỷỉ]\s*trở\s*lên)/i);
@@ -1707,27 +1795,38 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
   // 4. Nếu không thuộc chiến dịch, tính theo bảng điểm tháng thông thường
   if (!isCampaignMatched) {
     if (loaiQuy === 'Quỹ Chéo') {
-      // Tra cứu trong bảng Dự án F2
+      // 4.1 Tra cứu trong bảng Dự án F2
       const duAnKey = duAn.toLowerCase();
-      if (ctx.f2Map.has(duAnKey)) {
-        const monthScores = ctx.f2Map.get(duAnKey);
-        if (monthScores.has(monthKey)) {
-          baseScore = monthScores.get(monthKey);
-        } else {
-          // Lấy tháng gần nhất
-          const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
-          baseScore = (latestKey && monthScores.has(latestKey)) ? monthScores.get(latestKey) : 1;
-        }
+      if (ctx.f2Map && ctx.f2Map.has(duAnKey) && ctx.f2Map.get(duAnKey).has(monthKey)) {
+        baseScore = ctx.f2Map.get(duAnKey).get(monthKey);
+      } else if (ctx.f2Map && ctx.f2Map.has(duAnKey) && monthKey < '2026-09') {
+        const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
+        baseScore = (latestKey && ctx.f2Map.get(duAnKey).has(latestKey)) ? ctx.f2Map.get(duAnKey).get(latestKey) : 1;
       } else {
-        baseScore = 1; // Mặc định Quỹ chéo không thuộc danh sách F2 là 1 điểm
+        // Kiểm tra rule chung Quỹ Chéo (ví dụ: bảng quy đổi điểm Tháng 9)
+        let matchedQCheo = null;
+        const genRules = ctx.generalRules || [];
+        for (const r of genRules) {
+          if (r.fund === 'Quỹ Chéo' && r.monthScores.has(monthKey)) {
+            if (matchRules(r.sanPham, r.loaiCan, r.khoangGia, sanPham, loaiCan, valInBillion)) {
+              matchedQCheo = r;
+              break;
+            }
+          }
+        }
+        if (matchedQCheo) {
+          const rawScore = matchedQCheo.monthScores.get(monthKey);
+          baseScore = calculateProgressiveScore(valInBillion, rawScore, matchedQCheo.khoangGia, monthKey);
+        } else {
+          baseScore = 1; // Mặc định Quỹ chéo không thuộc danh sách F2 là 1 điểm
+        }
       }
     } else {
-      // Quỹ NW: Tra cứu trong bảng Tổng Hợp
+      // 4.2 Quỹ NW: Tra cứu trong bảng Tổng Hợp
       const duAnKey = duAn.toLowerCase();
-      let candidates = ctx.thMap.get(duAnKey) || [];
+      let candidates = (ctx.thMap && ctx.thMap.has(duAnKey)) ? ctx.thMap.get(duAnKey) : [];
 
-      // Nếu không tìm thấy bằng tên dự án, thử tìm bằng mã căn hoặc từ khóa
-      if (candidates.length === 0) {
+      if (candidates.length === 0 && ctx.thMap) {
         for (const [code, list] of ctx.thMap.entries()) {
           if (duAnKey.includes(code) || code.includes(duAnKey)) {
             candidates = list;
@@ -1736,9 +1835,8 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
         }
       }
 
+      let matchedRow = null;
       if (candidates.length > 0) {
-        let matchedRow = null;
-
         // Ưu tiên dòng khớp cả 3 tiêu chí Sản phẩm, Loại căn, Khoảng giá trước
         for (const cand of candidates) {
           if (matchRules(cand.sanPham, cand.loaiCan, cand.khoangGia, sanPham, loaiCan, valInBillion)) {
@@ -1759,21 +1857,67 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
         if (matchedRow) {
           if (matchedRow.monthScores.has(monthKey) && matchedRow.monthScores.get(monthKey) !== '' && matchedRow.monthScores.get(monthKey) !== null) {
             baseScore = matchedRow.monthScores.get(monthKey);
-          } else {
-            // Nếu tháng giao dịch chưa có điểm trên bảng Tổng hợp: ưu tiên kế thừa điểm của tháng đã cấu hình gần nhất
+          } else if (monthKey < '2026-09') {
+            // Đối với các đơn hàng tháng cũ (< tháng 9/2026): chỉ kế thừa từ các tháng <= monthKey
             let foundScore = null;
             for (const m of ctx.thMonthsList) {
-              if (matchedRow.monthScores.has(m.key) && matchedRow.monthScores.get(m.key) !== '' && matchedRow.monthScores.get(m.key) !== null) {
+              if (m.key <= monthKey && matchedRow.monthScores.has(m.key) && matchedRow.monthScores.get(m.key) !== '' && matchedRow.monthScores.get(m.key) !== null) {
                 foundScore = matchedRow.monthScores.get(m.key);
                 break;
               }
             }
+            if (foundScore === null) {
+              for (const m of ctx.thMonthsList) {
+                if (matchedRow.monthScores.has(m.key) && matchedRow.monthScores.get(m.key) !== '' && matchedRow.monthScores.get(m.key) !== null) {
+                  foundScore = matchedRow.monthScores.get(m.key);
+                  break;
+                }
+              }
+            }
             baseScore = foundScore !== null ? foundScore : 2;
+          } else {
+            // Với đơn hàng tháng >= 9/2026, nếu dự án cụ thể chưa cấu hình điểm tháng này,
+            // cho phép khớp xuống bảng quy tắc chung toàn quốc (generalRules)
+            matchedRow = null;
           }
         }
-      } else {
-        // Dự án Quỹ NW chưa có cấu hình riêng trong bảng Tổng hợp (vd: TPV, S-Light,...):
-        // Áp dụng điểm mặc định 2 điểm cho Quỹ NW (theo cơ chế R035)
+      }
+
+      // Nếu chưa tìm thấy dòng khớp theo dự án cụ thể, xét bảng quy tắc chung (CĐT, Miền, Khoảng giá)
+      if (!matchedRow && ctx.generalRules && ctx.generalRules.length > 0) {
+        const genCandidates = [];
+        const txCdt = String(row[22] || '').trim();
+        const txMien = String(row[4] || '').trim();
+
+        for (const r of ctx.generalRules) {
+          if (r.fund === 'Quỹ Chéo') continue;
+          if (!r.monthScores.has(monthKey)) continue;
+          if (!matchCdt(r.cdt, txCdt)) continue;
+          if (!matchRegion(r.region, txMien)) continue;
+          if (!matchRules(r.sanPham, r.loaiCan, r.khoangGia, sanPham, loaiCan, valInBillion)) continue;
+
+          let spec = 0;
+          if (!isConditionAll(r.cdt)) {
+            const isKhac = /khác|khac/i.test(r.cdt);
+            spec += isKhac ? 30 : 50;
+          }
+          if (!isConditionAll(r.region)) spec += 20;
+          if (!isConditionAll(r.sanPham)) spec += 10;
+          if (!isConditionAll(r.loaiCan)) spec += 10;
+          if (!isConditionAll(r.khoangGia)) spec += 10;
+
+          genCandidates.push({ spec, rule: r, score: r.monthScores.get(monthKey) });
+        }
+
+        if (genCandidates.length > 0) {
+          genCandidates.sort((a, b) => b.spec - a.spec);
+          const best = genCandidates[0];
+          baseScore = calculateProgressiveScore(valInBillion, best.score, best.rule.khoangGia, monthKey);
+          matchedRow = best.rule;
+        }
+      }
+
+      if (!matchedRow && baseScore === 0) {
         baseScore = 2;
       }
     }
@@ -1788,8 +1932,9 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
   }
 
   // Thưởng thêm căn > 30 tỷ từ tháng 5/2025 (loại trừ VCG và căn Quỹ 'Check D' tại Cột N - index 13)
+  // Chỉ áp dụng cho đơn hàng cũ trước tháng 9/2026 (tháng 9 đã có bảng quy đổi điểm lũy tiến riêng)
   const cotN_Quy = String(row[13] || '').trim();
-  if (dateBC >= new Date(2025, 4, 1) && valInBillion >= 30 && cotN_Quy !== 'Check D' && duAn.trim().toUpperCase() !== 'VCG') {
+  if (dateBC >= new Date(2025, 4, 1) && dateBC < new Date(2026, 8, 1) && valInBillion >= 30 && cotN_Quy !== 'Check D' && duAn.trim().toUpperCase() !== 'VCG') {
     bonusScore += 1;
   }
 
@@ -2260,3 +2405,58 @@ function autoTriggerOnDataChange(e) {
     lock.releaseLock();
   }
 }
+
+/**
+ * =========================================================================
+ * CÔNG CỤ KIỂM TRA THỬ RULE TÍNH ĐIỂM (RULE SIMULATOR / TESTER)
+ * =========================================================================
+ * Cho phép người dùng test nhanh bất kỳ giao dịch nào (Tháng 9 hay tháng cũ)
+ * để kiểm tra rule có áp dụng đúng hay không trực tiếp từ giao diện Modal UI.
+ */
+function testEvaluateTransaction(txData) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ctx = getRuleEngineContext(ss);
+
+    // Chuẩn bị mảng row giả lập đúng 35 cột của sheet Data
+    const row = new Array(35).fill('');
+    row[0] = txData.dateBC || new Date();
+    row[4] = txData.region || 'Miền Bắc';
+    row[5] = txData.code || '';
+    row[6] = txData.maCan || '';
+    row[7] = txData.pkd || '';
+    row[8] = txData.cvkd || '';
+    row[9] = txData.trangThai || 'Đã bán';
+    row[10] = Number(txData.gia) || 0;
+    row[11] = Number(txData.gia) || 0;
+    row[13] = txData.cotN_Quy || '';
+    row[14] = txData.sanPham || 'Tất cả';
+    row[16] = txData.loaiCan || 'Tất cả';
+    row[17] = txData.maNV || '';
+    row[22] = txData.cdt || '';
+    row[25] = txData.loaiQuy || 'Quỹ NW';
+    row[28] = txData.name || txData.code || '';
+    row[32] = txData.ghiChu || '';
+
+    const parsedDate = parseDateSafe(row[0], row);
+    const monthKey = parsedDate ? formatDateSafe(parsedDate, ss).substring(0, 7) : '';
+    const score = evaluateRowWithRules(row, ctx);
+
+    return {
+      success: true,
+      score: score,
+      monthKey: monthKey,
+      loaiQuy: row[25],
+      duAn: row[5],
+      cdt: row[22],
+      region: row[4],
+      sanPham: row[14],
+      loaiCan: row[16],
+      giaTy: (Number(txData.gia) / 1e9).toFixed(2),
+      valInBillion: Number(txData.gia) / 1e9
+    };
+  } catch (err) {
+    return { success: false, error: err.message || String(err) };
+  }
+}
+

@@ -1,814 +1,139 @@
-import sys
+import re, sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 with open('src/ConfigUI.html', 'r', encoding='utf-8') as f:
-    html = f.read()
+    content = f.read()
 
-# 1. Update .kpi-deck css to 5 columns and add campaign css
-old_kpi_css = """    .kpi-deck {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-    }"""
+# 1. Add "🧪 Kiểm Tra Rule" button next to "Thêm Dòng Mới"
+old_tb = '''      <div class="toolbar-actions">
+        <button type="button" class="btn btn-secondary" onclick="openAddRowModal()">
+          Thêm Dòng Mới
+        </button>
+      </div>'''
 
-new_kpi_css = """    .kpi-deck {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 12px;
-    }
+new_tb = '''      <div class="toolbar-actions">
+        <button type="button" class="btn btn-secondary" onclick="openAddRowModal()">
+          Thêm Dòng Mới
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="openTestRuleModal()" style="border-color: #6366f1; color: #4f46e5; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;" title="Kiểm tra thử rule tính điểm cho Tháng 9 hoặc các tháng cũ">
+          🧪 Kiểm Tra Rule
+        </button>
+      </div>'''
 
-    @media (max-width: 1200px) {
-      .kpi-deck {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-    @media (max-width: 768px) {
-      .kpi-deck {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
+if old_tb in content:
+    content = content.replace(old_tb, new_tb, 1)
+    print("Step 1: Added Kiểm Tra Rule button to toolbar")
+else:
+    print("Warning: old_tb not found")
 
-    /* Campaign Control Card & Styling */
-    .campaign-control-card {
-      background: linear-gradient(135deg, #fffaf5 0%, #ffffff 100%);
-      border: 1.5px solid #fdba74;
-      border-radius: var(--radius-lg);
-      padding: 16px 20px;
-      box-shadow: 0 2px 6px rgba(234, 88, 12, 0.08);
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .campaign-control-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .campaign-form-row {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .campaign-field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .campaign-field-label {
-      font-size: var(--text-xs);
-      font-weight: 700;
-      color: #9a3412;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-
-    .cell-score-campaign {
-      border-color: #fb923c !important;
-      background: #fff7ed !important;
-      color: #c2410c !important;
-      font-weight: 800 !important;
-    }
-    .cell-score-campaign:focus {
-      border-color: #ea580c !important;
-      box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2) !important;
-    }"""
-
-assert old_kpi_css in html, "old_kpi_css not found"
-html = html.replace(old_kpi_css, new_kpi_css, 1)
-
-# 2. Update KPI deck HTML with 5th card
-old_kpi_deck = """      <div class="kpi-card">
-        <span class="kpi-label">Thay Đổi Chưa Lưu</span>
-        <span class="kpi-value kpi-highlight-warning" id="statUnsavedCount">0 ô</span>
-      </div>
-    </section>"""
-
-new_kpi_deck = """      <div class="kpi-card">
-        <span class="kpi-label">Thay Đổi Chưa Lưu</span>
-        <span class="kpi-value kpi-highlight-warning" id="statUnsavedCount">0 ô</span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Chiến Dịch Hiện Tại</span>
-        <span class="kpi-value" id="statCampaignCount" style="font-size: 14px; line-height: 1.3;">Chưa có</span>
-      </div>
-    </section>"""
-
-assert old_kpi_deck in html, "old_kpi_deck not found"
-html = html.replace(old_kpi_deck, new_kpi_deck, 1)
-
-# 3. Update Tab bar and insert Campaign Control Panel
-old_tab_bar = """      <button type="button" class="tab-btn" id="tabBtnF2" onclick="switchTab('f2')">
-        <span>🔄</span> Dự Án F2 (Quỹ Chéo)
-        <span class="tab-badge" id="badgeF2Count">29</span>
-      </button>
-    </nav>"""
-
-new_tab_bar = """      <button type="button" class="tab-btn" id="tabBtnF2" onclick="switchTab('f2')">
-        <span>🔄</span> Dự Án F2 (Quỹ Chéo)
-        <span class="tab-badge" id="badgeF2Count">29</span>
-      </button>
-      <button type="button" class="tab-btn" id="tabBtnCampaign" onclick="switchTab('campaign')">
-        <span>🔥</span> Điểm Chiến Dịch
-        <span class="tab-badge" id="badgeCampaignCount">0</span>
-      </button>
-    </nav>
-
-    <!-- Campaign Control Panel (Hiển thị khi chọn tab Điểm Chiến Dịch) -->
-    <div class="campaign-control-card" id="campaignControlPanel" style="display: none;">
-      <div class="campaign-control-header">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 24px; line-height: 1;">🔥</span>
-          <div>
-            <div style="font-size: 15px; font-weight: 800; color: #9a3412;">Cấu Hình Chiến Dịch Điểm Tạm (Cột X)</div>
-            <div style="font-size: 12.5px; color: #7c2d12;">Thiết lập điểm ưu đãi áp dụng theo khoảng ngày giao dịch (Ngày BC) ghi trực tiếp vào Cột X</div>
+# 2. Update renderFundSpecificFields for 'th'
+old_th_fields = '''          <div class="form-row-2">
+            <div class="form-group">
+              <label class="field-label" for="addCode">Mã Dự Án (*)</label>
+              <div class="autocomplete-container">
+                <input type="text" class="filter-input" style="width:100%;" id="addCode" placeholder="Ví dụ: MAS OCP2, VIN VGG..." autocomplete="off" oninput="showProjectCodeSuggest('add')" onfocus="showProjectCodeSuggest('add')" required>
+                <div class="autocomplete-dropdown" id="addCode_dropdown"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="field-label" for="addName">Tên Dự Án</label>
+              <div class="autocomplete-container">
+                <input type="text" class="filter-input" style="width:100%;" id="addName" placeholder="Ví dụ: Vinhomes Ocean Park 2..." autocomplete="off" oninput="showProjectNameSuggest('add')" onfocus="showProjectNameSuggest('add')">
+                <div class="autocomplete-dropdown" id="addName_dropdown"></div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <button type="button" class="btn btn-secondary" onclick="cloneFromTongHopToCampaign()" style="border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Sao chép toàn bộ 106 điều kiện từ Tổng Hợp sang Chiến Dịch">
-            <span>📋</span> Sao Chép Từ Tổng Hợp
-          </button>
-          <button type="button" class="btn btn-primary" onclick="saveCampaignChanges()" style="background-color: #ea580c; border-color: #c2410c;">
-            <span>💾</span> Lưu Bảng Chiến Dịch
-          </button>
-        </div>
-      </div>
 
-      <div class="campaign-form-row">
-        <div class="campaign-field-group" style="flex: 2; min-width: 260px;">
-          <label class="campaign-field-label" for="campaignName">Tên Chiến Dịch (*)</label>
-          <input type="text" class="filter-input" style="width: 100%; border-color: #fed7aa;" id="campaignName" placeholder="VD: Chiến dịch Bùng Nổ Mùa Hè 2026" oninput="markCampaignDirty()">
-        </div>
-
-        <div class="campaign-field-group" style="flex: 1; min-width: 150px;">
-          <label class="campaign-field-label" for="campaignStartDate">Từ Ngày (*)</label>
-          <input type="date" class="filter-input" style="width: 100%; border-color: #fed7aa;" id="campaignStartDate" onchange="markCampaignDirty()">
-        </div>
-
-        <div class="campaign-field-group" style="flex: 1; min-width: 150px;">
-          <label class="campaign-field-label" for="campaignEndDate">Đến Ngày (*)</label>
-          <input type="date" class="filter-input" style="width: 100%; border-color: #fed7aa;" id="campaignEndDate" onchange="markCampaignDirty()">
-        </div>
-
-        <div class="campaign-field-group" style="flex: 1; min-width: 160px;">
-          <label class="campaign-field-label" for="campaignStatus">Trạng Thái Chiến Dịch</label>
-          <select class="filter-select" style="width: 100%; border-color: #fed7aa; font-weight: 700;" id="campaignStatus" onchange="markCampaignDirty()">
-            <option value="Đang chạy">🟢 Đang chạy (Active)</option>
-            <option value="Tạm dừng">⏸️ Tạm dừng (Paused)</option>
-            <option value="Kết thúc">⚪ Kết thúc (Ended)</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="font-size: 12px; color: #9a3412; background: rgba(255, 237, 213, 0.6); padding: 8px 12px; border-radius: var(--radius-sm); border-left: 3px solid #f97316; display: flex; align-items: center; justify-content: space-between;">
-        <span>💡 <b>Quy tắc áp dụng:</b> Khi chiến dịch ở trạng thái <b>Đang chạy</b>, các giao dịch có <i>Ngày BC</i> nằm trong khoảng <i>Từ ngày</i> đến <i>Đến ngày</i> sẽ tự động áp dụng Điểm Chiến Dịch và ghi vào <b>Cột X (Điểm tạm)</b> trong sheet Data.</span>
-        <span id="campaignDirtyText" style="font-weight: 800; color: #c2410c; display: none;">⚠️ Có thay đổi chưa lưu</span>
-      </div>
-    </div>"""
-
-assert old_tab_bar in html, "old_tab_bar not found"
-html = html.replace(old_tab_bar, new_tab_bar, 1)
-
-# 4. Global state variable additions
-old_state = """    // Global State
-    let configData = {
-      thMonths: [],
-      thRows: [],
-      f2Months: [],
-      f2Rows: [],
-      latestMonth: ''
-    };
-
-    let activeTab = 'th'; // 'th' hoặc 'f2'
-    let modifiedCellsTH = new Map(); // key: `${rowIdx}_${colIdx}` -> { rowIdx, colIdx, score }
-    let modifiedCellsF2 = new Map();
-    let newRowsTH = [];
-    let newRowsF2 = [];"""
-
-new_state = """    // Global State
-    let configData = {
-      thMonths: [],
-      thRows: [],
-      f2Months: [],
-      f2Rows: [],
-      latestMonth: '',
-      campaign: { name: '', startDate: '', endDate: '', status: 'Tạm dừng', rows: [] }
-    };
-
-    let activeTab = 'th'; // 'th', 'f2' hoặc 'campaign'
-    let modifiedCellsTH = new Map(); // key: `${rowIdx}_${colIdx}` -> { rowIdx, colIdx, score }
-    let modifiedCellsF2 = new Map();
-    let newRowsTH = [];
-    let newRowsF2 = [];
-    let isCampaignDirty = false;"""
-
-assert old_state in html, "old_state not found"
-html = html.replace(old_state, new_state, 1)
-
-# 5. Update fetchData
-old_fetch = """          if (res && res.success) {
-            configData = res;
-            modifiedCellsTH.clear();
-            modifiedCellsF2.clear();
-            newRowsTH = [];
-            newRowsF2 = [];
-            updateUnsavedBadge();
-            populateFilters();
-            renderStats();
-            renderTable();
-          }"""
-
-new_fetch = """          if (res && res.success) {
-            configData = res;
-            if (!configData.campaign) {
-              configData.campaign = { name: '', startDate: '', endDate: '', status: 'Tạm dừng', rows: [] };
-            }
-            modifiedCellsTH.clear();
-            modifiedCellsF2.clear();
-            newRowsTH = [];
-            newRowsF2 = [];
-            isCampaignDirty = false;
-            if (activeTab === 'campaign') {
-              populateCampaignForm();
-            }
-            updateUnsavedBadge();
-            populateFilters();
-            renderStats();
-            renderTable();
-          }"""
-
-assert old_fetch in html, "old_fetch not found"
-html = html.replace(old_fetch, new_fetch, 1)
-
-# 6. Update renderStats and updateUnsavedBadge
-old_stats = """    function renderStats() {
-      document.getElementById('statTHCount').innerText = `${configData.thRows.length} dòng`;
-      document.getElementById('statF2Count').innerText = `${configData.f2Rows.length} dự án`;
-      document.getElementById('statLatestMonth').innerText = configData.latestMonth || '--/----';
-      document.getElementById('badgeTHCount').innerText = configData.thRows.length;
-      document.getElementById('badgeF2Count').innerText = configData.f2Rows.length;
-    }
-
-    function updateUnsavedBadge() {
-      const total = modifiedCellsTH.size + modifiedCellsF2.size + newRowsTH.length + newRowsF2.length;
-      document.getElementById('statUnsavedCount').innerText = `${total} ô/dòng`;
-      const badge = document.getElementById('saveBadge');
-      if (total > 0) {
-        badge.innerText = total;
-        badge.style.display = 'inline-flex';
-      } else {
-        badge.style.display = 'none';
-      }
-    }"""
-
-new_stats = """    function renderStats() {
-      document.getElementById('statTHCount').innerText = `${configData.thRows.length} dòng`;
-      document.getElementById('statF2Count').innerText = `${configData.f2Rows.length} dự án`;
-      document.getElementById('statLatestMonth').innerText = configData.latestMonth || '--/----';
-      document.getElementById('badgeTHCount').innerText = configData.thRows.length;
-      document.getElementById('badgeF2Count').innerText = configData.f2Rows.length;
-
-      const camp = configData.campaign;
-      const campStatus = (camp && camp.status) ? camp.status : 'Chưa có';
-      const campRowsCount = (camp && camp.rows) ? camp.rows.length : 0;
-      const statCampEl = document.getElementById('statCampaignCount');
-      if (statCampEl) {
-        if (campStatus === 'Đang chạy') {
-          statCampEl.innerHTML = `<span style="color:var(--success);font-weight:800;">🟢 Đang chạy</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
-        } else if (campStatus === 'Tạm dừng') {
-          statCampEl.innerHTML = `<span style="color:var(--warning);font-weight:800;">⏸️ Tạm dừng</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
-        } else {
-          statCampEl.innerHTML = `<span style="color:var(--text-tertiary);font-weight:700;">⚪ ${escapeHtml(campStatus)}</span> <span style="font-size:12px;color:var(--text-tertiary);">(${campRowsCount} dòng)</span>`;
-        }
-      }
-
-      const badgeCamp = document.getElementById('badgeCampaignCount');
-      if (badgeCamp) {
-        badgeCamp.innerText = campRowsCount;
-      }
-    }
-
-    function updateUnsavedBadge() {
-      const campDirtyCount = isCampaignDirty ? 1 : 0;
-      const total = modifiedCellsTH.size + modifiedCellsF2.size + newRowsTH.length + newRowsF2.length + campDirtyCount;
-      document.getElementById('statUnsavedCount').innerText = `${total} ô/dòng`;
-      const badge = document.getElementById('saveBadge');
-      if (total > 0) {
-        badge.innerText = total;
-        badge.style.display = 'inline-flex';
-      } else {
-        badge.style.display = 'none';
-      }
-    }"""
-
-assert old_stats in html, "old_stats not found"
-html = html.replace(old_stats, new_stats, 1)
-
-# 7. Update switchTab, populateFilters, applyFilters, renderTable
-old_switch = """    function switchTab(tab) {
-      activeTab = tab;
-      document.getElementById('tabBtnTH').className = 'tab-btn' + (tab === 'th' ? ' active' : '');
-      document.getElementById('tabBtnF2').className = 'tab-btn' + (tab === 'f2' ? ' active' : '');
-
-      // Toggle các filter không áp dụng cho F2
-      const isTH = (tab === 'th');
-      document.getElementById('cdtFilter').style.display = isTH ? 'inline-block' : 'none';
-      document.getElementById('regionFilter').style.display = isTH ? 'inline-block' : 'none';
-      document.getElementById('statusFilter').style.display = isTH ? 'inline-block' : 'none';
-
-      populateFilters();
-      renderTable();
-    }
-
-    function populateFilters() {
-      // Month dropdown
-      const monthSelect = document.getElementById('monthFilter');
-      const curMonthVal = monthSelect.value;
-      const months = (activeTab === 'th') ? configData.thMonths : configData.f2Months;
-
-      monthSelect.innerHTML = '<option value="ALL">🗓️ Xem tất cả các tháng (Ma trận)</option>';
-      months.forEach(m => {
-        monthSelect.innerHTML += `<option value="${m.dateStr}">Tháng ${m.display}</option>`;
-      });
-      if (curMonthVal && months.some(m => m.dateStr === curMonthVal)) {
-        monthSelect.value = curMonthVal;
-      }
-
-      // CĐT dropdown for TH
-      if (activeTab === 'th') {
-        const cdtSelect = document.getElementById('cdtFilter');
-        const curCdt = cdtSelect.value;
-        const cdts = Array.from(new Set(configData.thRows.map(r => r.cdt).filter(Boolean))).sort();
-        cdtSelect.innerHTML = '<option value="ALL">🏢 Tất cả CĐT</option>';
-        cdts.forEach(c => {
-          cdtSelect.innerHTML += `<option value="${c}">${c}</option>`;
-        });
-        if (curCdt) cdtSelect.value = curCdt;
-      }
-    }
-
-    function applyFilters() {
-      renderTable();
-    }
-
-    function renderTable() {
-      const thead = document.getElementById('tableHead');
-      const tbody = document.getElementById('tableBody');
-
-      const searchQ = document.getElementById('searchInput').value.trim().toLowerCase();
-      const selMonth = document.getElementById('monthFilter').value;
-      const selCdt = document.getElementById('cdtFilter').value;
-      const selRegion = document.getElementById('regionFilter').value;
-      const selStatus = document.getElementById('statusFilter').value;
-
-      if (activeTab === 'th') {
-        renderTableTH(thead, tbody, searchQ, selMonth, selCdt, selRegion, selStatus);
-      } else {
-        renderTableF2(thead, tbody, searchQ, selMonth);
-      }
-    }"""
-
-new_switch = """    function switchTab(tab) {
-      activeTab = tab;
-      document.getElementById('tabBtnTH').className = 'tab-btn' + (tab === 'th' ? ' active' : '');
-      document.getElementById('tabBtnF2').className = 'tab-btn' + (tab === 'f2' ? ' active' : '');
-      const tabBtnCamp = document.getElementById('tabBtnCampaign');
-      if (tabBtnCamp) tabBtnCamp.className = 'tab-btn' + (tab === 'campaign' ? ' active' : '');
-
-      const isTH = (tab === 'th');
-      const isCampaign = (tab === 'campaign');
-      const showFilters = isTH || isCampaign;
-
-      document.getElementById('cdtFilter').style.display = showFilters ? 'inline-block' : 'none';
-      document.getElementById('regionFilter').style.display = showFilters ? 'inline-block' : 'none';
-      document.getElementById('statusFilter').style.display = showFilters ? 'inline-block' : 'none';
-      document.getElementById('monthFilter').style.display = isCampaign ? 'none' : 'inline-block';
-
-      const campPanel = document.getElementById('campaignControlPanel');
-      if (campPanel) campPanel.style.display = isCampaign ? 'flex' : 'none';
-
-      if (isCampaign) {
-        populateCampaignForm();
-      }
-
-      populateFilters();
-      renderTable();
-    }
-
-    function populateCampaignForm() {
-      const camp = configData.campaign || { name: '', startDate: '', endDate: '', status: 'Tạm dừng', rows: [] };
-      const nameEl = document.getElementById('campaignName');
-      const startEl = document.getElementById('campaignStartDate');
-      const endEl = document.getElementById('campaignEndDate');
-      const statusEl = document.getElementById('campaignStatus');
-
-      if (nameEl) nameEl.value = camp.name || '';
-      if (startEl) startEl.value = camp.startDate || '';
-      if (endEl) endEl.value = camp.endDate || '';
-      if (statusEl) statusEl.value = camp.status || 'Tạm dừng';
-    }
-
-    function markCampaignDirty() {
-      isCampaignDirty = true;
-      const txt = document.getElementById('campaignDirtyText');
-      if (txt) txt.style.display = 'inline';
-      updateUnsavedBadge();
-    }
-
-    function populateFilters() {
-      // Month dropdown
-      const monthSelect = document.getElementById('monthFilter');
-      const curMonthVal = monthSelect.value;
-      const months = (activeTab === 'th') ? configData.thMonths : (configData.f2Months || []);
-
-      if (activeTab !== 'campaign') {
-        monthSelect.innerHTML = '<option value="ALL">🗓️ Xem tất cả các tháng (Ma trận)</option>';
-        months.forEach(m => {
-          monthSelect.innerHTML += `<option value="${m.dateStr}">Tháng ${m.display}</option>`;
-        });
-        if (curMonthVal && months.some(m => m.dateStr === curMonthVal)) {
-          monthSelect.value = curMonthVal;
-        }
-      }
-
-      // CĐT dropdown for TH and Campaign
-      if (activeTab === 'th' || activeTab === 'campaign') {
-        const cdtSelect = document.getElementById('cdtFilter');
-        const curCdt = cdtSelect.value;
-        const sourceRows = (activeTab === 'th') ? configData.thRows : (configData.campaign?.rows || []);
-        const cdts = Array.from(new Set(sourceRows.map(r => r.cdt).filter(Boolean))).sort();
-        cdtSelect.innerHTML = '<option value="ALL">🏢 Tất cả CĐT</option>';
-        cdts.forEach(c => {
-          cdtSelect.innerHTML += `<option value="${c}">${c}</option>`;
-        });
-        if (curCdt) cdtSelect.value = curCdt;
-      }
-    }
-
-    function applyFilters() {
-      renderTable();
-    }
-
-    function renderTable() {
-      const thead = document.getElementById('tableHead');
-      const tbody = document.getElementById('tableBody');
-
-      const searchQ = document.getElementById('searchInput').value.trim().toLowerCase();
-      const selMonth = document.getElementById('monthFilter').value;
-      const selCdt = document.getElementById('cdtFilter').value;
-      const selRegion = document.getElementById('regionFilter').value;
-      const selStatus = document.getElementById('statusFilter').value;
-
-      if (activeTab === 'th') {
-        renderTableTH(thead, tbody, searchQ, selMonth, selCdt, selRegion, selStatus);
-      } else if (activeTab === 'f2') {
-        renderTableF2(thead, tbody, searchQ, selMonth);
-      } else if (activeTab === 'campaign') {
-        renderTableCampaign(thead, tbody, searchQ, selCdt, selRegion, selStatus);
-      }
-    }"""
-
-assert old_switch in html, "old_switch not found"
-html = html.replace(old_switch, new_switch, 1)
-
-# 8. Add renderTableCampaign and campaign helpers right after renderTableF2
-target_after_f2 = """      tbody.innerHTML = bodyHtml;
-    }"""
-
-campaign_table_code = """      tbody.innerHTML = bodyHtml;
-    }
-
-    function renderTableCampaign(thead, tbody, searchQ, selCdt, selRegion, selStatus) {
-      let headHtml = `<tr>
-        <th style="width: 44px; text-align: center;">STT</th>
-        <th style="width: 72px; text-align: center;">Thao Tác</th>
-        <th style="width: 120px;">CĐT</th>
-        <th style="width: 90px;">Mã DA</th>
-        <th style="min-width: 170px;">Tên Dự Án</th>
-        <th style="width: 95px;">Miền</th>
-        <th style="width: 90px; text-align: center;">Trạng Thái</th>
-        <th style="width: 100px; text-align: center;">Sản Phẩm</th>
-        <th style="min-width: 130px; text-align: center;">Loại Căn</th>
-        <th style="min-width: 110px; text-align: center;">Khoảng Giá</th>
-        <th style="width: 120px; text-align: center; background: #ffedd5; color: #9a3412;">🔥 Điểm CD</th>
-        <th style="min-width: 120px;">Ghi Chú</th>
-      </tr>`;
-      thead.innerHTML = headHtml;
-
-      const rows = configData.campaign?.rows || [];
-      const filtered = rows.filter(r => {
-        if (searchQ) {
-          const matchStr = `${r.code} ${r.name} ${r.cdt} ${r.sanPham} ${r.loaiCan} ${r.khoangGia}`.toLowerCase();
-          if (!matchStr.includes(searchQ)) return false;
-        }
-        if (selCdt !== 'ALL' && r.cdt !== selCdt) return false;
-        if (selRegion !== 'ALL' && r.region !== selRegion) return false;
-        if (selStatus !== 'ALL' && r.status !== selStatus) return false;
-        return true;
-      });
-
-      if (filtered.length === 0) {
-        const msg = (rows.length === 0)
-          ? 'Chưa có cấu hình điểm chiến dịch. Bấm nút <b>"📋 Sao Chép Từ Tổng Hợp"</b> phía trên để tạo nhanh danh sách điều kiện!'
-          : 'Không tìm thấy dòng chiến dịch phù hợp với bộ lọc.';
-        tbody.innerHTML = `<tr><td colspan="12" class="empty-state">${msg}</td></tr>`;
-        return;
-      }
-
-      let bodyHtml = '';
-      filtered.forEach((r, idx) => {
-        const isSoldout = (r.status === 'Sold out');
-        const statusBadge = isSoldout 
-          ? `<span class="badge badge-soldout">Sold out</span>` 
-          : `<span class="badge badge-dangban">Đang bán</span>`;
-
-        const spBadge = (r.sanPham && r.sanPham !== '*' && r.sanPham !== 'Tất cả')
-          ? `<span class="badge badge-sp">${escapeHtml(r.sanPham)}</span>`
-          : `<span class="badge badge-all">Tất cả</span>`;
-
-        const lcBadge = (r.loaiCan && r.loaiCan !== '*' && r.loaiCan !== 'Tất cả')
-          ? `<span class="badge badge-lc" title="${escapeHtml(r.loaiCan)}">${escapeHtml(r.loaiCan)}</span>`
-          : `<span class="badge badge-all">Tất cả</span>`;
-
-        const giaBadge = (r.khoangGia && r.khoangGia !== '*' && r.khoangGia !== 'Tất cả')
-          ? `<span class="badge badge-gia" title="${escapeHtml(r.khoangGia)}">${escapeHtml(r.khoangGia)}</span>`
-          : `<span class="badge badge-all">Tất cả</span>`;
-
-        const scoreVal = (r.score !== undefined && r.score !== null) ? r.score : 0;
-        const noteVal = r.note || '';
-
-        bodyHtml += `<tr>
-          <td class="col-stt">${r.stt || (idx + 1)}</td>
-          <td class="col-actions">
-            <button type="button" class="btn-icon" title="Sửa dòng này" onclick="openEditRowModal('campaign', ${r.rowIdx})">✏️</button>
-            <button type="button" class="btn-icon btn-icon-delete" title="Xóa dòng này" onclick="deleteRow('campaign', ${r.rowIdx}, '${escapeJs(r.code)}')">🗑️</button>
-          </td>
-          <td class="col-text" title="${escapeHtml(r.cdt)}">${escapeHtml(r.cdt)}</td>
-          <td class="col-code">${escapeHtml(r.code)}</td>
-          <td class="col-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}</td>
-          <td class="col-region">${escapeHtml(r.region)}</td>
-          <td class="col-status" style="text-align: center;">${statusBadge}</td>
-          <td class="col-center">${spBadge}</td>
-          <td class="col-center">${lcBadge}</td>
-          <td class="col-center">${giaBadge}</td>
-          <td class="col-score" style="background: #fff7ed; text-align: center;">
-            <input type="number" step="0.01" min="0" 
-              class="cell-score-input cell-score-campaign" 
-              value="${scoreVal}" 
-              data-row="${r.rowIdx}"
-              onchange="handleCampaignScoreChange(this, ${r.rowIdx})"
-              onfocus="this.select()">
-          </td>
-          <td class="col-text">
-            <input type="text" class="filter-input" style="height: 28px; width: 100%; font-size: 12px;"
-              value="${escapeHtml(noteVal)}"
-              data-row="${r.rowIdx}"
-              onchange="handleCampaignNoteChange(this, ${r.rowIdx})"
-              placeholder="Ghi chú...">
-          </td>
-        </tr>`;
-      });
-
-      tbody.innerHTML = bodyHtml;
-    }
-
-    function handleCampaignScoreChange(inputEl, rowIdx) {
-      const val = parseFloat(inputEl.value);
-      const cleanVal = isNaN(val) ? 0 : val;
-      const row = configData.campaign?.rows?.find(r => r.rowIdx === rowIdx);
-      if (row) {
-        row.score = cleanVal;
-        markCampaignDirty();
-        inputEl.style.background = '#fef3c7';
-      }
-    }
-
-    function handleCampaignNoteChange(inputEl, rowIdx) {
-      const row = configData.campaign?.rows?.find(r => r.rowIdx === rowIdx);
-      if (row) {
-        row.note = inputEl.value.trim();
-        markCampaignDirty();
-      }
-    }
-
-    function cloneFromTongHopToCampaign() {
-      if (!configData.thRows || configData.thRows.length === 0) {
-        showToast('Không có dữ liệu trong Bảng Tổng Hợp để sao chép!', true);
-        return;
-      }
-
-      showConfirmModal({
-        icon: '📋',
-        title: 'Sao Chép Cấu Hình Từ Tổng Hợp',
-        message: `Hệ thống sẽ sao chép toàn bộ ${configData.thRows.length} dòng điều kiện (CĐT, Mã DA, Tên DA, Sản Phẩm, Loại Căn, Khoảng Giá) từ Bảng Tổng Hợp sang Bảng Chiến Dịch.\\n\\nĐiểm chiến dịch ban đầu sẽ được lấy từ tháng mới nhất (${configData.thMonths[0]?.display || 'tháng gần nhất'}).\\n\\nBạn có muốn tiếp tục?`
-      }, function() {
-        const latestMonthKey = (configData.thMonths && configData.thMonths.length > 0) ? configData.thMonths[0].dateStr : null;
-        
-        if (!configData.campaign) configData.campaign = {};
-        configData.campaign.rows = configData.thRows.map((r, idx) => {
-          let baselineScore = 0;
-          if (latestMonthKey && r.scores && r.scores[latestMonthKey] !== undefined) {
-            baselineScore = r.scores[latestMonthKey];
-          } else if (r.scores) {
-            const keys = Object.keys(r.scores);
-            baselineScore = keys.length > 0 ? r.scores[keys[0]] : 0;
-          }
-
-          return {
-            rowIdx: idx,
-            stt: idx + 1,
-            cdt: r.cdt || '',
-            code: r.code || '',
-            name: r.name || '',
-            region: r.region || '',
-            status: r.status || 'Đang bán',
-            sanPham: r.sanPham || 'Tất cả',
-            loaiCan: r.loaiCan || 'Tất cả',
-            khoangGia: r.khoangGia || 'Tất cả',
-            score: baselineScore,
-            note: r.note || ''
-          };
-        });
-
-        markCampaignDirty();
-        renderStats();
-        renderTable();
-        showToast(`Đã sao chép thành công ${configData.campaign.rows.length} dòng từ Tổng Hợp! Hãy chỉnh sửa điểm và bấm "Lưu Bảng Chiến Dịch".`);
-      });
-    }
-
-    function saveCampaignChanges() {
-      const name = (document.getElementById('campaignName').value || '').trim();
-      const startDate = document.getElementById('campaignStartDate').value;
-      const endDate = document.getElementById('campaignEndDate').value;
-      const status = document.getElementById('campaignStatus').value;
-
-      if (!name) {
-        showToast('Vui lòng nhập Tên Chiến Dịch!', true);
-        document.getElementById('campaignName').focus();
-        return;
-      }
-
-      if (status === 'Đang chạy') {
-        if (!startDate || !endDate) {
-          showToast('Chiến dịch Đang chạy bắt buộc phải có Từ Ngày và Đến Ngày!', true);
-          return;
-        }
-        if (new Date(startDate) > new Date(endDate)) {
-          showToast('Từ Ngày không được lớn hơn Đến Ngày!', true);
-          return;
-        }
-      }
-
-      const payload = {
-        name: name,
-        startDate: startDate,
-        endDate: endDate,
-        status: status,
-        rows: configData.campaign?.rows || []
-      };
-
-      showLoading('Đang lưu bảng Điểm Chiến Dịch vào Google Sheets...');
-
-      google.script.run
-        .withSuccessHandler(function(res) {
-          hideLoading();
-          if (res && res.success) {
-            isCampaignDirty = false;
-            configData.campaign.name = name;
-            configData.campaign.startDate = startDate;
-            configData.campaign.endDate = endDate;
-            configData.campaign.status = status;
-
-            const txt = document.getElementById('campaignDirtyText');
-            if (txt) txt.style.display = 'none';
-
-            renderStats();
-            updateUnsavedBadge();
-            showToast(`Đã lưu thành công chiến dịch "${name}" với ${res.rowCount || configData.campaign.rows.length} dòng!`);
-          } else {
-            showToast('Lỗi khi lưu chiến dịch: ' + ((res && res.error) || 'Không rõ'), true);
-          }
-        })
-        .withFailureHandler(function(err) {
-          hideLoading();
-          showToast('Lỗi kết nối khi lưu chiến dịch: ' + (err.message || err), true);
-        })
-        .saveCampaignData(payload);
-    }"""
-
-# Replace only the second occurrence of `tbody.innerHTML = bodyHtml;\n    }` (the one inside renderTableF2)
-idx_first = html.find(target_after_f2)
-assert idx_first != -1, "first target_after_f2 not found"
-idx_second = html.find(target_after_f2, idx_first + len(target_after_f2))
-assert idx_second != -1, "second target_after_f2 not found"
-
-html = html[:idx_second] + campaign_table_code + html[idx_second + len(target_after_f2):]
-
-# 9. Update saveAllChanges to handle campaign tab
-old_save_all = """    function saveAllChanges() {
-      const thUpdates = Array.from(modifiedCellsTH.values());"""
-
-new_save_all = """    function saveAllChanges() {
-      if (activeTab === 'campaign') {
-        saveCampaignChanges();
-        return;
-      }
-      const thUpdates = Array.from(modifiedCellsTH.values());"""
-
-assert old_save_all in html, "old_save_all not found"
-html = html.replace(old_save_all, new_save_all, 1)
-
-# 10. Update openAddRowModal, renderFundSpecificFields, and submitAddRow
-old_add_option = """            <option value="th" ${activeTab === 'th' ? 'selected' : ''}>🏢 Quỹ NW (Bảng Tổng Hợp - Tính Điểm Theo Dự Án & Điều Kiện)</option>
-            <option value="f2" ${activeTab === 'f2' ? 'selected' : ''}>🔄 Quỹ Chéo (Bảng Dự Án F2 - Điểm Quỹ Chéo Độc Lập)</option>"""
-
-new_add_option = """            <option value="th" ${activeTab === 'th' ? 'selected' : ''}>🏢 Quỹ NW (Bảng Tổng Hợp - Tính Điểm Theo Dự Án & Điều Kiện)</option>
-            <option value="f2" ${activeTab === 'f2' ? 'selected' : ''}>🔄 Quỹ Chéo (Bảng Dự Án F2 - Điểm Quỹ Chéo Độc Lập)</option>
-            <option value="campaign" ${activeTab === 'campaign' ? 'selected' : ''}>🔥 Quỹ Chiến Dịch (Bảng Điểm Chiến Dịch Cột X)</option>"""
-
-assert old_add_option in html, "old_add_option not found"
-html = html.replace(old_add_option, new_add_option, 1)
-
-# In submitAddRow: handle fundType === 'campaign'
-old_submit_add = """      if (fundType === 'th') {"""
-
-new_submit_add = """      if (fundType === 'campaign') {
-        const codeInput = document.getElementById('addCode');
-        const code = codeInput ? codeInput.value.trim() : '';
-        if (!code) { showToast('Vui lòng nhập Mã Dự Án!', true); return; }
-
-        const name = (document.getElementById('addName') && document.getElementById('addName').value.trim()) || code;
-        const cdt = (document.getElementById('addCdt') && document.getElementById('addCdt').value.trim()) || '';
-        const region = document.getElementById('addRegion') ? document.getElementById('addRegion').value : 'Miền Bắc';
-        const vals = getThreeFieldValues('add');
-        const score = parseFloat(document.getElementById('addScore').value) || 0;
-
-        if (!configData.campaign) configData.campaign = { rows: [] };
-        if (!configData.campaign.rows) configData.campaign.rows = [];
-
-        const newRow = {
-          rowIdx: configData.campaign.rows.length,
-          stt: configData.campaign.rows.length + 1,
-          cdt: cdt,
-          code: code,
-          name: name,
-          region: region,
-          status: 'Đang bán',
-          sanPham: vals.sanPham,
-          loaiCan: vals.loaiCan,
-          khoangGia: vals.khoangGia,
-          score: score,
-          note: ''
-        };
-
-        configData.campaign.rows.push(newRow);
-        closeAddRowModal();
-        markCampaignDirty();
-        renderStats();
-        renderTable();
-        showToast(`Đã thêm dự án "${code}" vào bảng Điểm Chiến Dịch!`);
-        return;
-      }
-
-      if (fundType === 'th') {"""
-
-assert old_submit_add in html, "old_submit_add not found"
-html = html.replace(old_submit_add, new_submit_add, 1)
-
-# 11. Update openEditRowModal and submitEditRow and deleteRow for campaign
-old_edit_modal = """    function openEditRowModal(tab, rowIdx) {
-      const modal = document.getElementById('editRowModal');
-      const title = document.getElementById('modalEditTitle');
-      const body = document.getElementById('modalEditBody');
-
-      if (tab === 'th') {"""
-
-new_edit_modal = """    function openEditRowModal(tab, rowIdx) {
-      const modal = document.getElementById('editRowModal');
-      const title = document.getElementById('modalEditTitle');
-      const body = document.getElementById('modalEditBody');
-
-      if (tab === 'campaign') {
-        const row = configData.campaign?.rows?.find(r => r.rowIdx === rowIdx);
-        if (!row) { showToast('Không tìm thấy dòng chiến dịch!', true); return; }
-
-        const spVal = (row.sanPham && row.sanPham !== '*' && row.sanPham !== 'Tất cả') ? row.sanPham : 'Tất cả';
-        const lcVal = (row.loaiCan && row.loaiCan !== '*' && row.loaiCan !== 'Tất cả') ? row.loaiCan : 'Tất cả';
-        const giaVal = (row.khoangGia && row.khoangGia !== '*' && row.khoangGia !== 'Tất cả') ? row.khoangGia : 'Tất cả';
-        const parsedPrice = parseKhoangGiaToMinMax(row.khoangGia);
-
-        title.innerText = `✏️ Sửa Dự Án Chiến Dịch: ${row.code} (${row.name})`;
-        body.innerHTML = `
-          <input type="hidden" id="editRowIdx" value="${rowIdx}">
-          <input type="hidden" id="editTab" value="campaign">
-          
           <div class="form-row-2">
+            <div class="form-group">
+              <label class="field-label" for="addCdt">Chủ Đầu Tư (CĐT)</label>
+              <div class="autocomplete-container">
+                <input type="text" class="filter-input" style="width:100%;" id="addCdt" placeholder="Ví dụ: Masterise, Vinhomes..." autocomplete="off" oninput="showCdtSuggest('add')" onfocus="showCdtSuggest('add')">
+                <div class="autocomplete-dropdown" id="addCdt_dropdown"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="field-label" for="addRegion">Miền</label>
+              <select class="filter-select" style="width:100%;" id="addRegion">
+                <option value="Miền Bắc">Miền Bắc</option>
+                <option value="Miền Nam">Miền Nam</option>
+                <option value="Miền Trung">Miền Trung</option>
+              </select>
+            </div>
+          </div>'''
+
+new_th_fields = '''          <div class="form-row-2">
+            <div class="form-group">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label class="field-label" for="addCode" style="margin-bottom:0;">Mã Dự Án (*)</label>
+                <span class="chip-btn" onclick="setAllProjects('add')" style="font-size:10px; padding:1px 8px; border-radius:10px; background:#e0e7ff; color:#3730a3; cursor:pointer; font-weight:700; border:1px solid #c7d2fe;" title="Chọn áp dụng cho tất cả dự án">⭐ Chọn Tất Cả Dự Án</span>
+              </div>
+              <div class="autocomplete-container">
+                <input type="text" class="filter-input" style="width:100%;" id="addCode" placeholder="Ví dụ: MAS OCP2, hoặc 'Tất cả'..." autocomplete="off" oninput="showProjectCodeSuggest('add')" onfocus="showProjectCodeSuggest('add')" required>
+                <div class="autocomplete-dropdown" id="addCode_dropdown"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="field-label" for="addName">Tên Dự Án</label>
+              <div class="autocomplete-container">
+                <input type="text" class="filter-input" style="width:100%;" id="addName" placeholder="Ví dụ: Vinhomes Ocean Park 2..." autocomplete="off" oninput="showProjectNameSuggest('add')" onfocus="showProjectNameSuggest('add')">
+                <div class="autocomplete-dropdown" id="addName_dropdown"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="field-label" for="addCdt">Chủ Đầu Tư (CĐT)</label>
+              <div class="autocomplete-container">
+                <input type="text" class="filter-input" style="width:100%;" id="addCdt" placeholder="Ví dụ: Masterise, Vinhomes, hoặc Tất cả..." autocomplete="off" oninput="showCdtSuggest('add')" onfocus="showCdtSuggest('add')">
+                <div class="autocomplete-dropdown" id="addCdt_dropdown"></div>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:5px;">
+                <span class="chip-btn" onclick="selectCdtChip('add', 'Tất cả')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:#e0e7ff; color:#3730a3; cursor:pointer; font-weight:700; border:1px solid #c7d2fe;" title="Áp dụng cho mọi CĐT">⭐ Tất cả CĐT</span>
+                <span class="chip-btn" onclick="selectCdtChip('add', 'Masterise Homes')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:#fef3c7; color:#92400e; cursor:pointer; font-weight:700; border:1px solid #fde68a;">🏢 Masterise Homes</span>
+                <span class="chip-btn" onclick="selectCdtChip('add', 'Các CĐT Khác')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:#dcfce7; color:#166534; cursor:pointer; font-weight:700; border:1px solid #bbf7d0;" title="Áp dụng mọi CĐT trừ Masterise">🏘️ Các CĐT Khác</span>
+                <span class="chip-btn" onclick="toggleCdtOption('add', 'Vinhomes')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:var(--bg-muted); color:var(--text-secondary); cursor:pointer; font-weight:600; border:1px solid var(--border-subtle);">Vinhomes</span>
+                <span class="chip-btn" onclick="toggleCdtOption('add', 'Capitaland')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:var(--bg-muted); color:var(--text-secondary); cursor:pointer; font-weight:600; border:1px solid var(--border-subtle);">Capitaland</span>
+                <span class="chip-btn" onclick="toggleCdtOption('add', 'Gamuda Land')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:var(--bg-muted); color:var(--text-secondary); cursor:pointer; font-weight:600; border:1px solid var(--border-subtle);">Gamuda</span>
+                <span class="chip-btn" onclick="toggleCdtOption('add', 'MIK Group')" style="font-size:10px; padding:2px 7px; border-radius:10px; background:var(--bg-muted); color:var(--text-secondary); cursor:pointer; font-weight:600; border:1px solid var(--border-subtle);">MIK</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label class="field-label" for="addRegion" style="margin-bottom:0;">Miền</label>
+                <div style="display:flex; gap:3px;">
+                  <span onclick="setRegionValue('add', 'Tất cả')" style="font-size:10px; font-weight:700; color:var(--primary-600); cursor:pointer;">[Toàn quốc]</span>
+                  <span onclick="setRegionValue('add', 'Miền Bắc')" style="font-size:10px; font-weight:600; color:var(--text-tertiary); cursor:pointer;">[Bắc]</span>
+                  <span onclick="setRegionValue('add', 'Miền Nam')" style="font-size:10px; font-weight:600; color:var(--text-tertiary); cursor:pointer;">[Nam]</span>
+                  <span onclick="setRegionValue('add', 'Miền Trung')" style="font-size:10px; font-weight:600; color:var(--text-tertiary); cursor:pointer;">[Trung]</span>
+                </div>
+              </div>
+              <select class="filter-select" style="width:100%;" id="addRegion">
+                <option value="Tất cả">Tất cả các miền (Toàn quốc)</option>
+                <option value="Miền Bắc" selected>Miền Bắc</option>
+                <option value="Miền Nam">Miền Nam</option>
+                <option value="Miền Trung">Miền Trung</option>
+                <option value="Miền Bắc, Miền Nam">Miền Bắc & Miền Nam</option>
+              </select>
+              <div style="margin-top: 8px;">
+                <label class="field-label" for="addFundInTH" style="margin-bottom:3px; font-size:11px;">Loại Quỹ</label>
+                <select class="filter-select" style="width:100%; font-weight:600; height:32px;" id="addFundInTH">
+                  <option value="Quỹ NW" selected>Quỹ NW (Độc quyền Masterise / CĐT khác)</option>
+                  <option value="Quỹ Chéo">Quỹ Chéo (Bảng quy đổi điểm Quỹ Chéo)</option>
+                </select>
+              </div>
+            </div>
+          </div>'''
+
+if old_th_fields in content:
+    content = content.replace(old_th_fields, new_th_fields, 1)
+    print("Step 2: Updated renderFundSpecificFields for TH")
+else:
+    print("Warning: old_th_fields not found")
+
+# 3. Update editRowModal for TH
+old_edit_th = '''          <div class="form-row-2">
             <div class="form-group">
               <label class="field-label" for="editCode">Mã Dự Án (*)</label>
               <div class="autocomplete-container">
@@ -848,176 +173,415 @@ new_edit_modal = """    function openEditRowModal(tab, rowIdx) {
                 <option value="Sold out" ${row.status === 'Sold out' ? 'selected' : ''}>Sold out</option>
               </select>
             </div>
+          </div>'''
+
+new_edit_th = '''          <div class="form-row-2">
+            <div class="form-group">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label class="field-label" for="editCode" style="margin-bottom:0;">Mã Dự Án (*)</label>
+                <span class="chip-btn" onclick="setAllProjects('edit')" style="font-size:10px; padding:1px 8px; border-radius:10px; background:#e0e7ff; color:#3730a3; cursor:pointer; font-weight:700; border:1px solid #c7d2fe;" title="Chọn áp dụng cho tất cả dự án">⭐ Chọn Tất Cả Dự Án</span>
+              </div>
+              <div class="autocomplete-container">
+                <input type="text" class="filter-input" id="editCode" value="${escapeHtml(row.code)}" autocomplete="off" oninput="showProjectCodeSuggest('edit')" onfocus="showProjectCodeSuggest('edit')" required>
+                <div class="autocomplete-dropdown" id="editCode_dropdown"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="field-label" for="editName">Tên Dự Án</label>
+              <div class="autocomplete-container">
+                <input type="text" class="filter-input" id="editName" value="${escapeHtml(row.name)}" autocomplete="off" oninput="showProjectNameSuggest('edit')" onfocus="showProjectNameSuggest('edit')">
+                <div class="autocomplete-dropdown" id="editName_dropdown"></div>
+              </div>
+            </div>
           </div>
 
-          <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">
-                🎯 Cập Nhật 3 Tiêu Chí Khớp (Sản Phẩm - Loại Căn - Khoảng Giá)
-              </span>
-              <span style="font-size: 11px; color: var(--text-tertiary);">
-                (* hoặc để trống = Áp dụng tất cả)
-              </span>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label class="field-label" for="editCdt">Chủ Đầu Tư (CĐT)</label>
+              <div class="autocomplete-container">
+                <input type="text" class="filter-input" id="editCdt" value="${escapeHtml(row.cdt)}" autocomplete="off" oninput="showCdtSuggest('edit')" onfocus="showCdtSuggest('edit')">
+                <div class="autocomplete-dropdown" id="editCdt_dropdown"></div>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:3px; margin-top:4px;">
+                <span class="chip-btn" onclick="selectCdtChip('edit', 'Tất cả')" style="font-size:9px; padding:1px 6px; border-radius:8px; background:#e0e7ff; color:#3730a3; cursor:pointer; font-weight:700;">Tất cả CĐT</span>
+                <span class="chip-btn" onclick="selectCdtChip('edit', 'Masterise Homes')" style="font-size:9px; padding:1px 6px; border-radius:8px; background:#fef3c7; color:#92400e; cursor:pointer; font-weight:700;">Masterise</span>
+                <span class="chip-btn" onclick="selectCdtChip('edit', 'Các CĐT Khác')" style="font-size:9px; padding:1px 6px; border-radius:8px; background:#dcfce7; color:#166534; cursor:pointer; font-weight:700;">CĐT Khác</span>
+                <span class="chip-btn" onclick="toggleCdtOption('edit', 'Vinhomes')" style="font-size:9px; padding:1px 6px; border-radius:8px; background:var(--bg-muted); color:var(--text-secondary); cursor:pointer;">Vinhomes</span>
+                <span class="chip-btn" onclick="toggleCdtOption('edit', 'Capitaland')" style="font-size:9px; padding:1px 6px; border-radius:8px; background:var(--bg-muted); color:var(--text-secondary); cursor:pointer;">Capitaland</span>
+                <span class="chip-btn" onclick="toggleCdtOption('edit', 'Gamuda Land')" style="font-size:9px; padding:1px 6px; border-radius:8px; background:var(--bg-muted); color:var(--text-secondary); cursor:pointer;">Gamuda</span>
+              </div>
             </div>
-
-            <div class="form-row-2">
-              <div class="form-group">
-                <label class="field-label" for="editSelSanPham">1. Sản Phẩm</label>
-                <select class="filter-select" style="width:100%; height:36px;" id="editSelSanPham">
-                  <option value="Tất cả" ${spVal === 'Tất cả' || spVal === '*' || !spVal ? 'selected' : ''}>Tất cả (Cao & Thấp tầng)</option>
-                  <option value="Cao tầng" ${spVal === 'Cao tầng' ? 'selected' : ''}>Cao tầng</option>
-                  <option value="Thấp tầng" ${spVal === 'Thấp tầng' ? 'selected' : ''}>Thấp tầng</option>
+            <div class="form-group">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label class="field-label" for="editRegion" style="margin-bottom:0;">Miền</label>
+                <div style="display:flex; gap:2px;">
+                  <span onclick="setRegionValue('edit', 'Tất cả')" style="font-size:9px; font-weight:700; color:var(--primary-600); cursor:pointer;">[Toàn quốc]</span>
+                </div>
+              </div>
+              <select class="filter-select" id="editRegion">
+                <option value="Tất cả" ${row.region === 'Tất cả' || !row.region ? 'selected' : ''}>Tất cả các miền (Toàn quốc)</option>
+                <option value="Miền Bắc" ${row.region === 'Miền Bắc' ? 'selected' : ''}>Miền Bắc</option>
+                <option value="Miền Nam" ${row.region === 'Miền Nam' ? 'selected' : ''}>Miền Nam</option>
+                <option value="Miền Trung" ${row.region === 'Miền Trung' ? 'selected' : ''}>Miền Trung</option>
+                <option value="Miền Bắc, Miền Nam" ${row.region === 'Miền Bắc, Miền Nam' ? 'selected' : ''}>Miền Bắc & Miền Nam</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="field-label" for="editStatus">Trạng Thái</label>
+              <select class="filter-select" id="editStatus">
+                <option value="Đang bán" ${row.status === 'Đang bán' ? 'selected' : ''}>Đang bán</option>
+                <option value="Sold out" ${row.status === 'Sold out' ? 'selected' : ''}>Sold out</option>
+              </select>
+              <div style="margin-top:4px;">
+                <label class="field-label" for="editFundInTH" style="font-size:10px; margin-bottom:2px;">Loại Quỹ</label>
+                <select class="filter-select" id="editFundInTH" style="height:28px; font-size:11px;">
+                  <option value="Quỹ NW" ${row.fund !== 'Quỹ Chéo' ? 'selected' : ''}>Quỹ NW</option>
+                  <option value="Quỹ Chéo" ${row.fund === 'Quỹ Chéo' ? 'selected' : ''}>Quỹ Chéo</option>
                 </select>
               </div>
-
-              <div class="form-group" style="position: relative;">
-                <label class="field-label">2. Loại Căn</label>
-                <div class="multi-select-container" id="editLoaiCanContainer">
-                  <div class="multi-select-trigger" id="editLoaiCanTrigger" onclick="toggleMultiSelect('edit')">
-                    <span class="multi-select-label" id="editLoaiCanLabel">${escapeHtml(lcVal)}</span>
-                    <span class="multi-select-arrow">▼</span>
-                  </div>
-                  <div class="multi-select-dropdown" id="editLoaiCanDropdown">
-                    <div class="multi-select-search-box">
-                      <input type="text" class="multi-select-search" id="editLoaiCanSearch" placeholder="🔍 Tìm loại căn..." oninput="filterMultiSelectOptions('edit')">
-                    </div>
-                    <div class="multi-select-actions">
-                      <span class="multi-select-btn-link" onclick="selectAllUnits('edit')">Chọn tất cả</span>
-                      <span class="multi-select-btn-link" onclick="clearAllUnits('edit')">Bỏ chọn</span>
-                    </div>
-                    <div class="multi-select-options" id="editLoaiCanOptions"></div>
-                  </div>
-                </div>
-                <input type="hidden" id="editLoaiCanInput" value="${escapeHtml(lcVal)}">
-              </div>
             </div>
+          </div>'''
 
-            <div class="form-group" style="background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 10px 12px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <label class="field-label" style="margin-bottom:0;">3. Khoảng Giá (Tỷ VNĐ)</label>
-                <span id="editKhoangGiaPreview" style="font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--brand); background: var(--brand-subtle); padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--brand-border);">
-                  ${escapeHtml(formatPriceRangeOutput(parsedPrice.min, parsedPrice.max, parsedPrice.isDat))}
-                </span>
-              </div>
-              
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <span style="font-size: 12px; color: var(--text-tertiary);">Từ</span>
-                  <input type="number" class="filter-input" id="editGiaTu" value="${parsedPrice.min}" min="0" max="999" step="0.5" style="width: 75px; text-align: center; height: 32px;" oninput="onPriceInputChange('edit')">
-                  <span style="font-size: 12px; color: var(--text-tertiary);">tỷ</span>
-                </div>
-                
-                <span style="color: var(--text-tertiary); font-weight: 700;">-</span>
+if old_edit_th in content:
+    content = content.replace(old_edit_th, new_edit_th, 1)
+    print("Step 3: Updated editRowModal for TH")
+else:
+    print("Warning: old_edit_th not found")
 
-                <div style="display: flex; align-items: center; gap: 4px;">
-                  <span style="font-size: 12px; color: var(--text-tertiary);">Đến</span>
-                  <input type="number" class="filter-input" id="editGiaDen" value="${parsedPrice.max}" min="0" max="999" step="0.5" style="width: 75px; text-align: center; height: 32px;" oninput="onPriceInputChange('edit')">
-                  <span style="font-size: 12px; color: var(--text-tertiary);">tỷ</span>
-                </div>
+# 4. Update submitAddRow to read addFundInTH and not default to Masterise
+old_submit_th = '''        const name = (document.getElementById('addName') && document.getElementById('addName').value.trim()) || code;
+        const cdt = (document.getElementById('addCdt') && document.getElementById('addCdt').value.trim()) || 'Masterise';
+        const region = document.getElementById('addRegion') ? document.getElementById('addRegion').value : 'Miền Bắc';
+        const vals = getThreeFieldValues('add');
+        const score = parseFloat(document.getElementById('addScore').value) || 0;
 
-                <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--border-subtle);">
-                  <input type="checkbox" id="editIsDat" ${parsedPrice.isDat ? 'checked' : ''} onchange="onPriceInputChange('edit')">
-                  <label for="editIsDat" style="font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-secondary);">Giá đất</label>
-                </div>
-              </div>
-              <input type="hidden" id="editKhoangGiaInput" value="${escapeHtml(giaVal)}">
-            </div>
+        const scoresObj = {};
+        configData.thMonths.forEach(m => { scoresObj[m.dateStr] = score; });
 
-            <div class="form-group" style="margin-top: 4px;">
-              <label class="field-label" for="editScoreCampaign" style="color: #9a3412; font-weight: 800;">🔥 Điểm Chiến Dịch (*)</label>
-              <input type="number" step="0.01" min="0" class="filter-input cell-score-campaign" style="width: 140px; font-weight: 800;" id="editScoreCampaign" value="${row.score !== undefined ? row.score : 0}">
-            </div>
-          </div>
-        `;
+        newRowsTH.push({
+          status: 'Đang bán',
+          cdt: cdt,
+          code: code,
+          name: name,
+          region: region,
+          fund: 'Quỹ NW','''
 
-        buildMultiSelectOptions('edit', ALL_UNIT_TYPES.filter(u => {
-          const escapedU = u.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
-          const re = new RegExp('(^|[,;\\\\s(])' + escapedU + '($|[,;\\\\s)])', 'i');
-          return re.test(lcVal);
-        }));
+new_submit_th = '''        const name = (document.getElementById('addName') && document.getElementById('addName').value.trim()) || code;
+        const cdt = (document.getElementById('addCdt') && document.getElementById('addCdt').value.trim()) || 'Tất cả';
+        const region = document.getElementById('addRegion') ? document.getElementById('addRegion').value : 'Tất cả';
+        const fundInTH = (document.getElementById('addFundInTH') ? document.getElementById('addFundInTH').value : 'Quỹ NW');
+        const vals = getThreeFieldValues('add');
+        const score = parseFloat(document.getElementById('addScore').value) || 0;
 
-        modal.style.display = 'flex';
-        return;
-      }
+        const scoresObj = {};
+        configData.thMonths.forEach(m => { scoresObj[m.dateStr] = score; });
 
-      if (tab === 'th') {"""
+        newRowsTH.push({
+          status: 'Đang bán',
+          cdt: cdt,
+          code: code,
+          name: name,
+          region: region,
+          fund: fundInTH,'''
 
-assert old_edit_modal in html, "old_edit_modal not found"
-html = html.replace(old_edit_modal, new_edit_modal, 1)
+if old_submit_th in content:
+    content = content.replace(old_submit_th, new_submit_th, 1)
+    print("Step 4: Updated submitAddRow for TH")
+else:
+    print("Warning: old_submit_th not found")
 
-# In submitEditRow: handle tab === 'campaign'
-old_submit_edit = """    function submitEditRow() {
-      const rowIdx = parseInt(document.getElementById('editRowIdx').value, 10);
-      const tab = document.getElementById('editTab').value;"""
+# Also in configData.thRows.push inside submitAddRow:
+old_push_th = '''        // Add to local view
+        configData.thRows.push({
+          rowIdx: configData.thRows.length + 4,
+          status: 'Đang bán',
+          cdt: cdt,
+          code: code,
+          name: name,
+          region: region,
+          fund: 'Quỹ NW','''
 
-new_submit_edit = """    function submitEditRow() {
-      const rowIdx = parseInt(document.getElementById('editRowIdx').value, 10);
-      const tab = document.getElementById('editTab').value;
+new_push_th = '''        // Add to local view
+        configData.thRows.push({
+          rowIdx: configData.thRows.length + 4,
+          status: 'Đang bán',
+          cdt: cdt,
+          code: code,
+          name: name,
+          region: region,
+          fund: fundInTH,'''
 
-      if (tab === 'campaign') {
-        const row = configData.campaign?.rows?.find(r => r.rowIdx === rowIdx);
-        if (!row) { showToast('Không tìm thấy dòng chiến dịch!', true); return; }
+if old_push_th in content:
+    content = content.replace(old_push_th, new_push_th, 1)
+    print("Step 4b: Updated local view push in submitAddRow")
 
-        const code = document.getElementById('editCode').value.trim();
+# Also in submitEditRow for TH:
+old_submit_edit_th = '''        const code = document.getElementById('editCode').value.trim();
+        if (!code) { showToast('Vui lòng nhập Mã Dự Án!', true); return; }
         const name = document.getElementById('editName').value.trim() || code;
         const cdt = document.getElementById('editCdt').value.trim();
         const region = document.getElementById('editRegion').value;
         const status = document.getElementById('editStatus').value;
-        const vals = getThreeFieldValues('edit');
-        const scoreEl = document.getElementById('editScoreCampaign');
+        const vals = getThreeFieldValues('edit');'''
 
-        row.code = code;
-        row.name = name;
-        row.cdt = cdt;
-        row.region = region;
-        row.status = status;
-        row.sanPham = vals.sanPham;
-        row.loaiCan = vals.loaiCan;
-        row.khoangGia = vals.khoangGia;
-        if (scoreEl) row.score = parseFloat(scoreEl.value) || 0;
+new_submit_edit_th = '''        const code = document.getElementById('editCode').value.trim();
+        if (!code) { showToast('Vui lòng nhập Mã Dự Án!', true); return; }
+        const name = document.getElementById('editName').value.trim() || code;
+        const cdt = document.getElementById('editCdt').value.trim() || 'Tất cả';
+        const region = document.getElementById('editRegion').value;
+        const fundInTH = document.getElementById('editFundInTH') ? document.getElementById('editFundInTH').value : 'Quỹ NW';
+        const status = document.getElementById('editStatus').value;
+        const vals = getThreeFieldValues('edit');'''
 
-        closeEditRowModal();
-        markCampaignDirty();
-        renderTable();
-        showToast('Đã cập nhật dòng chiến dịch thành công!');
-        return;
-      }"""
+if old_submit_edit_th in content:
+    content = content.replace(old_submit_edit_th, new_submit_edit_th, 1)
+    # also update the call to updateMonthlyConfigRow
+    content = content.replace("fund: 'Quỹ NW'", "fund: fundInTH", 1)
+    print("Step 5: Updated submitEditRow for TH")
+else:
+    print("Warning: old_submit_edit_th not found")
 
-assert old_submit_edit in html, "old_submit_edit not found"
-html = html.replace(old_submit_edit, new_submit_edit, 1)
+# 5. Insert testRuleModal before customConfirmModal
+test_modal_html = '''  <!-- Modal Kiểm Tra Thử Rule (Rule Tester Modal) -->
+  <div class="modal-backdrop" id="testRuleModal" style="display:none;">
+    <div class="modal-content" style="max-width: 680px; width: 95%;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: #ffffff;">
+        <h3 class="modal-title" style="color:#ffffff; font-weight:800; display:flex; align-items:center; gap:8px;">
+          🧪 Kiểm Tra Thử Rule Tính Điểm KPI
+        </h3>
+        <button type="button" class="modal-close" onclick="closeTestRuleModal()" style="color:#ffffff;">×</button>
+      </div>
+      <div class="modal-body" style="padding: 16px; gap: 14px;">
+        <div style="font-size: 12px; color: var(--text-secondary); background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.5;">
+          💡 <b>Hướng dẫn kiểm tra:</b> Nhập thông số giao dịch giả lập để kiểm tra xem rule điểm (Tháng 9 hay tháng cũ) có khớp chính xác không trước khi áp dụng trên sheet Data.
+        </div>
 
-# In deleteRow: handle tab === 'campaign'
-old_delete_row = """    function deleteRow(tab, rowIdx, displayName) {
-      showConfirmModal({"""
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="field-label">Ngày Giao Dịch / Ngày BC (*)</label>
+            <input type="date" class="filter-input" id="testDate" value="2026-09-02" style="font-weight:700;">
+          </div>
+          <div class="form-group">
+            <label class="field-label">Loại Quỹ (*)</label>
+            <select class="filter-select" id="testLoaiQuy" style="font-weight:700;">
+              <option value="Quỹ NW" selected>Quỹ NW (Masterise / CĐT khác)</option>
+              <option value="Quỹ Chéo">Quỹ Chéo</option>
+            </select>
+          </div>
+        </div>
 
-new_delete_row = """    function deleteRow(tab, rowIdx, displayName) {
-      if (tab === 'campaign') {
-        showConfirmModal({
-          icon: '🗑️',
-          title: 'Xóa Dòng Cấu Hình Chiến Dịch',
-          message: `Bạn có chắc muốn xóa dòng "${displayName}" khỏi bảng Chiến Dịch?`
-        }, function() {
-          if (configData.campaign && configData.campaign.rows) {
-            configData.campaign.rows = configData.campaign.rows.filter(r => r.rowIdx !== rowIdx);
-            configData.campaign.rows.forEach((r, idx) => {
-              r.rowIdx = idx;
-              r.stt = idx + 1;
-            });
-          }
-          markCampaignDirty();
-          renderStats();
-          renderTable();
-          showToast('Đã xóa dòng cấu hình khỏi chiến dịch!');
-        });
-        return;
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="field-label">Chủ Đầu Tư (CĐT)</label>
+            <input type="text" class="filter-input" id="testCdt" placeholder="VD: Masterise Homes, Vinhomes, Gamuda..." value="Masterise Homes" style="font-weight:600;">
+            <div style="display:flex; gap:4px; margin-top:4px; flex-wrap:wrap;">
+              <span class="chip-btn" onclick="document.getElementById('testCdt').value='Masterise Homes'" style="font-size:10px; padding:1px 6px; border-radius:10px; background:#fef3c7; color:#92400e; cursor:pointer; font-weight:700;">Masterise</span>
+              <span class="chip-btn" onclick="document.getElementById('testCdt').value='Vinhomes'" style="font-size:10px; padding:1px 6px; border-radius:10px; background:#e0e7ff; color:#3730a3; cursor:pointer; font-weight:600;">Vinhomes</span>
+              <span class="chip-btn" onclick="document.getElementById('testCdt').value='Gamuda Land'" style="font-size:10px; padding:1px 6px; border-radius:10px; background:#dcfce7; color:#166534; cursor:pointer; font-weight:600;">Gamuda</span>
+              <span class="chip-btn" onclick="document.getElementById('testCdt').value='Capitaland'" style="font-size:10px; padding:1px 6px; border-radius:10px; background:#f3e8ff; color:#6b21a8; cursor:pointer; font-weight:600;">Capitaland</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Dự Án (Mã hoặc Tên)</label>
+            <input type="text" class="filter-input" id="testDuAn" placeholder="VD: MAS OCP2, VIN VGG, hoặc để trống" value="MAS NEW" style="font-weight:600;">
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="field-label">Miền</label>
+            <select class="filter-select" id="testRegion">
+              <option value="Miền Bắc" selected>Miền Bắc</option>
+              <option value="Miền Nam">Miền Nam</option>
+              <option value="Miền Trung">Miền Trung</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Sản Phẩm</label>
+            <select class="filter-select" id="testSanPham">
+              <option value="Tất cả" selected>Tất cả</option>
+              <option value="Cao tầng">Cao tầng</option>
+              <option value="Thấp tầng">Thấp tầng</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Loại Căn</label>
+            <input type="text" class="filter-input" id="testLoaiCan" placeholder="VD: 2PN, Biệt thự..." value="2PN">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="field-label" style="font-weight:800; color:var(--primary-600);">Giá Trị Căn (tỷ VNĐ)</label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="number" step="0.5" min="0" max="999" class="filter-input" id="testGiaTy" value="15.0" style="font-size:15px; font-weight:800; width:120px; color:#0f172a;">
+            <span style="font-weight:700; color:var(--text-secondary);">tỷ VNĐ</span>
+            <div style="display:flex; gap:6px; margin-left:auto; flex-wrap:wrap;">
+              <span class="chip-btn" onclick="document.getElementById('testGiaTy').value='4.5'" style="font-size:11px; padding:2px 8px; border-radius:6px; background:#f1f5f9; cursor:pointer;">4.5 tỷ</span>
+              <span class="chip-btn" onclick="document.getElementById('testGiaTy').value='8.0'" style="font-size:11px; padding:2px 8px; border-radius:6px; background:#f1f5f9; cursor:pointer;">8 tỷ</span>
+              <span class="chip-btn" onclick="document.getElementById('testGiaTy').value='15.0'" style="font-size:11px; padding:2px 8px; border-radius:6px; background:#f1f5f9; cursor:pointer;">15 tỷ</span>
+              <span class="chip-btn" onclick="document.getElementById('testGiaTy').value='25.0'" style="font-size:11px; padding:2px 8px; border-radius:6px; background:#f1f5f9; cursor:pointer;">25 tỷ</span>
+              <span class="chip-btn" onclick="document.getElementById('testGiaTy').value='45.0'" style="font-size:11px; padding:2px 8px; border-radius:6px; background:#f1f5f9; cursor:pointer;">45 tỷ</span>
+              <span class="chip-btn" onclick="document.getElementById('testGiaTy').value='58.0'" style="font-size:11px; padding:2px 8px; border-radius:6px; background:#fef3c7; color:#92400e; cursor:pointer; font-weight:700;">58 tỷ (+1đ)</span>
+              <span class="chip-btn" onclick="document.getElementById('testGiaTy').value='75.0'" style="font-size:11px; padding:2px 8px; border-radius:6px; background:#fef3c7; color:#92400e; cursor:pointer; font-weight:700;">75 tỷ (+3đ)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kết Quả Kiểm Tra -->
+        <div id="testResultBox" style="display:none; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:14px; margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:12px; font-weight:800; color:#166534; text-transform:uppercase;">KẾT QUẢ TÍNH ĐIỂM KPI:</span>
+            <span id="testScoreBadge" style="font-size:20px; font-weight:900; color:#15803d; background:#dcfce7; padding:4px 14px; border-radius:20px; border:1px solid #86efac;">0.0 Điểm</span>
+          </div>
+          <div id="testDetailText" style="font-size:12px; color:#14532d; line-height:1.6;"></div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="background:#f8fafc; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between;">
+        <button type="button" class="btn btn-secondary" onclick="closeTestRuleModal()">Đóng</button>
+        <button type="button" class="btn btn-primary" onclick="runTestRuleCalculation()" style="background:#4f46e5; border-color:#4338ca; font-weight:800; padding:8px 20px;">
+          ⚡ Kiểm Tra Điểm Ngay
+        </button>
+      </div>
+    </div>
+  </div>
+
+'''
+
+confirm_tag = '  <!-- Modal Xác Nhận Đẹp (In-App Confirm thay thế browser confirm) -->'
+if confirm_tag in content:
+    content = content.replace(confirm_tag, test_modal_html + confirm_tag, 1)
+    print("Step 6: Inserted testRuleModal into HTML")
+else:
+    print("Warning: confirm_tag not found")
+
+# 6. Insert JavaScript helper functions
+js_helpers = '''
+    /* ========== RULE TESTER & MULTI-SELECT HELPERS ========== */
+    function setAllProjects(prefix) {
+      const codeEl = document.getElementById(prefix + 'Code');
+      const nameEl = document.getElementById(prefix + 'Name');
+      if (codeEl) codeEl.value = 'Tất cả';
+      if (nameEl) nameEl.value = 'Tất cả dự án';
+      showToast('Đã chọn: Áp dụng cho Tất Cả Dự Án');
+    }
+
+    function selectCdtChip(prefix, cdtValue) {
+      const cdtEl = document.getElementById(prefix + 'Cdt');
+      if (cdtEl) {
+        cdtEl.value = cdtValue;
+        showToast('Đã chọn CĐT: ' + cdtValue);
       }
+    }
 
-      showConfirmModal({"""
+    function toggleCdtOption(prefix, cdtValue) {
+      const cdtEl = document.getElementById(prefix + 'Cdt');
+      if (!cdtEl) return;
+      let cur = cdtEl.value.trim();
+      if (!cur || cur === 'Tất cả' || cur === 'Các CĐT Khác') {
+        cdtEl.value = cdtValue;
+      } else {
+        const list = cur.split(/[,;]/).map(s => s.trim()).filter(s => s);
+        if (list.includes(cdtValue)) {
+          const filtered = list.filter(s => s !== cdtValue);
+          cdtEl.value = filtered.join(', ') || 'Tất cả';
+        } else {
+          list.push(cdtValue);
+          cdtEl.value = list.join(', ');
+        }
+      }
+    }
 
-assert old_delete_row in html, "old_delete_row not found"
-html = html.replace(old_delete_row, new_delete_row, 1)
+    function setRegionValue(prefix, regionValue) {
+      const regEl = document.getElementById(prefix + 'Region');
+      if (regEl) {
+        regEl.value = regionValue;
+        showToast('Đã chọn Miền: ' + regionValue);
+      }
+    }
+
+    function openTestRuleModal() {
+      const modal = document.getElementById('testRuleModal');
+      if (modal) modal.style.display = 'flex';
+      const resultBox = document.getElementById('testResultBox');
+      if (resultBox) resultBox.style.display = 'none';
+    }
+
+    function closeTestRuleModal() {
+      const modal = document.getElementById('testRuleModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function runTestRuleCalculation() {
+      const dateVal = document.getElementById('testDate').value;
+      const loaiQuy = document.getElementById('testLoaiQuy').value;
+      const cdt = document.getElementById('testCdt').value.trim();
+      const code = document.getElementById('testDuAn').value.trim() || 'Tất cả';
+      const region = document.getElementById('testRegion').value;
+      const sanPham = document.getElementById('testSanPham').value;
+      const loaiCan = document.getElementById('testLoaiCan').value.trim() || 'Tất cả';
+      const giaTy = parseFloat(document.getElementById('testGiaTy').value) || 0;
+
+      const txData = {
+        dateBC: dateVal ? new Date(dateVal) : new Date(),
+        loaiQuy: loaiQuy,
+        cdt: cdt,
+        code: code,
+        name: code,
+        region: region,
+        sanPham: sanPham,
+        loaiCan: loaiCan,
+        gia: giaTy * 1e9,
+        trangThai: 'Đã bán'
+      };
+
+      const resultBox = document.getElementById('testResultBox');
+      const scoreBadge = document.getElementById('testScoreBadge');
+      const detailText = document.getElementById('testDetailText');
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        showLoading('Đang kiểm tra rule...');
+        google.script.run
+          .withSuccessHandler(function(res) {
+            hideLoading();
+            if (res && res.success) {
+              resultBox.style.display = 'block';
+              scoreBadge.innerText = Number(res.score).toFixed(1) + ' Điểm';
+              
+              let html = `<b>Tháng áp dụng:</b> ${res.monthKey} | <b>Quỹ:</b> ${res.loaiQuy}<br>`;
+              html += `<b>CĐT:</b> ${res.cdt || '(Mọi CĐT)'} | <b>Dự án:</b> ${res.duAn} | <b>Miền:</b> ${res.region}<br>`;
+              html += `<b>Giá:</b> ${res.giaTy} tỷ VNĐ | <b>Sản phẩm:</b> ${res.sanPham} | <b>Loại căn:</b> ${res.loaiCan}<br>`;
+              if (res.valInBillion > 50 && res.monthKey >= '2026-09') {
+                const extra = Math.floor((res.valInBillion - 50.0001) / 10) + 1;
+                html += `<span style="color:#b45309; font-weight:700;">★ Căn trên 50 tỷ: Được cộng thêm +${extra} điểm lũy tiến (+1đ mỗi 10 tỷ tiếp theo).</span><br>`;
+              }
+              html += `<span style="color:#15803d; font-weight:700;">✓ Đơn hàng các tháng cũ tuyệt đối không bị ảnh hưởng bởi quy tắc này.</span>`;
+              detailText.innerHTML = html;
+            } else {
+              showToast('Lỗi kiểm tra: ' + (res ? res.error : ''), true);
+            }
+          })
+          .withFailureHandler(function(err) {
+            hideLoading();
+            showToast('Lỗi: ' + (err.message || err), true);
+          })
+          .testEvaluateTransaction(txData);
+      } else {
+        resultBox.style.display = 'block';
+        scoreBadge.innerText = 'Chế độ mô phỏng';
+        detailText.innerHTML = `Đã nhận thông số: CĐT=${cdt}, Dự án=${code}, Giá=${giaTy} tỷ.`;
+      }
+    }
+'''
+
+# Insert js_helpers before </script>
+content = content.replace('</script>', js_helpers + '\n</script>', 1)
+print("Step 7: Inserted JS helper functions")
 
 with open('src/ConfigUI.html', 'w', encoding='utf-8') as f:
-    f.write(html)
+    f.write(content)
 
-print('All UI and JS updates successfully applied to src/ConfigUI.html!')
+with open('ConfigUI.html', 'w', encoding='utf-8') as f:
+    f.write(content)
+
+print("Finished updating src/ConfigUI.html and ConfigUI.html!")
