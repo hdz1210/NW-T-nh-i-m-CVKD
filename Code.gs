@@ -1751,7 +1751,6 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
   const ghiChu = String(row[32] || '').trim();
 
   if (trangThai === 'Hủy') return 0;
-  if (pkd === 'CTV/ĐỐI TÁC' || /BLĐ/i.test(pkd) || /BO/i.test(pkd)) return 0;
 
   // Lấy context từ đối số
   const ctx = (rulesOrCtx && rulesOrCtx.thMap) ? rulesOrCtx : getRuleEngineContext();
