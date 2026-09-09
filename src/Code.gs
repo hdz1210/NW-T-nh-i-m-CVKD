@@ -180,6 +180,36 @@ function parseDateSafe(val, row) {
 }
 
 /**
+ * Kiểm tra xem một dòng giao dịch có thuộc về tháng cũ (Tháng 8/2026 trở về trước) hay không.
+ * Các đơn hàng tháng cũ được đóng băng điểm Cột X, tuyệt đối không bị tính lại hay sửa đổi
+ * khi bất kỳ trigger hoặc chức năng tính điểm nào chạy.
+ */
+function isPastMonthRow(row) {
+  if (!row) return false;
+  // 1. Ưu tiên Cột C (Tháng: index 2) & Cột D (Năm: index 3)
+  if (row[2] !== undefined && row[2] !== null && row[2] !== '' &&
+      row[3] !== undefined && row[3] !== null && row[3] !== '') {
+    const y = parseInt(row[3], 10);
+    const m = parseInt(row[2], 10);
+    if (!isNaN(y) && !isNaN(m)) {
+      if (y < 2026) return true;
+      if (y === 2026 && m < 9) return true;
+      return false;
+    }
+  }
+  // 2. Phân tích Cột A (Ngày báo cáo: index 0)
+  const dateBC = parseDateSafe(row[0], row);
+  if (dateBC && dateBC instanceof Date && !isNaN(dateBC.getTime())) {
+    const y = dateBC.getFullYear();
+    const m = dateBC.getMonth() + 1; // 1-12
+    if (y < 2026) return true;
+    if (y === 2026 && m < 9) return true;
+    return false;
+  }
+  return false;
+}
+
+/**
  * Hàm phân tích số an toàn
  * Hỗ trợ mọi định dạng tiền tệ: chuỗi phân cách hàng nghìn bằng dấu chấm kiểu VN (vd: 58.331.990.507)
  * hoặc dấu phẩy kiểu quốc tế (vd: 58,331,990,507), có hoặc không có số thập phân.
@@ -1944,6 +1974,9 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
   const dateBC = parseDateSafe(row[0], row);
   if (!dateBC) return '';
 
+  // Xác định monthKey của giao dịch (YYYY-MM)
+  const monthKey = `${dateBC.getFullYear()}-${String(dateBC.getMonth() + 1).padStart(2, '0')}`;
+
   const duAn = String(row[5] || '').trim();
   const maCan = String(row[6] || '').trim().toUpperCase();
   const pkd = String(row[7] || '').trim();
@@ -1956,15 +1989,18 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
   const maNV = String(row[17] || '').trim().toUpperCase();
   const ghiChu = String(row[32] || '').trim();
 
-  // Rule: Căn hủy auto 0 điểm (cột trạng thái - index 9)
-  const ttLower = trangThai.toLowerCase();
-  if (ttLower.includes('hủy') || ttLower.includes('huy')) return 0;
+  // Các quy tắc mới chỉ áp dụng từ Tháng 9/2026 trở đi (đơn hàng tháng cũ không áp dụng)
+  if (monthKey >= '2026-09') {
+    // Rule: Căn hủy auto 0 điểm (cột trạng thái - index 9)
+    const ttLower = trangThai.toLowerCase();
+    if (ttLower.includes('hủy') || ttLower.includes('huy')) return 0;
 
-  // Rule: Ở cột PKD (index 7): BLĐ/BO và CTV/ĐỐI TÁC là 0 điểm
-  const pkdClean = pkd.toUpperCase();
-  const isBldBo = /^(BLĐ|BLD|BO)($|[\s\/\-])/i.test(pkd) || /BLĐ\/BO|BLD\/BO/i.test(pkd) || /^BLĐ$|^BLD$|^BO$/i.test(pkdClean) || /BLĐ|BLD/i.test(pkdClean);
-  const isCtvDoiTac = /CTV/i.test(pkd) || /ĐỐI TÁC|DOI TAC/i.test(pkd);
-  if (isBldBo || isCtvDoiTac) return 0;
+    // Rule: Ở cột PKD (index 7): BLĐ/BO và CTV/ĐỐI TÁC là 0 điểm
+    const pkdClean = pkd.toUpperCase();
+    const isBldBo = /^(BLĐ|BLD|BO)($|[\s\/\-])/i.test(pkd) || /BLĐ\/BO|BLD\/BO/i.test(pkd) || /^BLĐ$|^BLD$|^BO$/i.test(pkdClean) || /BLĐ|BLD/i.test(pkdClean);
+    const isCtvDoiTac = /CTV/i.test(pkd) || /ĐỐI TÁC|DOI TAC/i.test(pkd);
+    if (isBldBo || isCtvDoiTac) return 0;
+  }
 
   // 2. BẮT BUỘC: Kiểm tra Cột Z (Loại Quỹ - index 25). Nếu chưa điền Cột Z -> KHÔNG TÍNH, trả về rỗng ''
   const rawLoaiQuy = String(row[25] || '').trim();
@@ -1974,9 +2010,6 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
 
   // Lấy context từ đối số
   const ctx = (rulesOrCtx && rulesOrCtx.thMap) ? rulesOrCtx : getRuleEngineContext();
-
-  // Xác định monthKey của giao dịch (YYYY-MM)
-  const monthKey = `${dateBC.getFullYear()}-${String(dateBC.getMonth() + 1).padStart(2, '0')}`;
 
   let rawVal = giaGomVat > 0 ? giaGomVat : giaChuaVat;
   if (duAn === 'VHHVB' && ctx.gianXayMap.has(maCan)) {
@@ -2270,9 +2303,9 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
     timeMultiplier = 2;
   }
 
-  // Hệ số phòng PTĐT: PTĐT bán chia đôi (x 0.5), giữ nguyên (x 1) nếu ở cột CVKD là PTĐT đứng tên
+  // Hệ số phòng PTĐT: chỉ áp dụng từ Tháng 9/2026 trở đi (PTĐT bán chia đôi x0.5, giữ nguyên nếu CVKD là PTĐT đứng tên)
   let ptdtMultiplier = 1;
-  if (/PTĐT|PTDT/i.test(pkd)) {
+  if (monthKey >= '2026-09' && /PTĐT|PTDT/i.test(pkd)) {
     const samePerson = isSamePtdtPerson(pkd, cvkdName);
     const verifiedName = (ctx && ctx.cbnvMap) ? ctx.cbnvMap.get(maNV) : null;
     const isInternalPolicy = /Cơ chế nội bộ/i.test(ghiChu);
@@ -2304,6 +2337,12 @@ function calculateAllScoresWithRules() {
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
+      const existingScore = row[APP_CONFIG.COL_OUTPUT_SCORE - 1];
+      // ĐÓNG BĂNG ĐIỂM THÁNG CŨ: Nếu đơn hàng thuộc Tháng 8/2026 trở về trước và đã có điểm -> GIỮ NGUYÊN
+      if (isPastMonthRow(row) && existingScore !== '' && existingScore !== null && existingScore !== undefined) {
+        outputScores.push([existingScore]);
+        continue;
+      }
       const score = evaluateRowWithRules(row, ctx);
       outputScores.push([cleanScore(score)]);
     }
@@ -2400,7 +2439,13 @@ function calculateSpecificRows(rowNumbers) {
       for (let i = 0; i < span; i++) {
         const actualRow = minRow + i;
         if (targetSet.has(actualRow)) {
-          const score = evaluateRowWithRules(rangeData[i], ctx);
+          const rowData = rangeData[i];
+          const existingScore = scoreData[i][0];
+          // ĐÓNG BĂNG ĐIỂM THÁNG CŨ: Nếu dòng thuộc Tháng 8/2026 trở về trước và đã có điểm -> giữ nguyên
+          if (isPastMonthRow(rowData) && existingScore !== '' && existingScore !== null && existingScore !== undefined) {
+            continue;
+          }
+          const score = evaluateRowWithRules(rowData, ctx);
           scoreData[i][0] = cleanScore(score);
         }
       }
@@ -2437,7 +2482,13 @@ function calculateSpecificRows(rowNumbers) {
 
         for (let j = 0; j < cSpan; j++) {
           if (cSet.has(cStart + j)) {
-            const score = evaluateRowWithRules(cData[j], ctx);
+            const rowData = cData[j];
+            const existingScore = cScores[j][0];
+            // ĐÓNG BĂNG ĐIỂM THÁNG CŨ: Nếu dòng thuộc Tháng 8/2026 trở về trước và đã có điểm -> giữ nguyên
+            if (isPastMonthRow(rowData) && existingScore !== '' && existingScore !== null && existingScore !== undefined) {
+              continue;
+            }
+            const score = evaluateRowWithRules(rowData, ctx);
             cScores[j][0] = cleanScore(score);
           }
         }
@@ -2619,12 +2670,18 @@ function autoRecalculateImportedScores() {
     let ctx = null;
     const changedIndices = [];
     const outputScores = rows.map((row, index) => {
+      const existingScore = row[APP_CONFIG.COL_OUTPUT_SCORE - 1];
+      // ĐÓNG BĂNG ĐIỂM THÁNG CŨ: Trigger định kỳ tuyệt đối không sửa điểm của tháng cũ
+      if (isPastMonthRow(row) && existingScore !== '' && existingScore !== null && existingScore !== undefined) {
+        return [existingScore];
+      }
+
       let score = '';
       if (canAutoScoreRow(row)) {
         if (!ctx) ctx = getRuleEngineContext(ss);
         score = cleanScore(evaluateRowWithRules(row, ctx));
       }
-      if (row[APP_CONFIG.COL_OUTPUT_SCORE - 1] !== score) changedIndices.push(index);
+      if (existingScore !== score) changedIndices.push(index);
       return [score];
     });
 
@@ -2809,6 +2866,16 @@ function onEditAutoScore(e) {
       const rangeData = sheet.getRange(firstDataRow, 1, rowCount, 33).getValues();
       let ctx = null;
       const outputScores = rangeData.map(rowData => {
+        const existingScore = rowData[APP_CONFIG.COL_OUTPUT_SCORE - 1];
+
+        // ĐÓNG BĂNG ĐIỂM THÁNG CŨ:
+        // Nếu dòng thuộc tháng cũ (<= 08/2026) và đã có điểm:
+        // Giữ nguyên điểm cũ, TRỪ KHI người dùng chủ động sửa cột Ngày/Tháng/Năm (Cột 1 đến 4)
+        const isMonthDateEdit = e && e.range && (e.range.getColumn() <= 4);
+        if (isPastMonthRow(rowData) && !isMonthDateEdit && existingScore !== '' && existingScore !== null && existingScore !== undefined) {
+          return [existingScore];
+        }
+
         // Xóa điểm cũ nếu dữ liệu giao dịch không còn đủ điều kiện.
         if (!canAutoScoreRow(rowData)) return [''];
 
