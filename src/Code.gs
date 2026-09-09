@@ -407,6 +407,46 @@ function parseConditionToThreeFields(cStr) {
  * -> Tự động chèn cột mới ở vị trí đầu tiên của các tháng và copy điểm từ tháng trước sang!
  * -> Định dạng số 0.##: nếu là .0 thì ẩn thập phân (hiện số nguyên), .5 hoặc lẻ thì giữ lại.
  */
+
+/**
+ * Đảm bảo sheet 'Dự án F2' có cột C (cột 3) là 'Khoảng Giá'.
+ * Nếu chưa có (cột 3 đang là ngày tháng hoặc chưa có), chèn cột 'Khoảng Giá' vào cột 3 và điền 'Tất cả' cho các dòng hiện tại.
+ */
+function ensureF2KhoangGiaColumn(ss) {
+  try {
+    ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+    const f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
+    if (!f2Sheet) return 4;
+
+    const lastCol = f2Sheet.getLastColumn();
+    if (lastCol < 2) return 4;
+
+    const col3Val = (lastCol >= 3) ? String(f2Sheet.getRange(3, 3).getValue() || '').trim().toLowerCase() : '';
+    const isAlreadyGia = col3Val.includes('giá') || col3Val.includes('khoảng giá') || col3Val === 'khoang gia';
+
+    if (!isAlreadyGia) {
+      f2Sheet.insertColumnBefore(3);
+      f2Sheet.getRange(2, 3).setValue('');
+      f2Sheet.getRange(3, 3).setValue('Khoảng Giá')
+        .setFontWeight('bold').setBackground('#2563eb').setFontColor('#ffffff').setHorizontalAlignment('center');
+      
+      const lastRow = f2Sheet.getLastRow();
+      if (lastRow >= 4) {
+        const numRows = lastRow - 3;
+        const defaultVals = Array(numRows).fill(['Tất cả']);
+        f2Sheet.getRange(4, 3, numRows, 1).setValues(defaultVals).setHorizontalAlignment('center');
+      }
+      f2Sheet.setFrozenColumns(3);
+      f2Sheet.autoResizeColumns(1, 3);
+      Logger.log('[Schema F2] Đã bổ sung cột "Khoảng Giá" vào cột C sheet Dự án F2.');
+    }
+    return 4;
+  } catch (e) {
+    Logger.log('Lỗi ensureF2KhoangGiaColumn: ' + e.toString());
+    return 4;
+  }
+}
+
 function ensureCurrentMonthConfigured(ss) {
   ss = ss || SpreadsheetApp.getActiveSpreadsheet();
   const curMonthDate = getCurrentMonthDate(ss);
@@ -469,7 +509,9 @@ function ensureCurrentMonthConfigured(ss) {
   // 2. Kiểm tra sheet Dự án F2
   const f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
   if (f2Sheet && f2Sheet.getLastColumn() >= 3) {
-    const firstMonthVal = f2Sheet.getRange(3, 3).getValue();
+    ensureF2KhoangGiaColumn(ss);
+    const f2FirstMonthCol = 4;
+    const firstMonthVal = f2Sheet.getRange(3, f2FirstMonthCol).getValue();
     const firstMonthDate = normalizeToMonthDate(firstMonthVal, ss);
 
     if (firstMonthDate && curMonthDate.getTime() > firstMonthDate.getTime()) {
@@ -483,20 +525,20 @@ function ensureCurrentMonthConfigured(ss) {
           const targetY = curMonthDate.getUTCFullYear();
           const targetDate = createSafeMonthDate(targetY, targetM);
 
-          f2Sheet.insertColumnBefore(3);
+          f2Sheet.insertColumnBefore(f2FirstMonthCol);
 
-          f2Sheet.getRange(2, 3).setValue('');
-          f2Sheet.getRange(3, 3).setValue(targetDate).setNumberFormat('mm/yyyy');
+          f2Sheet.getRange(2, f2FirstMonthCol).setValue('');
+          f2Sheet.getRange(3, f2FirstMonthCol).setValue(targetDate).setNumberFormat('mm/yyyy');
 
           const lastRow = f2Sheet.getLastRow();
           if (lastRow >= 4) {
-            const prevScores = f2Sheet.getRange(4, 4, lastRow - 3, 1).getValues();
+            const prevScores = f2Sheet.getRange(4, f2FirstMonthCol + 1, lastRow - 3, 1).getValues();
             const cleanedScores = prevScores.map(r => [cleanScore(r[0])]);
-            f2Sheet.getRange(4, 3, lastRow - 3, 1).setValues(cleanedScores);
-            f2Sheet.getRange(4, 3, lastRow - 3, 1).setNumberFormat('0.##').setHorizontalAlignment('center');
+            f2Sheet.getRange(4, f2FirstMonthCol, lastRow - 3, 1).setValues(cleanedScores);
+            f2Sheet.getRange(4, f2FirstMonthCol, lastRow - 3, 1).setNumberFormat('0.##').setHorizontalAlignment('center');
           }
 
-          f2Sheet.getRange(3, 3).setFontWeight('bold').setBackground('#1d4ed8').setFontColor('#ffffff').setHorizontalAlignment('center');
+          f2Sheet.getRange(3, f2FirstMonthCol).setFontWeight('bold').setBackground('#1d4ed8').setFontColor('#ffffff').setHorizontalAlignment('center');
 
           updated = true;
           Logger.log(`[Auto-Rollover] Đã thêm cột tháng ${formatMonthDisplay(targetDate, ss)} vào sheet Dự án F2.`);
@@ -506,8 +548,8 @@ function ensureCurrentMonthConfigured(ss) {
 
     const f2LastRow = f2Sheet.getLastRow();
     const f2LastCol = f2Sheet.getLastColumn();
-    if (f2LastRow >= 4 && f2LastCol >= 3) {
-      f2Sheet.getRange(4, 3, f2LastRow - 3, f2LastCol - 2).setNumberFormat('0.##').setHorizontalAlignment('center');
+    if (f2LastRow >= 4 && f2LastCol >= f2FirstMonthCol) {
+      f2Sheet.getRange(4, f2FirstMonthCol, f2LastRow - 3, f2LastCol - f2FirstMonthCol + 1).setNumberFormat('0.##').setHorizontalAlignment('center');
     }
   }
 
@@ -540,10 +582,11 @@ function manualSyncCurrentMonth() {
   }
 
   const f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
-  if (f2Sheet && f2Sheet.getLastColumn() >= 3 && f2Sheet.getLastRow() >= 4) {
+  const f2FirstMonthCol = 4;
+  if (f2Sheet && f2Sheet.getLastColumn() >= f2FirstMonthCol && f2Sheet.getLastRow() >= 4) {
     const numRows = f2Sheet.getLastRow() - 3;
-    const numCols = f2Sheet.getLastColumn() - 2;
-    const scoreRange = f2Sheet.getRange(4, 3, numRows, numCols);
+    const numCols = f2Sheet.getLastColumn() - f2FirstMonthCol + 1;
+    const scoreRange = f2Sheet.getRange(4, f2FirstMonthCol, numRows, numCols);
     const vals = scoreRange.getValues();
     for (let r = 0; r < numRows; r++) {
       for (let c = 0; c < numCols; c++) {
@@ -611,19 +654,19 @@ function initMonthlyConfigSheets() {
   }
 
   // Row 2: Header Tháng
-  f2Sheet.getRange(2, 3).setValue('Tháng')
+  f2Sheet.getRange(2, 4).setValue('Tháng')
     .setFontWeight('bold').setBackground('#1d4ed8').setFontColor('#ffffff').setHorizontalAlignment('center');
 
-  // Row 3: Column headers
-  const f2HeadersRow3 = ['Dự án', 'Loại Quỹ', curMonthDate];
+  // Row 3: Column headers (Bao gồm Khoảng Giá ở cột 3)
+  const f2HeadersRow3 = ['Dự án', 'Loại Quỹ', 'Khoảng Giá', curMonthDate];
   f2Sheet.getRange(3, 1, 1, f2HeadersRow3.length).setValues([f2HeadersRow3])
     .setFontWeight('bold').setBackground('#2563eb').setFontColor('#ffffff').setHorizontalAlignment('center');
   
-  f2Sheet.getRange(3, 3).setNumberFormat('mm/yyyy');
+  f2Sheet.getRange(3, 4).setNumberFormat('mm/yyyy');
 
   f2Sheet.setFrozenRows(3);
-  f2Sheet.setFrozenColumns(2);
-  f2Sheet.autoResizeColumns(1, 2);
+  f2Sheet.setFrozenColumns(3);
+  f2Sheet.autoResizeColumns(1, 3);
 
   SpreadsheetApp.getActiveSpreadsheet().toast('Đã tạo cấu trúc khung cho 2 sheet "Tổng hợp" và "Dự án F2"!', 'Khởi tạo hoàn tất', 5);
 }
@@ -711,12 +754,21 @@ function fetchMonthlyConfigData() {
     }
 
     // 2. Đọc sheet Dự án F2
+    ensureF2KhoangGiaColumn(ss);
     const f2LastRow = f2Sheet.getLastRow();
-    const f2LastCol = Math.max(3, f2Sheet.getLastColumn());
+    const f2LastCol = Math.max(4, f2Sheet.getLastColumn());
     const f2HeaderRow3 = f2Sheet.getRange(3, 1, 1, f2LastCol).getValues()[0];
 
+    let f2FirstMonthCol = 4;
+    for (let c = 0; c < f2LastCol; c++) {
+      if (normalizeToMonthDate(f2HeaderRow3[c], ss)) {
+        f2FirstMonthCol = c + 1;
+        break;
+      }
+    }
+
     const f2Months = [];
-    for (let c = 2; c < f2LastCol; c++) {
+    for (let c = f2FirstMonthCol - 1; c < f2LastCol; c++) {
       const rawD = f2HeaderRow3[c];
       const mDate = normalizeToMonthDate(rawD, ss);
       if (mDate) {
@@ -740,10 +792,14 @@ function fetchMonthlyConfigData() {
         scores[m.dateStr] = (val !== '' && val !== null && !isNaN(val)) ? Number(val) : '';
       });
 
+      const rawKhoangGia = (f2FirstMonthCol >= 4) ? r[2] : 'Tất cả';
+      const khoangGia = isConditionAll(rawKhoangGia) ? 'Tất cả' : canonicalKhoangGia(rawKhoangGia);
+
       f2Rows.push({
         rowIdx: rowNumber,
         name: String(r[0] || '').trim(),
         fund: String(r[1] || 'Quỹ chéo').trim(),
+        khoangGia: khoangGia,
         scores: scores
       });
     }
@@ -789,9 +845,10 @@ function saveMonthlyConfigData(payload) {
     }
 
     // 2. Lưu các cập nhật ô trong sheet Dự án F2
+    const f2FirstMonthCol = (String(f2Sheet.getRange(3, 3).getValue() || '').trim().toLowerCase().includes('giá')) ? 4 : 3;
     if (payload.f2CellUpdates && payload.f2CellUpdates.length > 0) {
       payload.f2CellUpdates.forEach(u => {
-        if (u.rowIdx >= 4 && u.colIdx >= 3) {
+        if (u.rowIdx >= 4 && u.colIdx >= f2FirstMonthCol) {
           f2Sheet.getRange(u.rowIdx, u.colIdx).setValue(u.score !== '' ? cleanScore(u.score) : '').setNumberFormat('0.##').setHorizontalAlignment('center');
         }
       });
@@ -817,15 +874,17 @@ function saveMonthlyConfigData(payload) {
     }
 
     if (payload.newRowsF2 && payload.newRowsF2.length > 0) {
+      ensureF2KhoangGiaColumn(ss);
       payload.newRowsF2.forEach(nr => {
         const nextRow = Math.max(4, f2Sheet.getLastRow() + 1);
-        const rowVals = [nr.name, nr.fund];
+        const kg = canonicalKhoangGia(nr.khoangGia || 'Tất cả');
+        const rowVals = [nr.name, nr.fund || 'Quỹ chéo', kg];
         payload.f2Months.forEach(m => {
           const s = nr.scores && nr.scores[m.dateStr];
           rowVals.push(s !== undefined && s !== '' ? cleanScore(s) : '');
         });
         f2Sheet.getRange(nextRow, 1, 1, rowVals.length).setValues([rowVals]);
-        f2Sheet.getRange(nextRow, 3, 1, payload.f2Months.length).setNumberFormat('0.##').setHorizontalAlignment('center');
+        f2Sheet.getRange(nextRow, 4, 1, payload.f2Months.length).setNumberFormat('0.##').setHorizontalAlignment('center');
       });
     }
 
@@ -900,10 +959,15 @@ function updateMonthlyConfigRow(tab, rowIdx, data) {
         });
       }
     } else {
+      ensureF2KhoangGiaColumn(ss);
       sheet.getRange(targetRow, 1).setValue(data.name || '');
+      sheet.getRange(targetRow, 2).setValue(data.fund || 'Quỹ chéo');
+      if (data.khoangGia !== undefined) {
+        sheet.getRange(targetRow, 3).setValue(canonicalKhoangGia(data.khoangGia || 'Tất cả'));
+      }
       if (data.monthUpdates && data.monthUpdates.length > 0) {
         data.monthUpdates.forEach(u => {
-          if (u.colIdx >= 3) {
+          if (u.colIdx >= 4) {
             sheet.getRange(targetRow, u.colIdx).setValue(u.score !== '' ? cleanScore(u.score) : '').setNumberFormat('0.##').setHorizontalAlignment('center');
           }
         });
@@ -1309,14 +1373,26 @@ function getRuleEngineContext(ss) {
   ensureCurrentMonthConfigured(ss);
 
   // 1. Tải bảng Dự án F2 (Quỹ Chéo)
-  const f2Map = new Map(); // key: du_an_lower -> Map(monthKey -> score)
+  const f2Map = new Map(); // key: du_an_lower -> list of rule objects [{ name, fund, khoangGia, monthScores }]
+  const f2GeneralRules = []; // list of rules where name is 'tất cả' or '*'
+  const allF2RulesList = [];
   const f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
   let f2MonthsList = [];
 
   if (f2Sheet && f2Sheet.getLastRow() >= 4 && f2Sheet.getLastColumn() >= 3) {
+    ensureF2KhoangGiaColumn(ss);
     const f2LastCol = f2Sheet.getLastColumn();
     const f2HeaderRow = f2Sheet.getRange(3, 1, 1, f2LastCol).getValues()[0];
-    for (let c = 2; c < f2LastCol; c++) {
+
+    let f2FirstMonthCol = 4;
+    for (let c = 0; c < f2LastCol; c++) {
+      if (normalizeToMonthDate(f2HeaderRow[c], ss)) {
+        f2FirstMonthCol = c + 1;
+        break;
+      }
+    }
+
+    for (let c = f2FirstMonthCol - 1; c < f2LastCol; c++) {
       const d = normalizeToMonthDate(f2HeaderRow[c], ss);
       if (d) {
         const key = formatDateSafe(d, ss).substring(0, 7);
@@ -1328,14 +1404,35 @@ function getRuleEngineContext(ss) {
     f2RowsData.forEach(r => {
       const rawName = String(r[0] || '').trim();
       if (!rawName) return;
+      const fund = String(r[1] || 'Quỹ chéo').trim();
+      const rawKhoangGia = (f2FirstMonthCol >= 4) ? r[2] : 'Tất cả';
+      const khoangGia = isConditionAll(rawKhoangGia) ? 'Tất cả' : canonicalKhoangGia(rawKhoangGia);
+
       const monthScores = new Map();
       f2MonthsList.forEach((m) => {
         const s = r[m.colIdx - 1];
         if (s !== '' && s !== null && !isNaN(s)) monthScores.set(m.key, Number(s));
       });
+
+      const ruleObj = {
+        name: rawName,
+        fund: fund,
+        khoangGia: khoangGia,
+        monthScores: monthScores
+      };
+      allF2RulesList.push(ruleObj);
+
+      const isGeneral = isConditionAll(rawName) || rawName.toLowerCase() === 'tất cả' || rawName.toLowerCase() === 'all' || rawName === '*';
+      if (isGeneral) {
+        f2GeneralRules.push(ruleObj);
+      }
+
       rawName.split(/[,;\n]/).forEach(p => {
         const duAnName = p.trim().toLowerCase();
-        if (duAnName) f2Map.set(duAnName, monthScores);
+        if (duAnName) {
+          if (!f2Map.has(duAnName)) f2Map.set(duAnName, []);
+          f2Map.get(duAnName).push(ruleObj);
+        }
       });
     });
   }
@@ -1542,7 +1639,9 @@ function getRuleEngineContext(ss) {
 
   return { 
     f2Map, 
+    f2GeneralRules,
     f2MonthsList, 
+    allF2RulesList,
     thMap, 
     generalRules, 
     allRulesList, 
@@ -1726,6 +1825,13 @@ function matchCondition(conditionStr, sanPham, loaiCan, priceBill) {
 }
 
 /**
+ * Hàm kiểm tra khớp Khoảng Giá (tỷ VNĐ)
+ */
+function matchKhoangGia(candGia, priceBill) {
+  return matchRules('Tất cả', 'Tất cả', candGia, '', '', priceBill);
+}
+
+/**
  * =========================================================================
  * ĐÁNH GIÁ 1 DÒNG DỮ LIỆU GIAO DỊCH VỚI MA TRẬN ĐIỂM THEO THÁNG
  * =========================================================================
@@ -1822,37 +1928,102 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
       const duAnKey = duAn.toLowerCase();
       const tenDuAnKey = (String(row[28] || row[12] || '').trim()).toLowerCase(); // Cột AC (Tên dự án) hoặc M (Phân khu/Tòa)
       let matchedScore = null;
+      let matchedRule = null;
 
       if (ctx.f2Map) {
-        // 1. Khớp chính xác mã / tên dự án trong F2
-        if (ctx.f2Map.has(duAnKey) && ctx.f2Map.get(duAnKey).has(monthKey)) {
-          matchedScore = ctx.f2Map.get(duAnKey).get(monthKey);
-        } else if (tenDuAnKey && ctx.f2Map.has(tenDuAnKey) && ctx.f2Map.get(tenDuAnKey).has(monthKey)) {
-          matchedScore = ctx.f2Map.get(tenDuAnKey).get(monthKey);
-        } else if (ctx.f2Map.has(duAnKey) && monthKey < '2026-09') {
-          const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
-          matchedScore = (latestKey && ctx.f2Map.get(duAnKey).has(latestKey)) ? ctx.f2Map.get(duAnKey).get(latestKey) : null;
-        } else if (tenDuAnKey && ctx.f2Map.has(tenDuAnKey) && monthKey < '2026-09') {
-          const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
-          matchedScore = (latestKey && ctx.f2Map.get(tenDuAnKey).has(latestKey)) ? ctx.f2Map.get(tenDuAnKey).get(latestKey) : null;
+        // Tìm candidates khớp dự án cụ thể
+        let candidates = ctx.f2Map.get(duAnKey) || [];
+        if (candidates.length === 0 && tenDuAnKey) {
+          candidates = ctx.f2Map.get(tenDuAnKey) || [];
+        }
+        if (candidates.length === 0) {
+          for (const [code, list] of ctx.f2Map.entries()) {
+            if (code !== 'tất cả' && code !== '*' && (duAnKey.includes(code) || code.includes(duAnKey) || (tenDuAnKey && (tenDuAnKey.includes(code) || code.includes(tenDuAnKey))))) {
+              candidates = list;
+              break;
+            }
+          }
         }
 
-        // 2. Nếu không khớp tên dự án riêng, kiểm tra rule 'Tất cả' hoặc '*' trong sheet Dự án F2
-        if (matchedScore === null) {
-          const allKey = ctx.f2Map.has('tất cả') ? 'tất cả' : (ctx.f2Map.has('*') ? '*' : null);
-          if (allKey) {
-            if (ctx.f2Map.get(allKey).has(monthKey)) {
-              matchedScore = ctx.f2Map.get(allKey).get(monthKey);
+        // Khớp quy tắc theo khoảng giá
+        if (candidates.length > 0) {
+          let matchedRow = null;
+          for (const cand of candidates) {
+            if (matchKhoangGia(cand.khoangGia, valInBillion)) {
+              matchedRow = cand;
+              break;
+            }
+          }
+          if (!matchedRow) {
+            matchedRow = candidates.find(c => isConditionAll(c.khoangGia)) || candidates[0];
+          }
+
+          if (matchedRow && matchedRow.monthScores) {
+            if (matchedRow.monthScores.has(monthKey) && matchedRow.monthScores.get(monthKey) !== '' && matchedRow.monthScores.get(monthKey) !== null) {
+              matchedScore = matchedRow.monthScores.get(monthKey);
+              matchedRule = matchedRow;
             } else if (monthKey < '2026-09') {
-              const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
-              matchedScore = (latestKey && ctx.f2Map.get(allKey).has(latestKey)) ? ctx.f2Map.get(allKey).get(latestKey) : null;
+              for (const m of ctx.f2MonthsList) {
+                if (m.key <= monthKey && matchedRow.monthScores.has(m.key) && matchedRow.monthScores.get(m.key) !== '' && matchedRow.monthScores.get(m.key) !== null) {
+                  matchedScore = matchedRow.monthScores.get(m.key);
+                  matchedRule = matchedRow;
+                  break;
+                }
+              }
+              if (matchedScore === null) {
+                for (const m of ctx.f2MonthsList) {
+                  if (matchedRow.monthScores.has(m.key) && matchedRow.monthScores.get(m.key) !== '' && matchedRow.monthScores.get(m.key) !== null) {
+                    matchedScore = matchedRow.monthScores.get(m.key);
+                    matchedRule = matchedRow;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // 2. Nếu không khớp dự án cụ thể, kiểm tra rule 'Tất cả' hoặc '*' trong F2 (f2GeneralRules)
+        if (matchedScore === null && ctx.f2GeneralRules && ctx.f2GeneralRules.length > 0) {
+          let genRow = null;
+          for (const cand of ctx.f2GeneralRules) {
+            if (matchKhoangGia(cand.khoangGia, valInBillion)) {
+              genRow = cand;
+              break;
+            }
+          }
+          if (!genRow) {
+            genRow = ctx.f2GeneralRules.find(c => isConditionAll(c.khoangGia)) || ctx.f2GeneralRules[0];
+          }
+          if (genRow && genRow.monthScores) {
+            if (genRow.monthScores.has(monthKey) && genRow.monthScores.get(monthKey) !== '' && genRow.monthScores.get(monthKey) !== null) {
+              matchedScore = genRow.monthScores.get(monthKey);
+              matchedRule = genRow;
+            } else if (monthKey < '2026-09') {
+              for (const m of ctx.f2MonthsList) {
+                if (m.key <= monthKey && genRow.monthScores.has(m.key) && genRow.monthScores.get(m.key) !== '' && genRow.monthScores.get(m.key) !== null) {
+                  matchedScore = genRow.monthScores.get(m.key);
+                  matchedRule = genRow;
+                  break;
+                }
+              }
+              if (matchedScore === null) {
+                for (const m of ctx.f2MonthsList) {
+                  if (genRow.monthScores.has(m.key) && genRow.monthScores.get(m.key) !== '' && genRow.monthScores.get(m.key) !== null) {
+                    matchedScore = genRow.monthScores.get(m.key);
+                    matchedRule = genRow;
+                    break;
+                  }
+                }
+              }
             }
           }
         }
       }
 
       if (matchedScore !== null && matchedScore !== '' && !isNaN(matchedScore)) {
-        baseScore = calculateProgressiveScore(valInBillion, Number(matchedScore), 'Tất cả', monthKey);
+        const kg = (matchedRule && matchedRule.khoangGia) ? matchedRule.khoangGia : 'Tất cả';
+        baseScore = calculateProgressiveScore(valInBillion, Number(matchedScore), kg, monthKey);
       } else {
         baseScore = 1; // Mặc định Quỹ chéo không thuộc danh sách F2 là 1 điểm
       }
