@@ -2173,7 +2173,7 @@
       if (filtered.length === 0) {
         const isActuallyEmpty = configData.thRows.length === 0;
         const msg = isActuallyEmpty 
-          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án</div><div>Bấm <b>Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"rule quỹ NW"</b> để bắt đầu.</div>'
+          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án</div><div>Bấm <b>Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"Rule quỹ NW"</b> để bắt đầu.</div>'
           : 'Không tìm thấy dự án nào phù hợp với bộ lọc.';
         tbody.innerHTML = `<tr><td colspan="${10 + displayMonths.length}" style="text-align:center; padding:36px 16px; color:var(--text-tertiary);">${msg}</td></tr>`;
         return;
@@ -2262,7 +2262,7 @@
       if (filtered.length === 0) {
         const isActuallyEmpty = configData.f2Rows.length === 0;
         const msg = isActuallyEmpty 
-          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án F2</div><div>Bấm <b>Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"rule quỹ chéo"</b> để bắt đầu.</div>'
+          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án F2</div><div>Bấm <b>Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"Rule quỹ chéo"</b> để bắt đầu.</div>'
           : 'Không tìm thấy dự án F2 nào phù hợp với bộ lọc.';
         tbody.innerHTML = `<tr><td colspan="${5 + displayMonths.length}" style="text-align:center; padding:36px 16px; color:var(--text-tertiary);">${msg}</td></tr>`;
         return;

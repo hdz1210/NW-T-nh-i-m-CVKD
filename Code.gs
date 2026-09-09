@@ -14,8 +14,8 @@ const APP_VERSION = {
 const APP_CONFIG = {
   AUTO_SCORE_INTERVAL_MINUTES: 1,
   SHEET_DATA: 'Data',
-  SHEET_TONG_HOP: 'rule quỹ NW',
-  SHEET_DU_AN_F2: 'rule quỹ chéo',
+  SHEET_TONG_HOP: 'Rule quỹ NW',
+  SHEET_DU_AN_F2: 'Rule quỹ chéo',
   SHEET_CONFIG_LEGACY: 'CauHinh_Diem',
   SHEET_MAS_VCG: 'Danh sách căn MAS VCG',
   SHEET_GIAN_XAY: 'Giãn xây HVB',
@@ -27,7 +27,7 @@ const APP_CONFIG = {
 };
 
 /**
- * Lấy sheet 'rule quỹ NW' (hỗ trợ tên cũ 'Tổng hợp' nếu chưa đổi)
+ * Lấy sheet 'Rule quỹ NW' (hỗ trợ tên cũ 'Tổng hợp' nếu chưa đổi)
  */
 function getSheetTongHop(ss) {
   if (!ss) return null;
@@ -41,7 +41,7 @@ function getSheetTongHop(ss) {
 }
 
 /**
- * Lấy sheet 'rule quỹ chéo' (hỗ trợ tên cũ 'Dự án F2' nếu chưa đổi)
+ * Lấy sheet 'Rule quỹ chéo' (hỗ trợ tên cũ 'Dự án F2' nếu chưa đổi)
  */
 function getSheetDuAnF2(ss) {
   if (!ss) return null;
@@ -55,23 +55,29 @@ function getSheetDuAnF2(ss) {
 }
 
 /**
- * Tự động đổi tên sheet cũ "Tổng hợp" -> "rule quỹ NW" và "Dự án F2" -> "rule quỹ chéo"
+ * Tự động đổi tên sheet cũ "Tổng hợp" -> "Rule quỹ NW" và "Dự án F2" -> "Rule quỹ chéo"
  */
 function renameLegacySheets(ss) {
   if (!ss) return;
   try {
-    const oldTh = ss.getSheetByName('Tổng hợp') || ss.getSheetByName('Tổng Hợp');
-    const newTh = ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP) || ss.getSheetByName('Rule Quỹ NW');
-    if (oldTh && !newTh) {
-      oldTh.setName(APP_CONFIG.SHEET_TONG_HOP);
-      Logger.log('Đã đổi tên sheet: ' + oldTh.getName() + ' -> ' + APP_CONFIG.SHEET_TONG_HOP);
+    const targetTh = APP_CONFIG.SHEET_TONG_HOP; // 'Rule quỹ NW'
+    const thSheet = getSheetTongHop(ss);
+    if (thSheet && thSheet.getName() !== targetTh && (
+      thSheet.getName() === 'Tổng hợp' || thSheet.getName() === 'Tổng Hợp' || thSheet.getName() === 'rule quỹ NW'
+    )) {
+      const prevName = thSheet.getName();
+      thSheet.setName(targetTh);
+      Logger.log('Đã đổi tên sheet: ' + prevName + ' -> ' + targetTh);
     }
 
-    const oldF2 = ss.getSheetByName('Dự án F2') || ss.getSheetByName('Dự Án F2');
-    const newF2 = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2) || ss.getSheetByName('Rule Quỹ Chéo');
-    if (oldF2 && !newF2) {
-      oldF2.setName(APP_CONFIG.SHEET_DU_AN_F2);
-      Logger.log('Đã đổi tên sheet: ' + oldF2.getName() + ' -> ' + APP_CONFIG.SHEET_DU_AN_F2);
+    const targetF2 = APP_CONFIG.SHEET_DU_AN_F2; // 'Rule quỹ chéo'
+    const f2Sheet = getSheetDuAnF2(ss);
+    if (f2Sheet && f2Sheet.getName() !== targetF2 && (
+      f2Sheet.getName() === 'Dự án F2' || f2Sheet.getName() === 'Dự Án F2' || f2Sheet.getName() === 'rule quỹ chéo'
+    )) {
+      const prevName = f2Sheet.getName();
+      f2Sheet.setName(targetF2);
+      Logger.log('Đã đổi tên sheet: ' + prevName + ' -> ' + targetF2);
     }
   } catch (err) {
     Logger.log('Lỗi khi đổi tên sheet: ' + (err.message || err));
@@ -85,7 +91,7 @@ function renameSheetsToNewNames() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) return;
   renameLegacySheets(ss);
-  SpreadsheetApp.getActiveSpreadsheet().toast('Đã kiểm tra & đổi tên sheet: "Tổng hợp" -> "rule quỹ NW", "Dự án F2" -> "rule quỹ chéo"!', 'Thành công', 4);
+  SpreadsheetApp.getActiveSpreadsheet().toast('Đã kiểm tra & đổi tên sheet: "Tổng hợp" -> "Rule quỹ NW", "Dự án F2" -> "Rule quỹ chéo"!', 'Thành công', 4);
 }
 
 /**
@@ -330,7 +336,7 @@ function onOpen() {
     .addItem('Kiểm tra căn xin cơ chế (Cột AB & Y)', 'checkAndFormatCanXinCoChe')
     .addSeparator()
     .addItem('Đồng bộ / Thêm cột tháng', 'manualSyncCurrentMonth')
-    .addItem('Đổi tên sheet sang "rule quỹ NW" & "rule quỹ chéo"', 'renameSheetsToNewNames')
+    .addItem('Đổi tên sheet sang "Rule quỹ NW" & "Rule quỹ chéo"', 'renameSheetsToNewNames')
     .addItem('Cài đặt Trigger tự động', 'setupAutoTrigger')
     .addSeparator()
     .addItem(`Commit: ${APP_VERSION.COMMIT}`, 'showVersionInfo')
@@ -582,7 +588,7 @@ function ensureCurrentMonthConfigured(ss) {
   let updated = false;
 
   renameLegacySheets(ss);
-  // 1. Kiểm tra sheet rule quỹ NW (9 cột cố định: Trạng thái, CĐT, Mã dự án, Dự án, Miền, Loại Quỹ, Sản Phẩm, Loại Căn, Khoảng Giá)
+  // 1. Kiểm tra sheet Rule quỹ NW (9 cột cố định: Trạng thái, CĐT, Mã dự án, Dự án, Miền, Loại Quỹ, Sản Phẩm, Loại Căn, Khoảng Giá)
   const thSheet = getSheetTongHop(ss);
   const firstMonthCol = 10;
   if (thSheet && thSheet.getLastColumn() >= firstMonthCol) {
@@ -634,7 +640,7 @@ function ensureCurrentMonthConfigured(ss) {
     }
   }
 
-  // 2. Kiểm tra sheet rule quỹ chéo
+  // 2. Kiểm tra sheet Rule quỹ chéo
   const f2Sheet = getSheetDuAnF2(ss);
   if (f2Sheet && f2Sheet.getLastColumn() >= 3) {
     ensureF2KhoangGiaColumn(ss);
@@ -746,7 +752,7 @@ function initMonthlyConfigSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const curMonthDate = getCurrentMonthDate(ss);
 
-  // 1. Tạo sheet rule quỹ NW (9 cột cố định + các cột tháng)
+  // 1. Tạo sheet Rule quỹ NW (9 cột cố định + các cột tháng)
   let thSheet = getSheetTongHop(ss);
   if (!thSheet) {
     thSheet = ss.insertSheet(APP_CONFIG.SHEET_TONG_HOP);
@@ -773,7 +779,7 @@ function initMonthlyConfigSheets() {
   thSheet.setFrozenColumns(9);
   thSheet.autoResizeColumns(1, 9);
 
-  // 2. Tạo sheet rule quỹ chéo
+  // 2. Tạo sheet Rule quỹ chéo
   let f2Sheet = getSheetDuAnF2(ss);
   if (!f2Sheet) {
     f2Sheet = ss.insertSheet(APP_CONFIG.SHEET_DU_AN_F2);
@@ -796,7 +802,7 @@ function initMonthlyConfigSheets() {
   f2Sheet.setFrozenColumns(3);
   f2Sheet.autoResizeColumns(1, 3);
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('Đã tạo cấu trúc khung cho 2 sheet "rule quỹ NW" và "rule quỹ chéo"!', 'Khởi tạo hoàn tất', 5);
+  SpreadsheetApp.getActiveSpreadsheet().toast('Đã tạo cấu trúc khung cho 2 sheet "Rule quỹ NW" và "Rule quỹ chéo"!', 'Khởi tạo hoàn tất', 5);
 }
 
 /**
@@ -1500,7 +1506,7 @@ function getRuleEngineContext(ss) {
   // Đảm bảo cột tháng mới nhất đã được đồng bộ
   ensureCurrentMonthConfigured(ss);
 
-  // 1. Tải bảng rule quỹ chéo (Quỹ Chéo)
+  // 1. Tải bảng Rule quỹ chéo (Quỹ Chéo)
   const f2Map = new Map(); // key: du_an_lower -> list of rule objects [{ name, fund, khoangGia, monthScores }]
   const f2GeneralRules = []; // list of rules where name is 'tất cả' or '*'
   const allF2RulesList = [];
@@ -1565,7 +1571,7 @@ function getRuleEngineContext(ss) {
     });
   }
 
-  // 2. Tải bảng rule quỹ NW (Quỹ NW & Quỹ Chéo)
+  // 2. Tải bảng Rule quỹ NW (Quỹ NW & Quỹ Chéo)
   const thMap = new Map(); // key: proj_code_lower -> list of rule objects
   const generalRules = []; // list of rules where code is 'Tất cả' or '*'
   const allRulesList = []; // flat list of all rules

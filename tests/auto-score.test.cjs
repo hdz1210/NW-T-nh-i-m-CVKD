@@ -210,7 +210,7 @@ for (const relativePath of ['src/Code.gs', 'Code.gs']) {
   });
 
   check('ignores header-only edits and edits on other sheets', () => {
-    for (const options of [{}, { sheetName: 'rule quỹ NW' }, { sheetName: 'Tổng hợp' }]) {
+    for (const options of [{}, { sheetName: 'Rule quỹ NW' }, { sheetName: 'Tổng hợp' }]) {
       const h = harness(sourcePath, [transaction()], options);
       h.edit({ row: options.sheetName ? 2 : 1 });
       assert.equal(h.writes.length, 0);
