@@ -6,6 +6,11 @@
  * Tự động tạo cột tháng mới và kế thừa điểm khi bước sang tháng mới
  */
 
+const APP_VERSION = {
+  COMMIT: 'f375716',
+  BUILD_TIME: '2026-09-09 14:11:07',
+};
+
 const APP_CONFIG = {
   AUTO_SCORE_INTERVAL_MINUTES: 1,
   SHEET_DATA: 'Data',
@@ -232,7 +237,22 @@ function onOpen() {
     .addSeparator()
     .addItem('Đồng bộ / Thêm cột tháng', 'manualSyncCurrentMonth')
     .addItem('Cài đặt Trigger tự động', 'setupAutoTrigger')
+    .addSeparator()
+    .addItem(`Commit: ${APP_VERSION.COMMIT}`, 'showVersionInfo')
     .addToUi();
+}
+
+/**
+ * Hiển thị thông tin phiên bản commit build hiện tại
+ */
+function showVersionInfo() {
+  SpreadsheetApp.getUi().alert(
+    'Thông Tin Phiên Bản (Build Version)',
+    `📌 Commit Hash: ${APP_VERSION.COMMIT}\n` +
+    `🕒 Thời gian Build: ${APP_VERSION.BUILD_TIME}\n\n` +
+    `Mã nguồn Google Apps Script đã được build và triển khai thành công từ commit ${APP_VERSION.COMMIT}.`,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
 }
 
 /**

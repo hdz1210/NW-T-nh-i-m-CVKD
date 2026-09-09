@@ -120,7 +120,35 @@
       color: var(--text-primary);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+    }
+
+    .commit-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      vertical-align: middle;
+      user-select: all;
+    }
+
+    .commit-text {
+      color: var(--brand, #1d4ed8);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .commit-hash {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-family: var(--font-mono, monospace);
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: 0.5px;
     }
 
     .app-subtitle {
@@ -1089,6 +1117,10 @@
       <div class="header-titles">
         <h1 class="app-title">
           <span>Bảng Cấu Hình Điểm</span>
+          <span class="commit-badge" title="Mã commit phiên bản hiện tại của hệ thống">
+            <span class="commit-text">Commit</span>
+            <span class="commit-hash" id="commitHashDisplay">f375716</span>
+          </span>
         </h1>
 
       </div>

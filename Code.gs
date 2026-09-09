@@ -6,6 +6,11 @@
  * Tự động tạo cột tháng mới và kế thừa điểm khi bước sang tháng mới
  */
 
+const APP_VERSION = {
+  COMMIT: 'f375716',
+  BUILD_TIME: '2026-09-09 14:11:07',
+};
+
 const APP_CONFIG = {
   AUTO_SCORE_INTERVAL_MINUTES: 1,
   SHEET_DATA: 'Data',
@@ -17,6 +22,8 @@ const APP_CONFIG = {
   SHEET_CBNV: 'CBNV',
   SHEET_CHIEN_DICH: 'Điểm Chiến Dịch',
   COL_OUTPUT_SCORE: 24, // Cột X: Điểm tạm (Index 24)
+  COL_VERIFY_SCORE: 25, // Cột Y: Điểm Verify (Index 25)
+  COL_CAN_XIN_CO_CHE: 28, // Cột AB: Căn xin cơ chế (Index 28)
 };
 
 /**
@@ -226,10 +233,26 @@ function onOpen() {
     .addItem('Tính điểm dòng chọn / mới', 'calculateSelectedRows')
     .addItem('Tính lại toàn bộ điểm Data', 'calculateAllScoresWithRules')
     .addItem('Quét & tính dòng chưa có điểm', 'autoTriggerOnDataChange')
+    .addItem('Kiểm tra căn xin cơ chế (Cột AB & Y)', 'checkAndFormatCanXinCoChe')
     .addSeparator()
     .addItem('Đồng bộ / Thêm cột tháng', 'manualSyncCurrentMonth')
     .addItem('Cài đặt Trigger tự động', 'setupAutoTrigger')
+    .addSeparator()
+    .addItem(`Commit: ${APP_VERSION.COMMIT}`, 'showVersionInfo')
     .addToUi();
+}
+
+/**
+ * Hiển thị thông tin phiên bản commit build hiện tại
+ */
+function showVersionInfo() {
+  SpreadsheetApp.getUi().alert(
+    'Thông Tin Phiên Bản (Build Version)',
+    `📌 Commit Hash: ${APP_VERSION.COMMIT}\n` +
+    `🕒 Thời gian Build: ${APP_VERSION.BUILD_TIME}\n\n` +
+    `Mã nguồn Google Apps Script đã được build và triển khai thành công từ commit ${APP_VERSION.COMMIT}.`,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
 }
 
 /**
@@ -2282,6 +2305,11 @@ function calculateAllScoresWithRules() {
       .setValues(outputScores)
       .setNumberFormat('0.##')
       .setHorizontalAlignment('center');
+
+    // Cập nhật trạng thái Căn xin cơ chế (Cột AB & Cột Y)
+    processCanXinCoCheRule(dataSheet, 2, rows.length, rows);
+    ensureCanXinCoCheConditionalFormatting(dataSheet);
+
     SpreadsheetApp.getActiveSpreadsheet().toast(`[Option 1] Đã tính lại toàn bộ ${rows.length} dòng!`, 'Thành công', 3);
     return { success: true, count: rows.length };
   } catch (err) {
@@ -2374,6 +2402,9 @@ function calculateSpecificRows(rowNumbers) {
         .setValues(scoreData)
         .setNumberFormat('0.##')
         .setHorizontalAlignment('center');
+
+      // Cập nhật Căn xin cơ chế cho dải dòng
+      processCanXinCoCheRule(dataSheet, minRow, span, rangeData);
     } else {
       // Nếu các dòng nằm rải rác rất xa nhau, gom thành các cụm (chunk) gần nhau
       const chunks = [];
@@ -2408,6 +2439,9 @@ function calculateSpecificRows(rowNumbers) {
           .setValues(cScores)
           .setNumberFormat('0.##')
           .setHorizontalAlignment('center');
+
+        // Cập nhật Căn xin cơ chế cho chunk
+        processCanXinCoCheRule(dataSheet, cStart, cSpan, cData);
       });
     }
 
@@ -2415,6 +2449,137 @@ function calculateSpecificRows(rowNumbers) {
   } catch (err) {
     Logger.log('Lỗi calculateSpecificRows: ' + err.toString());
     return { success: false, error: err.toString() };
+  }
+}
+
+/**
+ * =========================================================================
+ * QUY TẮC CĂN XIN CƠ CHẾ (CỘT AB & CỘT Y)
+ * =========================================================================
+ * - Cột AB nếu có "Căn xin cơ chế":
+ *   + Cột Y là nơi nhập điểm manual.
+ *   + Nếu Cột Y chưa có điểm (trống hoặc đang là 'chưa có điểm'):
+ *     -> Đánh dấu chữ "chưa có điểm" màu đỏ (#dc2626), in đậm.
+ *   + Nếu Cột Y đã được nhập điểm manual:
+ *     -> Giữ nguyên điểm manual đó, font màu đen (#000000), chữ thường.
+ * - Cột AB nếu không có "Căn xin cơ chế":
+ *   + Nếu Cột Y đang có chữ "chưa có điểm", tự động xóa trắng ('') và reset định dạng.
+ * Lưu ý: Quy tắc này độc lập, hoàn toàn không làm thay đổi việc tính điểm Cột X.
+ */
+
+function isCanXinCoChe(val) {
+  if (!val) return false;
+  const s = String(val).trim().toLowerCase();
+  return s.includes('căn xin cơ chế') || s.includes('can xin co che') || s.includes('xin cơ chế') || s.includes('xin co che') || s === 'cơ chế' || s === 'co che';
+}
+
+function processCanXinCoCheRule(dataSheet, startRow, rowCount, dataRange) {
+  if (!dataSheet || rowCount <= 0) return;
+  startRow = startRow || 2;
+
+  try {
+    const rangeValues = dataRange || dataSheet.getRange(startRow, 1, rowCount, Math.max(28, dataSheet.getLastColumn())).getValues();
+    const rangeY = dataSheet.getRange(startRow, APP_CONFIG.COL_VERIFY_SCORE, rowCount, 1);
+    const currentYVals = rangeY.getValues();
+    const currentColors = rangeY.getFontColors();
+    const currentWeights = rangeY.getFontWeights();
+
+    let hasChange = false;
+
+    for (let i = 0; i < rowCount; i++) {
+      const row = rangeValues[i];
+      const rawValAB = row.length >= 28 ? row[27] : ''; // Cột AB: index 27 (1-based: 28)
+      const rawValY = currentYVals[i][0];
+
+      const isCoChe = isCanXinCoChe(rawValAB);
+      const strY = String(rawValY !== null && rawValY !== undefined ? rawValY : '').trim();
+      const isPlaceholder = strY.toLowerCase() === 'chưa có điểm' || strY.toLowerCase() === 'chua co diem';
+      const hasManualScore = strY !== '' && !isPlaceholder;
+
+      if (isCoChe) {
+        if (!hasManualScore) {
+          if (rawValY !== 'chưa có điểm' || currentColors[i][0] !== '#dc2626' || currentWeights[i][0] !== 'bold') {
+            currentYVals[i][0] = 'chưa có điểm';
+            currentColors[i][0] = '#dc2626';
+            currentWeights[i][0] = 'bold';
+            hasChange = true;
+          }
+        } else {
+          if (currentColors[i][0] === '#dc2626' || currentWeights[i][0] === 'bold') {
+            currentColors[i][0] = '#000000';
+            currentWeights[i][0] = 'normal';
+            hasChange = true;
+          }
+        }
+      } else {
+        if (isPlaceholder) {
+          currentYVals[i][0] = '';
+          currentColors[i][0] = '#000000';
+          currentWeights[i][0] = 'normal';
+          hasChange = true;
+        }
+      }
+    }
+
+    if (hasChange) {
+      rangeY.setValues(currentYVals)
+        .setFontColors(currentColors)
+        .setFontWeights(currentWeights)
+        .setHorizontalAlignment('center');
+    }
+  } catch (err) {
+    Logger.log('Lỗi processCanXinCoCheRule: ' + err.toString());
+  }
+}
+
+function ensureCanXinCoCheConditionalFormatting(sheet) {
+  if (!sheet) return;
+  try {
+    const rules = sheet.getConditionalFormatRules() || [];
+    const exists = rules.some(r => {
+      const ranges = r.getRanges();
+      return ranges.some(rg => rg.getColumn() === APP_CONFIG.COL_VERIFY_SCORE) &&
+        r.getBooleanCondition() &&
+        r.getBooleanCondition().getCriteriaType() === SpreadsheetApp.BooleanCriteria.TEXT_EQUAL_TO &&
+        String(r.getBooleanCondition().getCriteriaValues()[0]).toLowerCase() === 'chưa có điểm';
+    });
+    if (!exists) {
+      const maxRows = Math.max(10, sheet.getMaxRows());
+      const rangeY = sheet.getRange(2, APP_CONFIG.COL_VERIFY_SCORE, maxRows - 1, 1);
+      const rule = SpreadsheetApp.newConditionalFormatRule()
+        .whenTextEqualTo('chưa có điểm')
+        .setFontColor('#dc2626')
+        .setBold(true)
+        .setBackground('#fef2f2')
+        .setRanges([rangeY])
+        .build();
+      rules.push(rule);
+      sheet.setConditionalFormatRules(rules);
+    }
+  } catch (e) {
+    Logger.log('ensureCanXinCoCheConditionalFormatting error: ' + e);
+  }
+}
+
+function checkAndFormatCanXinCoChe() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const dataSheet = ss.getSheetByName(APP_CONFIG.SHEET_DATA);
+    if (!dataSheet || dataSheet.getLastRow() < 2) {
+      SpreadsheetApp.getUi().alert('Sheet Data không tồn tại hoặc chưa có dữ liệu.');
+      return;
+    }
+
+    const lastRow = dataSheet.getLastRow();
+    const numRows = lastRow - 1;
+    const dataRange = dataSheet.getRange(2, 1, numRows, 33).getValues();
+
+    processCanXinCoCheRule(dataSheet, 2, numRows, dataRange);
+    ensureCanXinCoCheConditionalFormatting(dataSheet);
+
+    SpreadsheetApp.getActiveSpreadsheet().toast('Đã kiểm tra & cập nhật trạng thái Căn xin cơ chế (Cột AB & Y)!', 'Thành công', 3);
+  } catch (err) {
+    SpreadsheetApp.getUi().alert('Lỗi kiểm tra Căn xin cơ chế: ' + err.toString());
   }
 }
 
@@ -2472,6 +2637,7 @@ function autoRecalculateImportedScores() {
         .setHorizontalAlignment('center');
     });
 
+    processCanXinCoCheRule(sheet, 2, rows.length, rows);
     SpreadsheetApp.flush();
     if (changedIndices.length > 0) Logger.log('[Import Score] Đã cập nhật ' + changedIndices.length + ' dòng.');
     return { success: true, count: changedIndices.length };
@@ -2650,6 +2816,9 @@ function onEditAutoScore(e) {
         .setNumberFormat('0.##')
         .setHorizontalAlignment('center');
 
+      // Giữ quy tắc Căn xin cơ chế và điểm nhập tay ở cột Y.
+      processCanXinCoCheRule(sheet, firstDataRow, rowCount, rangeData);
+
       SpreadsheetApp.flush();
     } finally {
       lock.releaseLock();
@@ -2730,6 +2899,10 @@ function autoTriggerOnDataChange(e) {
     if (hasBlankUpdated) {
       dataSheet.getRange(2, APP_CONFIG.COL_OUTPUT_SCORE, numRows, 1).setValues(scoreRange);
     }
+
+    // Quét & cập nhật trạng thái Căn xin cơ chế (Cột AB & Y)
+    processCanXinCoCheRule(dataSheet, 2, numRows, dataRange);
+    ensureCanXinCoCheConditionalFormatting(dataSheet);
 
     if (unscoredRowNumbers.length === 0) {
       let msg = 'Không có dòng nào cần tính điểm.';

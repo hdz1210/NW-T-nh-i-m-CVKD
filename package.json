@@ -4,9 +4,10 @@
   "description": "Google Apps Script CI/CD với Clasp và GitHub Actions",
   "scripts": {
     "test": "node --test tests/*.test.cjs",
-    "push": "clasp push",
+    "version": "node scripts/inject-version.mjs",
+    "push": "node scripts/inject-version.mjs && clasp push",
     "pull": "clasp pull",
-    "deploy": "clasp push --force"
+    "deploy": "node scripts/inject-version.mjs && clasp push --force"
   },
   "devDependencies": {
     "@google/clasp": "^2.4.2"

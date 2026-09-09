@@ -30,5 +30,12 @@ jobs:
         run: |
           echo "$CLASPRC_JSON" > ~/.clasprc.json
 
+      - name: Inject Git Commit Version
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          BUILD_TIME=$(TZ="Asia/Ho_Chi_Minh" date +"%Y-%m-%d %H:%M:%S")
+          echo "Injecting version: $COMMIT_HASH built at $BUILD_TIME"
+          node scripts/inject-version.mjs "$COMMIT_HASH" "$BUILD_TIME"
+
       - name: Push code to Apps Script
         run: clasp push --force
