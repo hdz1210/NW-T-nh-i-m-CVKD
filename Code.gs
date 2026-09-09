@@ -14,8 +14,8 @@ const APP_VERSION = {
 const APP_CONFIG = {
   AUTO_SCORE_INTERVAL_MINUTES: 1,
   SHEET_DATA: 'Data',
-  SHEET_TONG_HOP: 'Tổng hợp',
-  SHEET_DU_AN_F2: 'Dự án F2',
+  SHEET_TONG_HOP: 'rule quỹ NW',
+  SHEET_DU_AN_F2: 'rule quỹ chéo',
   SHEET_CONFIG_LEGACY: 'CauHinh_Diem',
   SHEET_MAS_VCG: 'Danh sách căn MAS VCG',
   SHEET_GIAN_XAY: 'Giãn xây HVB',
@@ -25,6 +25,68 @@ const APP_CONFIG = {
   COL_VERIFY_SCORE: 25, // Cột Y: Điểm Verify (Index 25)
   COL_CAN_XIN_CO_CHE: 28, // Cột AB: Căn xin cơ chế (Index 28)
 };
+
+/**
+ * Lấy sheet 'rule quỹ NW' (hỗ trợ tên cũ 'Tổng hợp' nếu chưa đổi)
+ */
+function getSheetTongHop(ss) {
+  if (!ss) return null;
+  return ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP) ||
+         ss.getSheetByName('Rule Quỹ NW') ||
+         ss.getSheetByName('Rule quỹ NW') ||
+         ss.getSheetByName('rule quy NW') ||
+         ss.getSheetByName('Tổng hợp') ||
+         ss.getSheetByName('Tổng Hợp') ||
+         ss.getSheetByName('Tong hop');
+}
+
+/**
+ * Lấy sheet 'rule quỹ chéo' (hỗ trợ tên cũ 'Dự án F2' nếu chưa đổi)
+ */
+function getSheetDuAnF2(ss) {
+  if (!ss) return null;
+  return ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2) ||
+         ss.getSheetByName('Rule Quỹ Chéo') ||
+         ss.getSheetByName('Rule quỹ chéo') ||
+         ss.getSheetByName('rule quy cheo') ||
+         ss.getSheetByName('Dự án F2') ||
+         ss.getSheetByName('Dự Án F2') ||
+         ss.getSheetByName('Du an F2');
+}
+
+/**
+ * Tự động đổi tên sheet cũ "Tổng hợp" -> "rule quỹ NW" và "Dự án F2" -> "rule quỹ chéo"
+ */
+function renameLegacySheets(ss) {
+  if (!ss) return;
+  try {
+    const oldTh = ss.getSheetByName('Tổng hợp') || ss.getSheetByName('Tổng Hợp');
+    const newTh = ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP) || ss.getSheetByName('Rule Quỹ NW');
+    if (oldTh && !newTh) {
+      oldTh.setName(APP_CONFIG.SHEET_TONG_HOP);
+      Logger.log('Đã đổi tên sheet: ' + oldTh.getName() + ' -> ' + APP_CONFIG.SHEET_TONG_HOP);
+    }
+
+    const oldF2 = ss.getSheetByName('Dự án F2') || ss.getSheetByName('Dự Án F2');
+    const newF2 = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2) || ss.getSheetByName('Rule Quỹ Chéo');
+    if (oldF2 && !newF2) {
+      oldF2.setName(APP_CONFIG.SHEET_DU_AN_F2);
+      Logger.log('Đã đổi tên sheet: ' + oldF2.getName() + ' -> ' + APP_CONFIG.SHEET_DU_AN_F2);
+    }
+  } catch (err) {
+    Logger.log('Lỗi khi đổi tên sheet: ' + (err.message || err));
+  }
+}
+
+/**
+ * Hàm gọi từ menu hoặc Apps Script để đổi tên sheet ngay lập tức
+ */
+function renameSheetsToNewNames() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) return;
+  renameLegacySheets(ss);
+  SpreadsheetApp.getActiveSpreadsheet().toast('Đã kiểm tra & đổi tên sheet: "Tổng hợp" -> "rule quỹ NW", "Dự án F2" -> "rule quỹ chéo"!', 'Thành công', 4);
+}
 
 /**
  * Hàm lấy Date đầu tháng an toàn (sử dụng 12:00:00 UTC để triệt tiêu hoàn toàn độ lệch múi giờ)
@@ -268,6 +330,7 @@ function onOpen() {
     .addItem('Kiểm tra căn xin cơ chế (Cột AB & Y)', 'checkAndFormatCanXinCoChe')
     .addSeparator()
     .addItem('Đồng bộ / Thêm cột tháng', 'manualSyncCurrentMonth')
+    .addItem('Đổi tên sheet sang "rule quỹ NW" & "rule quỹ chéo"', 'renameSheetsToNewNames')
     .addItem('Cài đặt Trigger tự động', 'setupAutoTrigger')
     .addSeparator()
     .addItem(`Commit: ${APP_VERSION.COMMIT}`, 'showVersionInfo')
@@ -478,7 +541,8 @@ function parseConditionToThreeFields(cStr) {
 function ensureF2KhoangGiaColumn(ss) {
   try {
     ss = ss || SpreadsheetApp.getActiveSpreadsheet();
-    const f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
+    renameLegacySheets(ss);
+    const f2Sheet = getSheetDuAnF2(ss);
     if (!f2Sheet) return 4;
 
     const lastCol = f2Sheet.getLastColumn();
@@ -517,8 +581,9 @@ function ensureCurrentMonthConfigured(ss) {
 
   let updated = false;
 
-  // 1. Kiểm tra sheet Tổng hợp (9 cột cố định: Trạng thái, CĐT, Mã dự án, Dự án, Miền, Loại Quỹ, Sản Phẩm, Loại Căn, Khoảng Giá)
-  const thSheet = ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP);
+  renameLegacySheets(ss);
+  // 1. Kiểm tra sheet rule quỹ NW (9 cột cố định: Trạng thái, CĐT, Mã dự án, Dự án, Miền, Loại Quỹ, Sản Phẩm, Loại Căn, Khoảng Giá)
+  const thSheet = getSheetTongHop(ss);
   const firstMonthCol = 10;
   if (thSheet && thSheet.getLastColumn() >= firstMonthCol) {
     const firstMonthVal = thSheet.getRange(3, firstMonthCol).getValue();
@@ -569,8 +634,8 @@ function ensureCurrentMonthConfigured(ss) {
     }
   }
 
-  // 2. Kiểm tra sheet Dự án F2
-  const f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
+  // 2. Kiểm tra sheet rule quỹ chéo
+  const f2Sheet = getSheetDuAnF2(ss);
   if (f2Sheet && f2Sheet.getLastColumn() >= 3) {
     ensureF2KhoangGiaColumn(ss);
     const f2FirstMonthCol = 4;
@@ -627,7 +692,7 @@ function manualSyncCurrentMonth() {
   const res = ensureCurrentMonthConfigured(ss);
 
   // Quét làm sạch dữ liệu hiện có trên cả 2 sheet để loại bỏ triệt để .0
-  const thSheet = ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP);
+  const thSheet = getSheetTongHop(ss);
   const firstMonthCol = 10;
   if (thSheet && thSheet.getLastColumn() >= firstMonthCol && thSheet.getLastRow() >= 4) {
     const numRows = thSheet.getLastRow() - 3;
@@ -644,7 +709,7 @@ function manualSyncCurrentMonth() {
     scoreRange.setValues(vals).setNumberFormat('0.##').setHorizontalAlignment('center');
   }
 
-  const f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
+  const f2Sheet = getSheetDuAnF2(ss);
   const f2FirstMonthCol = 4;
   if (f2Sheet && f2Sheet.getLastColumn() >= f2FirstMonthCol && f2Sheet.getLastRow() >= 4) {
     const numRows = f2Sheet.getLastRow() - 3;
@@ -681,8 +746,8 @@ function initMonthlyConfigSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const curMonthDate = getCurrentMonthDate(ss);
 
-  // 1. Tạo sheet Tổng hợp (9 cột cố định + các cột tháng)
-  let thSheet = ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP);
+  // 1. Tạo sheet rule quỹ NW (9 cột cố định + các cột tháng)
+  let thSheet = getSheetTongHop(ss);
   if (!thSheet) {
     thSheet = ss.insertSheet(APP_CONFIG.SHEET_TONG_HOP);
   } else {
@@ -708,8 +773,8 @@ function initMonthlyConfigSheets() {
   thSheet.setFrozenColumns(9);
   thSheet.autoResizeColumns(1, 9);
 
-  // 2. Tạo sheet Dự án F2
-  let f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
+  // 2. Tạo sheet rule quỹ chéo
+  let f2Sheet = getSheetDuAnF2(ss);
   if (!f2Sheet) {
     f2Sheet = ss.insertSheet(APP_CONFIG.SHEET_DU_AN_F2);
   } else {
@@ -731,7 +796,7 @@ function initMonthlyConfigSheets() {
   f2Sheet.setFrozenColumns(3);
   f2Sheet.autoResizeColumns(1, 3);
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('Đã tạo cấu trúc khung cho 2 sheet "Tổng hợp" và "Dự án F2"!', 'Khởi tạo hoàn tất', 5);
+  SpreadsheetApp.getActiveSpreadsheet().toast('Đã tạo cấu trúc khung cho 2 sheet "rule quỹ NW" và "rule quỹ chéo"!', 'Khởi tạo hoàn tất', 5);
 }
 
 /**
@@ -744,13 +809,13 @@ function fetchMonthlyConfigData() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     ensureCurrentMonthConfigured(ss);
 
-    let thSheet = ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP);
-    let f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
+    let thSheet = getSheetTongHop(ss);
+    let f2Sheet = getSheetDuAnF2(ss);
 
     if (!thSheet || !f2Sheet) {
       initMonthlyConfigSheets();
-      thSheet = ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP);
-      f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
+      thSheet = getSheetTongHop(ss);
+      f2Sheet = getSheetDuAnF2(ss);
     }
 
     // 1. Đọc sheet Tổng hợp
@@ -892,8 +957,8 @@ function fetchMonthlyConfigData() {
 function saveMonthlyConfigData(payload) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const thSheet = ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP);
-    const f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
+    const thSheet = getSheetTongHop(ss);
+    const f2Sheet = getSheetDuAnF2(ss);
 
     if (!thSheet || !f2Sheet) return { success: false, error: 'Không tìm thấy sheet cấu hình' };
 
@@ -964,8 +1029,8 @@ function saveMonthlyConfigData(payload) {
 function deleteMonthlyConfigRow(tab, rowIdx) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = (tab === 'th') ? getSheetTongHop(ss) : getSheetDuAnF2(ss);
     const sheetName = (tab === 'th') ? APP_CONFIG.SHEET_TONG_HOP : APP_CONFIG.SHEET_DU_AN_F2;
-    const sheet = ss.getSheetByName(sheetName);
     if (!sheet) return { success: false, error: 'Không tìm thấy sheet ' + sheetName };
 
     if (!rowIdx || rowIdx < 4) {
@@ -989,8 +1054,8 @@ function deleteMonthlyConfigRow(tab, rowIdx) {
 function updateMonthlyConfigRow(tab, rowIdx, data) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = (tab === 'th') ? getSheetTongHop(ss) : getSheetDuAnF2(ss);
     const sheetName = (tab === 'th') ? APP_CONFIG.SHEET_TONG_HOP : APP_CONFIG.SHEET_DU_AN_F2;
-    const sheet = ss.getSheetByName(sheetName);
     if (!sheet) return { success: false, error: 'Không tìm thấy sheet ' + sheetName };
 
     if (!rowIdx || rowIdx < 4) {
@@ -1435,11 +1500,11 @@ function getRuleEngineContext(ss) {
   // Đảm bảo cột tháng mới nhất đã được đồng bộ
   ensureCurrentMonthConfigured(ss);
 
-  // 1. Tải bảng Dự án F2 (Quỹ Chéo)
+  // 1. Tải bảng rule quỹ chéo (Quỹ Chéo)
   const f2Map = new Map(); // key: du_an_lower -> list of rule objects [{ name, fund, khoangGia, monthScores }]
   const f2GeneralRules = []; // list of rules where name is 'tất cả' or '*'
   const allF2RulesList = [];
-  const f2Sheet = ss.getSheetByName(APP_CONFIG.SHEET_DU_AN_F2);
+  const f2Sheet = getSheetDuAnF2(ss);
   let f2MonthsList = [];
 
   if (f2Sheet && f2Sheet.getLastRow() >= 4 && f2Sheet.getLastColumn() >= 3) {
@@ -1500,12 +1565,11 @@ function getRuleEngineContext(ss) {
     });
   }
 
-  // 2. Tải bảng Tổng hợp (Quỹ NW)
-  // 2. Tải bảng Tổng hợp (Quỹ NW & Quỹ Chéo)
+  // 2. Tải bảng rule quỹ NW (Quỹ NW & Quỹ Chéo)
   const thMap = new Map(); // key: proj_code_lower -> list of rule objects
   const generalRules = []; // list of rules where code is 'Tất cả' or '*'
   const allRulesList = []; // flat list of all rules
-  const thSheet = ss.getSheetByName(APP_CONFIG.SHEET_TONG_HOP);
+  const thSheet = getSheetTongHop(ss);
   let thMonthsList = [];
 
   if (thSheet && thSheet.getLastRow() >= 4 && thSheet.getLastColumn() >= 10) {

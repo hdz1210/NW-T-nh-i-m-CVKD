@@ -1135,11 +1135,11 @@
     <!-- KPI Metrics Deck -->
     <section class="kpi-deck" aria-label="Thống kê tổng quan">
       <div class="kpi-card">
-        <span class="kpi-label">Dự Án Quỹ NW (Tổng Hợp)</span>
+        <span class="kpi-label">Dự Án Quỹ NW (Rule Quỹ NW)</span>
         <span class="kpi-value kpi-highlight-brand" id="statTHCount">0 dòng</span>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">Dự Án F2 (Quỹ Chéo)</span>
+        <span class="kpi-label">Dự Án Quỹ Chéo (Rule Quỹ Chéo)</span>
         <span class="kpi-value kpi-highlight-success" id="statF2Count">0 dự án</span>
       </div>
       <div class="kpi-card">
@@ -1159,11 +1159,11 @@
     <!-- Tab Bar -->
     <nav class="tab-bar" aria-label="Chuyển đổi bảng cấu hình">
       <button type="button" class="tab-btn active" id="tabBtnTH" onclick="switchTab('th')">
-        Bảng Tổng Hợp (Quỹ NW)
+        Rule Quỹ NW (Quỹ NW)
         <span class="tab-badge" id="badgeTHCount">106</span>
       </button>
       <button type="button" class="tab-btn" id="tabBtnF2" onclick="switchTab('f2')">
-        Dự Án F2 (Quỹ Chéo)
+        Dự Án Quỹ Chéo (Rule Quỹ Chéo)
         <span class="tab-badge" id="badgeF2Count">29</span>
       </button>
       <button type="button" class="tab-btn" id="tabBtnCampaign" onclick="switchTab('campaign')">
@@ -1185,8 +1185,8 @@
           <button type="button" class="btn btn-secondary" onclick="openAddCampaignRowModal()" style="border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Tạo mới một dòng cấu hình cho chiến dịch">
             Tạo Dòng Mới
           </button>
-          <button type="button" class="btn btn-secondary" onclick="openPickFromTongHopModal()" style="border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Chọn từng dòng từ Bảng Tổng Hợp để thêm vào Chiến Dịch">
-            Chọn Dòng Từ Tổng Hợp
+          <button type="button" class="btn btn-secondary" onclick="openPickFromTongHopModal()" style="border-color: #fdba74; color: #9a3412; background: #ffffff;" title="Chọn từng dòng từ Rule Quỹ NW để thêm vào Chiến Dịch">
+            Chọn Dòng Từ Rule Quỹ NW
           </button>
           <button type="button" class="btn btn-primary" onclick="saveCampaignChanges()" style="background-color: #ea580c; border-color: #c2410c;">
             Lưu Bảng Chiến Dịch
@@ -1294,11 +1294,11 @@
 
   </div>
 
-  <!-- Modal Chọn Dòng Từ Bảng Tổng Hợp Để Thêm Vào Chiến Dịch -->
+  <!-- Modal Chọn Dòng Từ Rule Quỹ NW Để Thêm Vào Chiến Dịch -->
   <div class="modal-backdrop" id="pickTHRowModal">
     <div class="modal-content" style="max-width: 980px; width: 95%;">
       <div class="modal-header">
-        <h3 class="modal-title">Chọn Dòng Từ Bảng Tổng Hợp Để Thêm Vào Chiến Dịch</h3>
+        <h3 class="modal-title">Chọn Dòng Từ Rule Quỹ NW Để Thêm Vào Chiến Dịch</h3>
         <button type="button" class="modal-close" onclick="closePickTHRowModal()">×</button>
       </div>
       <div class="modal-body" style="gap: 12px;">
@@ -2173,7 +2173,7 @@
       if (filtered.length === 0) {
         const isActuallyEmpty = configData.thRows.length === 0;
         const msg = isActuallyEmpty 
-          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án</div><div>Bấm <b>Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"Tổng hợp"</b> để bắt đầu.</div>'
+          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án</div><div>Bấm <b>Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"rule quỹ NW"</b> để bắt đầu.</div>'
           : 'Không tìm thấy dự án nào phù hợp với bộ lọc.';
         tbody.innerHTML = `<tr><td colspan="${10 + displayMonths.length}" style="text-align:center; padding:36px 16px; color:var(--text-tertiary);">${msg}</td></tr>`;
         return;
@@ -2262,7 +2262,7 @@
       if (filtered.length === 0) {
         const isActuallyEmpty = configData.f2Rows.length === 0;
         const msg = isActuallyEmpty 
-          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án F2</div><div>Bấm <b>Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"Dự án F2"</b> để bắt đầu.</div>'
+          ? '<div style="font-size:15px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Chưa có dữ liệu dự án F2</div><div>Bấm <b>Thêm Dòng Mới</b> ở góc trên hoặc nhập trực tiếp vào sheet <b>"rule quỹ chéo"</b> để bắt đầu.</div>'
           : 'Không tìm thấy dự án F2 nào phù hợp với bộ lọc.';
         tbody.innerHTML = `<tr><td colspan="${5 + displayMonths.length}" style="text-align:center; padding:36px 16px; color:var(--text-tertiary);">${msg}</td></tr>`;
         return;
@@ -2343,7 +2343,7 @@
 
       if (filtered.length === 0) {
         const msg = (rows.length === 0)
-          ? 'Chưa có cấu hình điểm chiến dịch nào. Bấm <b>"Tạo Dòng Mới"</b> hoặc <b>"Chọn Dòng Từ Tổng Hợp"</b> để thêm dự án vào chiến dịch!'
+          ? 'Chưa có cấu hình điểm chiến dịch nào. Bấm <b>"Tạo Dòng Mới"</b> hoặc <b>"Chọn Dòng Từ Rule Quỹ NW"</b> để thêm dự án vào chiến dịch!'
           : (isViewingAllCampaigns 
               ? 'Không tìm thấy dòng chiến dịch phù hợp với bộ lọc.'
               : `Chiến dịch <b>"${escapeHtml(selectedCampaignFilter)}"</b> chưa có cấu hình dự án nào. Bấm <b>"Tạo Dòng Mới"</b> để thêm!`);
@@ -2530,7 +2530,7 @@
     function pickThRowToCampaign(thRowIdx) {
       const r = configData.thRows.find(item => item.rowIdx === thRowIdx);
       if (!r) {
-        showToast('Không tìm thấy dòng cấu hình trong Bảng Tổng Hợp!', true);
+        showToast('Không tìm thấy dòng cấu hình trong Rule Quỹ NW!', true);
         return;
       }
 
@@ -4149,8 +4149,8 @@
             BƯỚC 1: CHỌN LOẠI QUỸ DỰ ÁN (*)
           </label>
           <select class="filter-select" id="addFundType" style="width:100%; font-size: 13px; font-weight: 700; height: 38px; border-color: var(--primary-500); background: #ffffff;" onchange="onFundTypeChange()">
-            <option value="th" ${activeTab === 'th' ? 'selected' : ''}>Quỹ NW (Bảng Tổng Hợp - Tính Điểm Theo Dự Án & Điều Kiện)</option>
-            <option value="f2" ${activeTab === 'f2' ? 'selected' : ''}>Quỹ Chéo (Bảng Dự Án F2 - Điểm Quỹ Chéo Độc Lập)</option>
+            <option value="th" ${activeTab === 'th' ? 'selected' : ''}>Quỹ NW (Rule Quỹ NW - Tính Điểm Theo Dự Án & Điều Kiện)</option>
+            <option value="f2" ${activeTab === 'f2' ? 'selected' : ''}>Quỹ Chéo (Rule Quỹ Chéo - Điểm Quỹ Chéo Độc Lập)</option>
             <option value="campaign" ${activeTab === 'campaign' ? 'selected' : ''}>Quỹ Chiến Dịch (Bảng Điểm Chiến Dịch Cột X)</option>
           </select>
         </div>
@@ -6224,7 +6224,7 @@
             })
             .withFailureHandler(function(err) {
               hideLoading();
-              showToast('Lỗi khi lưu bảng Tổng hợp / F2: ' + (err.message || err), true);
+              showToast('Lỗi khi lưu bảng Rule Quỹ NW / Rule Quỹ Chéo: ' + (err.message || err), true);
             })
             .saveMonthlyConfigData(payload);
           return;
