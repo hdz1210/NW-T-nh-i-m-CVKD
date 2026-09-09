@@ -330,14 +330,7 @@ function onOpen() {
     .addItem('Bảng Cấu Hình Điểm', 'openConfigUI')
     .addItem('Trình Tạo Biểu Đồ & Báo Cáo', 'openChartBuilderUI')
     .addSeparator()
-    .addItem('Tính điểm dòng chọn / mới', 'calculateSelectedRows')
-    .addItem('Tính lại toàn bộ điểm Data', 'calculateAllScoresWithRules')
-    .addItem('Quét & tính dòng chưa có điểm', 'autoTriggerOnDataChange')
-    .addItem('Kiểm tra căn xin cơ chế (Cột AB & Y)', 'checkAndFormatCanXinCoChe')
-    .addSeparator()
-    .addItem('Đồng bộ / Thêm cột tháng', 'manualSyncCurrentMonth')
-    .addItem('Đổi tên sheet sang "Rule quỹ NW" & "Rule quỹ chéo"', 'renameSheetsToNewNames')
-    .addItem('Cài đặt Trigger tự động', 'setupAutoTrigger')
+    .addItem('Bật trigger tự động', 'setupAutoTrigger')
     .addSeparator()
     .addItem(`Commit: ${APP_VERSION.COMMIT}`, 'showVersionInfo')
     .addToUi();
@@ -2828,6 +2821,10 @@ function setupAutoTrigger() {
 
     // 1. TỰ ĐỘNG CHẠY KIỂM TRA & BÙ CỘT THÁNG MỚI NGAY LẬP TỨC
     const syncRes = ensureCurrentMonthConfigured(ss);
+    const dataSheet = ss.getSheetByName(APP_CONFIG.SHEET_DATA);
+    if (dataSheet) {
+      ensureCanXinCoCheConditionalFormatting(dataSheet);
+    }
 
     // 2. XÓA CÁC TRIGGER CŨ LIÊN QUAN ĐỂ TRÁNH TRÙNG LẶP
     const triggers = ScriptApp.getProjectTriggers();
