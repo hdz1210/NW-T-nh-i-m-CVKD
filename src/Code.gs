@@ -7,6 +7,7 @@
  */
 
 const APP_CONFIG = {
+  AUTO_SCORE_INTERVAL_MINUTES: 5,
   SHEET_DATA: 'Data',
   SHEET_TONG_HOP: 'Tổng hợp',
   SHEET_DU_AN_F2: 'Dự án F2',
@@ -2563,18 +2564,95 @@ function checkAndFormatCanXinCoChe() {
 }
 
 /**
- * =========================================================================
- * [CÀI ĐẶT TRIGGER TỰ ĐỘNG] - CHẠY HÀM NÀY 1 LẦN DUY NHẤT
- * =========================================================================
- * Tự động kích hoạt:
- * 1. Chạy ngay lập tức: Kiểm tra và tạo cột tháng mới (ví dụ 09/2026) nếu chưa có, copy điểm từ tháng trước sang!
- * 2. Cài đặt Trigger On-Edit: Tự động tính điểm ngay khi chỉnh sửa/dán dữ liệu vào sheet Data.
- * 3. Cài đặt Trigger Hàng Ngày (Time-driven): Tự động kiểm tra và chèn cột tháng mới lúc 1h sáng mỗi ngày khi bước sang tháng mới.
- * 4. Tự động tính điểm siêu tốc cho toàn bộ các dòng chưa có điểm trong sheet Data!
+ * IMPORTRANGE/công thức cập nhật không phát sinh sự kiện On-Edit ở file đích.
+ * Quét định kỳ, tính lại từ dữ liệu hiện tại và chỉ ghi các điểm khác kết quả cũ.
+ * Không lưu dấu vết theo số dòng: xử lý được cả đổi thứ tự hoặc xóa dòng ở file nguồn.
+ */
+function autoRecalculateImportedScores() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) return { success: false, skipped: true, count: 0, reason: 'busy' };
+
+  try {
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty('AUTO_SCORE_SPREADSHEET_ID');
+    const ss = spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) throw new Error('Hãy chạy Cài đặt Trigger tự động trong file nhận dữ liệu trước.');
+    const sheet = ss.getSheetByName(APP_CONFIG.SHEET_DATA);
+    if (!sheet) throw new Error('Không tìm thấy sheet ' + APP_CONFIG.SHEET_DATA);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return { success: true, count: 0 };
+
+    // Đọc cả dòng tiêu đề để phát hiện lỗi ở ô chứa công thức IMPORTRANGE.
+    const values = sheet.getRange(1, 1, lastRow, 33).getValues();
+    if (values.some(hasAutoScoreInputError)) {
+      Logger.log('[Import Score] Dữ liệu đang tải hoặc có lỗi công thức; sẽ thử lại ở lượt sau.');
+      return { success: false, skipped: true, count: 0, reason: 'input-error' };
+    }
+
+    const rows = values.slice(1);
+    let ctx = null;
+    const changedIndices = [];
+    const outputScores = rows.map((row, index) => {
+      let score = '';
+      if (canAutoScoreRow(row)) {
+        if (!ctx) ctx = getRuleEngineContext(ss);
+        score = cleanScore(evaluateRowWithRules(row, ctx));
+      }
+      if (row[APP_CONFIG.COL_OUTPUT_SCORE - 1] !== score) changedIndices.push(index);
+      return [score];
+    });
+
+    // Gom các dòng liền nhau để hạn chế số lần gọi Sheets.
+    const groups = [];
+    changedIndices.forEach(index => {
+      const group = groups[groups.length - 1];
+      if (group && index === group.end + 1) group.end = index;
+      else groups.push({ start: index, end: index });
+    });
+    // Nếu thay đổi rải rác quá nhiều, ghi cột kết quả một lần thay vì hàng nghìn RPC.
+    const writeGroups = groups.length > 20 ? [{ start: 0, end: rows.length - 1 }] : groups;
+    writeGroups.forEach(group => {
+      sheet.getRange(group.start + 2, APP_CONFIG.COL_OUTPUT_SCORE, group.end - group.start + 1, 1)
+        .setValues(outputScores.slice(group.start, group.end + 1))
+        .setNumberFormat('0.##')
+        .setHorizontalAlignment('center');
+    });
+
+    processCanXinCoCheRule(sheet, 2, rows.length, rows);
+    SpreadsheetApp.flush();
+    if (changedIndices.length > 0) Logger.log('[Import Score] Đã cập nhật ' + changedIndices.length + ' dòng.');
+    return { success: true, count: changedIndices.length };
+  } catch (error) {
+    Logger.log('Lỗi autoRecalculateImportedScores: ' + (error.message || error));
+    throw error;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function canAutoScoreRow(row) {
+  return String(row[25] || '').trim() !== '' && (
+    String(row[5] || '').trim() !== '' ||
+    String(row[6] || '').trim() !== '' ||
+    parseDateSafe(row[0], row) !== null ||
+    String(row[8] || '').trim() !== ''
+  );
+}
+
+function hasAutoScoreInputError(row) {
+  // X/Y là cột kết quả/điểm nhập tay; không dùng làm dữ liệu đầu vào tính X.
+  return row.some((value, index) => index !== 23 && index !== 24 && typeof value === 'string' &&
+    /^(?:#(?:REF!|N\/A|VALUE!|ERROR!|NAME\?|NUM!|DIV\/0!|SPILL!|CALC!)|Loading(?:\.{3}|…)?|Đang tải(?:\.{3}|…)?)$/i.test(value.trim()));
+}
+
+/**
+ * Cài lại các trigger On-Edit, kiểm tra IMPORTRANGE mỗi 5 phút và đồng bộ tháng hàng ngày.
+ * Lưu ID file nhận dữ liệu để trigger định kỳ mở đúng file khi không có bảng tính đang mở.
+ * Lượt kiểm tra đầu tiên cũng cập nhật các dòng đã có điểm cũ.
  */
 function setupAutoTrigger() {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    PropertiesService.getScriptProperties().setProperty('AUTO_SCORE_SPREADSHEET_ID', ss.getId());
 
     // 1. TỰ ĐỘNG CHẠY KIỂM TRA & BÙ CỘT THÁNG MỚI NGAY LẬP TỨC
     const syncRes = ensureCurrentMonthConfigured(ss);
@@ -2583,7 +2661,7 @@ function setupAutoTrigger() {
     const triggers = ScriptApp.getProjectTriggers();
     triggers.forEach(t => {
       const fn = t.getHandlerFunction();
-      if (fn === 'onEditAutoScore' || fn === 'autoTriggerOnDataChange' || fn === 'autoDailyCheckAndSyncMonth') {
+      if (fn === 'onEditAutoScore' || fn === 'autoTriggerOnDataChange' || fn === 'autoDailyCheckAndSyncMonth' || fn === 'autoRecalculateImportedScores') {
         ScriptApp.deleteTrigger(t);
       }
     });
@@ -2601,24 +2679,15 @@ function setupAutoTrigger() {
       .atHour(1)
       .create();
 
-    // 5. TỰ ĐỘNG QUÉT & TÍNH ĐIỂM SIÊU TỐC HÀNG LOẠT CHO CÁC DÒNG CHƯA CÓ ĐIỂM
-    let scoredCount = 0;
-    const dataSheet = ss.getSheetByName(APP_CONFIG.SHEET_DATA);
-    if (dataSheet && dataSheet.getLastRow() >= 2) {
-      const numRows = dataSheet.getLastRow() - 1;
-      const scoreVals = dataSheet.getRange(2, APP_CONFIG.COL_OUTPUT_SCORE, numRows, 1).getValues();
-      const unscored = [];
-      for (let i = 0; i < numRows; i++) {
-        const val = scoreVals[i][0];
-        if (val === '' || val === null || val === undefined || val === 'Check' || String(val).trim() === '') {
-          unscored.push(i + 2);
-        }
-      }
-      if (unscored.length > 0) {
-        const cRes = calculateSpecificRows(unscored);
-        if (cRes.success) scoredCount = cRes.count;
-      }
-    }
+    // 5. IMPORTRANGE: kiểm tra định kỳ cả những dòng đã có điểm.
+    ScriptApp.newTrigger('autoRecalculateImportedScores')
+      .timeBased()
+      .everyMinutes(APP_CONFIG.AUTO_SCORE_INTERVAL_MINUTES)
+      .create();
+
+    // Sửa ngay các điểm cũ bị lệch khi cài đặt; các lượt sau tiếp tục kiểm tra định kỳ.
+    const initialSync = autoRecalculateImportedScores();
+    const scoredCount = initialSync.count || 0;
 
     const curMonthStr = formatMonthDisplay(getCurrentMonthDate(ss), ss);
     let msg = '';
@@ -2632,9 +2701,14 @@ function setupAutoTrigger() {
       msg += `ĐÃ TỰ ĐỘNG TÍNH ĐIỂM SIÊU TỐC CHO ${scoredCount} DÒNG TRONG SHEET "${APP_CONFIG.SHEET_DATA}"!\n\n`;
     }
 
-    msg += `Hệ thống đã thiết lập 2 Trigger tự động chạy ngầm:\n` +
-      `1. [Trigger On-Edit]: Tự động tính điểm khi nhập/dán dữ liệu mới và tính lại điểm cột X khi sửa/dán đè dòng đã có điểm vào sheet "${APP_CONFIG.SHEET_DATA}".\n` +
-      `2. [Trigger Hàng Ngày (1h sáng)]: Tự động kiểm tra và chèn cột tháng mới mỗi khi sang tháng mới (kèm copy điểm từ tháng trước sang) mà không cần phải mở bảng cấu hình!`;
+    msg += `Hệ thống đã thiết lập 3 Trigger tự động chạy ngầm:\n` +
+      `1. [On-Edit]: Tính lại điểm cột X khi nhập, sửa hoặc dán dữ liệu trực tiếp trong sheet "${APP_CONFIG.SHEET_DATA}".\n` +
+      `2. [IMPORTRANGE - mỗi ${APP_CONFIG.AUTO_SCORE_INTERVAL_MINUTES} phút]: Tính lại điểm theo dữ liệu nhận từ file nguồn, kể cả khi cột X đã có điểm.\n` +
+      `3. [Hàng ngày - 1h sáng]: Kiểm tra và chèn cột tháng mới, sao chép điểm tháng trước.\n\n` +
+      `Thay đổi ở file nguồn được xử lý sau khi IMPORTRANGE cập nhật dữ liệu tại file này và đến lượt kiểm tra định kỳ.`;
+    if (initialSync.skipped) {
+      msg += '\n\nLượt kiểm tra đầu chưa hoàn tất do hệ thống bận hoặc dữ liệu đang lỗi/đang tải. Trigger sẽ thử lại ở lượt sau.';
+    }
 
     SpreadsheetApp.getUi().alert('Cài Đặt Trigger Tự Động Hoàn Tất', msg, SpreadsheetApp.getUi().ButtonSet.OK);
   } catch (err) {
@@ -2708,16 +2782,8 @@ function onEditAutoScore(e) {
       const rangeData = sheet.getRange(firstDataRow, 1, rowCount, 33).getValues();
       let ctx = null;
       const outputScores = rangeData.map(rowData => {
-        const hasFundType = String(rowData[25] || '').trim() !== '';
-        const hasIdentity = (
-          String(rowData[5] || '').trim() !== '' ||
-          String(rowData[6] || '').trim() !== '' ||
-          parseDateSafe(rowData[0], rowData) !== null ||
-          String(rowData[8] || '').trim() !== ''
-        );
-
         // Xóa điểm cũ nếu dữ liệu giao dịch không còn đủ điều kiện.
-        if (!hasFundType || !hasIdentity) return [''];
+        if (!canAutoScoreRow(rowData)) return [''];
 
         // Luôn tính lại dòng vừa sửa, kể cả khi cột X đã có điểm (bao gồm 0).
         if (!ctx) ctx = getRuleEngineContext(sheet.getParent());

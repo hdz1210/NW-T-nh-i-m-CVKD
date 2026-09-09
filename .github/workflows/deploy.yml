@@ -21,6 +21,9 @@ jobs:
       - name: Install Clasp
         run: npm install -g @google/clasp
 
+      - name: Test scoring and IMPORTRANGE synchronization
+        run: npm test
+
       - name: Authenticate with Google
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}

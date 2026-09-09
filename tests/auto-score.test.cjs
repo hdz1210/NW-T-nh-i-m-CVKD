@@ -20,6 +20,8 @@ function harness(sourcePath, rows, options = {}) {
   const events = [];
   const writes = [];
   const logs = [];
+  const properties = new Map(options.spreadsheetId ? [['AUTO_SCORE_SPREADSHEET_ID', options.spreadsheetId]] : []);
+  const triggers = (options.triggers || []).map(handler => ({ getHandlerFunction: () => handler }));
   let locked = false;
   const lock = {
     tryLock(timeout) {
@@ -70,21 +72,46 @@ function harness(sourcePath, rows, options = {}) {
       return range;
     }
   };
-  const ss = { getSheetByName: () => sheet, toast() {} };
+  const ss = { getId: () => 'file-A', getSheetByName: () => sheet, toast() {} };
   const context = vm.createContext({
     SpreadsheetApp: {
-      getActiveSpreadsheet: () => ss,
-      getUi: () => ({ alert() { events.push(['alert']); } }),
+      getActiveSpreadsheet: () => options.background ? null : ss,
+      openById(id) { assert.equal(id, 'file-A'); events.push(['openById', id]); return ss; },
+      getUi: () => ({ ButtonSet: { OK: 'OK' }, alert(...args) { events.push(['alert', ...args]); } }),
       flush() {
         events.push(['flush', locked]);
         if (options.flushError) throw new Error('Flush failed');
       }
     },
     LockService: { getScriptLock: () => lock },
+    PropertiesService: { getScriptProperties: () => ({
+      getProperty: key => properties.get(key) || null,
+      setProperty(key, value) { properties.set(key, value); }
+    }) },
+    ScriptApp: {
+      getProjectTriggers: () => [...triggers],
+      deleteTrigger(trigger) { triggers.splice(triggers.indexOf(trigger), 1); },
+      newTrigger(handler) {
+        const trigger = { getHandlerFunction: () => handler };
+        const builder = {
+          forSpreadsheet(value) { assert.equal(value, ss); return builder; },
+          onEdit() { trigger.type = 'edit'; return builder; },
+          timeBased() { trigger.type = 'clock'; return builder; },
+          everyDays(value) { trigger.days = value; return builder; },
+          atHour(value) { trigger.hour = value; return builder; },
+          everyMinutes(value) { trigger.minutes = value; return builder; },
+          create() { triggers.push(trigger); return trigger; }
+        };
+        return builder;
+      }
+    },
     Logger: { log: message => logs.push(message) }
   });
   vm.runInContext(fs.readFileSync(sourcePath, 'utf8'), context, { filename: sourcePath });
   vm.runInContext(`
+    ensureCurrentMonthConfigured = () => ({ updated: false, monthDisplay: '09/2026' });
+    getCurrentMonthDate = () => new Date(2026, 8, 1);
+    formatMonthDisplay = () => '09/2026';
     getRuleEngineContext = function () {
       return {
         thMap: new Map([['project', [{
@@ -100,7 +127,9 @@ function harness(sourcePath, rows, options = {}) {
   `, context);
   if (options.ruleError) context.getRuleEngineContext = () => { throw new Error('Rules unavailable'); };
   return {
-    cells, events, writes, logs,
+    cells, events, writes, logs, properties, triggers,
+    poll() { return context.autoRecalculateImportedScores(); },
+    setup() { context.setupAutoTrigger(); },
     edit({ row = 2, rowCount = 1, column = 12, columnCount = 1, handler = 'onEditAutoScore' } = {}) {
       context[handler]({ range: {
         getSheet: () => sheet, getRow: () => row, getNumRows: () => rowCount,
@@ -237,6 +266,104 @@ for (const relativePath of ['src/Code.gs', 'Code.gs']) {
     const h = harness(sourcePath, [transaction()], { flushError: true });
     assert.throws(() => h.edit(), /Flush failed/);
     assert.deepEqual(h.events.at(-1), ['release']);
+  });
+
+  check('recalculates an IMPORTRANGE update without an edit event, including old zero scores', () => {
+    const h = harness(sourcePath, [transaction({ 23: 4 }), transaction({ 23: 0, 9: 'Đã hủy' })]);
+    assert.equal(h.poll().count, 0);
+    h.cells[1][2] = 8;
+    h.cells[1][3] = 2026;
+    h.cells[2][9] = 'Đã bán';
+    assert.equal(h.poll().count, 2);
+    assert.deepEqual(h.cells.slice(1).map(row => row[23]), [3, 4]);
+  });
+
+  check('does not rewrite scores when a periodic scan finds no result changes', () => {
+    const h = harness(sourcePath, [transaction({ 23: 4 })]);
+    h.poll();
+    h.poll();
+    assert.equal(h.writes.length, 0);
+  });
+
+  check('clears old scores after imported data is deleted or loses its fund type', () => {
+    const deleted = Array(33).fill('');
+    deleted[23] = 99;
+    const h = harness(sourcePath, [deleted, transaction({ 25: '' }), transaction({ 23: 4 })]);
+    assert.equal(h.poll().count, 2);
+    assert.deepEqual(h.cells.slice(1).map(row => row[23]), ['', '', 4]);
+  });
+
+  check('recalculates scores by current row after imported transactions change order', () => {
+    const h = harness(sourcePath, [transaction({ 23: 4 }), transaction({ 23: 0, 9: 'Đã hủy' })]);
+    const first = h.cells[1].slice(0, 23);
+    h.cells[1].splice(0, 23, ...h.cells[2].slice(0, 23));
+    h.cells[2].splice(0, 23, ...first);
+    h.poll();
+    assert.deepEqual(h.cells.slice(1).map(row => row[23]), [0, 4]);
+  });
+
+  check('preserves scores during import errors or loading, then retries after recovery', () => {
+    for (const error of ['#REF!', '#N/A', '#VALUE!', '#ERROR!', 'Loading...', 'Đang tải…']) {
+      const h = harness(sourcePath, [transaction()]);
+      h.cells[0][0] = error;
+      assert.equal(h.poll().reason, 'input-error');
+      assert.equal(h.writes.length, 0);
+      h.cells[0][0] = 'Ngày báo cáo';
+      h.cells[1][5] = error;
+      assert.equal(h.poll().reason, 'input-error');
+      assert.equal(h.cells[1][23], 99);
+      h.cells[1][5] = 'PROJECT';
+      assert.equal(h.poll().count, 1);
+      assert.equal(h.cells[1][23], 4);
+    }
+  });
+
+  check('opens saved file A during a time-driven run with no active spreadsheet', () => {
+    const h = harness(sourcePath, [transaction()], { background: true, spreadsheetId: 'file-A' });
+    h.poll();
+    assert.equal(h.cells[1][23], 4);
+    assert.ok(h.events.some(event => event[0] === 'openById'));
+  });
+
+  check('skips a busy periodic run so the next scheduled run can retry', () => {
+    const h = harness(sourcePath, [transaction()], { busy: true });
+    assert.equal(h.poll().reason, 'busy');
+    assert.equal(h.writes.length, 0);
+  });
+
+  check('does not write imported cells or manual Y scores', () => {
+    const h = harness(sourcePath, [transaction({ 24: 7 })]);
+    h.poll();
+    assert.equal(h.cells[1][24], 7);
+    assert.ok(h.writes.every(write => write.column === 24 && write.locked));
+  });
+
+  check('batches many scattered score corrections into one column write', () => {
+    const h = harness(sourcePath, Array.from({ length: 50 }, (_, index) => transaction({ 23: index % 2 ? 4 : 99 })));
+    assert.equal(h.poll().count, 25);
+    assert.equal(h.writes.filter(write => write.column === 24).length, 1);
+    assert.ok(h.cells.slice(1).every(row => row[23] === 4));
+  });
+
+  check('reports periodic scoring failures and releases the lock without overwriting old scores', () => {
+    const h = harness(sourcePath, [transaction()], { ruleError: true });
+    assert.throws(() => h.poll(), /Rules unavailable/);
+    assert.equal(h.writes.length, 0);
+    assert.deepEqual(h.events.at(-1), ['release']);
+  });
+
+  check('setup installs the five-minute poll once and immediately repairs existing scores', () => {
+    const h = harness(sourcePath, [transaction()], { triggers: ['autoRecalculateImportedScores', 'onEditAutoScore', 'autoTriggerOnDataChange', 'unrelated'] });
+    h.setup();
+    h.setup();
+    assert.equal(h.cells[1][23], 4);
+    assert.equal(h.properties.get('AUTO_SCORE_SPREADSHEET_ID'), 'file-A');
+    const pollTriggers = h.triggers.filter(trigger => trigger.getHandlerFunction() === 'autoRecalculateImportedScores');
+    assert.equal(pollTriggers.length, 1);
+    assert.equal(pollTriggers[0].minutes, 5);
+    assert.equal(h.triggers.length, 4);
+    assert.ok(h.triggers.some(trigger => trigger.getHandlerFunction() === 'unrelated'));
+    assert.ok(h.events.some(event => event[0] === 'alert' && String(event[2]).includes('3 Trigger')));
   });
 
   if (relativePath === 'src/Code.gs') {
