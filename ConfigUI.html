@@ -1398,6 +1398,34 @@
           </div>
         </div>
 
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="field-label">Phòng Kinh Doanh (PKD)</label>
+            <input type="text" class="filter-input" id="testPkd" placeholder="VD: NW01, PTĐT  Hà, BLĐ/BO..." value="NW01" style="font-weight:600;">
+            <div style="display:flex; gap:4px; margin-top:4px; flex-wrap:wrap;">
+              <span class="chip-btn" onclick="document.getElementById('testPkd').value='NW01'" style="font-size:10px; padding:1px 6px; border-radius:10px; background:#f1f5f9; cursor:pointer;">NW01</span>
+              <span class="chip-btn" onclick="document.getElementById('testPkd').value='PTĐT  Hà'" style="font-size:10px; padding:1px 6px; border-radius:10px; background:#e0e7ff; color:#3730a3; cursor:pointer; font-weight:700;">PTĐT Hà</span>
+              <span class="chip-btn" onclick="document.getElementById('testPkd').value='BLĐ/BO - Hà'" style="font-size:10px; padding:1px 6px; border-radius:10px; background:#fee2e2; color:#991b1b; cursor:pointer; font-weight:700;">BLĐ/BO (0đ)</span>
+              <span class="chip-btn" onclick="document.getElementById('testPkd').value='CTV/ĐỐI TÁC'" style="font-size:10px; padding:1px 6px; border-radius:10px; background:#fef3c7; color:#92400e; cursor:pointer; font-weight:700;">CTV (0đ)</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Chuyên Viên KD (CVKD)</label>
+            <input type="text" class="filter-input" id="testCvkd" placeholder="VD: Nguyễn Thu Hà, QTC..." value="" style="font-weight:600;">
+            <div style="display:flex; gap:4px; margin-top:4px; flex-wrap:wrap;">
+              <span class="chip-btn" onclick="document.getElementById('testCvkd').value='Nguyễn Thu Hà'" style="font-size:10px; padding:1px 6px; border-radius:10px; background:#dcfce7; color:#166534; cursor:pointer; font-weight:600;">Nguyễn Thu Hà</span>
+              <span class="chip-btn" onclick="document.getElementById('testCvkd').value='QTC'" style="font-size:10px; padding:1px 6px; border-radius:10px; background:#f1f5f9; cursor:pointer;">QTC (sàn)</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Trạng Thái Căn</label>
+            <select class="filter-select" id="testTrangThai" style="font-weight:700;">
+              <option value="Đã bán" selected>Đã bán (Bình thường)</option>
+              <option value="Hủy">Hủy (Căn hủy - 0 điểm)</option>
+            </select>
+          </div>
+        </div>
+
         <div class="form-group">
           <label class="field-label" style="font-weight:800; color:var(--primary-600);">Giá Trị Căn (tỷ VNĐ)</label>
           <div style="display:flex; align-items:center; gap:8px;">
@@ -6276,6 +6304,9 @@
       const sanPham = document.getElementById('testSanPham').value;
       const loaiCan = document.getElementById('testLoaiCan').value.trim() || 'Tất cả';
       const giaTy = parseFloat(document.getElementById('testGiaTy').value) || 0;
+      const pkd = document.getElementById('testPkd') ? document.getElementById('testPkd').value.trim() : 'NW01';
+      const cvkd = document.getElementById('testCvkd') ? document.getElementById('testCvkd').value.trim() : '';
+      const trangThai = document.getElementById('testTrangThai') ? document.getElementById('testTrangThai').value.trim() : 'Đã bán';
 
       const txData = {
         dateBC: dateVal ? new Date(dateVal) : new Date(),
@@ -6286,8 +6317,10 @@
         region: region,
         sanPham: sanPham,
         loaiCan: loaiCan,
-        gia: giaTy * 1e9,
-        trangThai: 'Đã bán'
+        pkd: pkd,
+        cvkd: cvkd,
+        trangThai: trangThai,
+        gia: giaTy * 1e9
       };
 
       const resultBox = document.getElementById('testResultBox');
@@ -6306,7 +6339,23 @@
               let html = `<b>Tháng áp dụng:</b> ${res.monthKey} | <b>Quỹ:</b> ${res.loaiQuy}<br>`;
               html += `<b>CĐT:</b> ${res.cdt || '(Mọi CĐT)'} | <b>Dự án:</b> ${res.duAn} | <b>Miền:</b> ${res.region}<br>`;
               html += `<b>Giá:</b> ${res.giaTy} tỷ VNĐ | <b>Sản phẩm:</b> ${res.sanPham} | <b>Loại căn:</b> ${res.loaiCan}<br>`;
-              if (res.valInBillion > 50 && res.monthKey >= '2026-09') {
+              html += `<b>PKD:</b> ${res.pkd || '-'} | <b>CVKD:</b> ${res.cvkd || '-'} | <b>Trạng thái:</b> ${res.trangThai || '-'}<br>`;
+
+              if (res.isHuy) {
+                html += `<span style="color:#dc2626; font-weight:800;">⛔ Căn Hủy: Tự động tính 0 điểm theo cột Trạng Thái.</span><br>`;
+              } else if (res.isBldBo) {
+                html += `<span style="color:#dc2626; font-weight:800;">⛔ Phòng BLĐ/BO: Tự động tính 0 điểm theo cột PKD.</span><br>`;
+              } else if (res.isCtvDoiTac) {
+                html += `<span style="color:#dc2626; font-weight:800;">⛔ Phòng CTV/ĐỐI TÁC: Tự động tính 0 điểm theo cột PKD.</span><br>`;
+              } else if (res.isPtdt) {
+                if (res.samePerson) {
+                  html += `<span style="color:#15803d; font-weight:800;">✨ Phòng PTĐT: CVKD trùng tên chuyên viên PTĐT đứng tên (${res.cvkd}) -> Giữ nguyên điểm (x 1).</span><br>`;
+                } else {
+                  html += `<span style="color:#b45309; font-weight:800;">⚡ Phòng PTĐT: CVKD không trùng tên PTĐT đứng tên -> Chia đôi điểm (x 0.5).</span><br>`;
+                }
+              }
+
+              if (res.valInBillion > 50 && res.monthKey >= '2026-09' && !res.isHuy && !res.isBldBo && !res.isCtvDoiTac) {
                 const extra = Math.floor((res.valInBillion - 50.0001) / 10) + 1;
                 html += `<span style="color:#b45309; font-weight:700;">★ Căn trên 50 tỷ: Được cộng thêm +${extra} điểm lũy tiến (+1đ mỗi 10 tỷ tiếp theo).</span><br>`;
               }
@@ -6324,7 +6373,7 @@
       } else {
         resultBox.style.display = 'block';
         scoreBadge.innerText = 'Chế độ mô phỏng';
-        detailText.innerHTML = `Đã nhận thông số: CĐT=${cdt}, Dự án=${code}, Giá=${giaTy} tỷ.`;
+        detailText.innerHTML = `Đã nhận thông số: CĐT=${cdt}, Dự án=${code}, PKD=${pkd}, CVKD=${cvkd}, Trạng thái=${trangThai}, Giá=${giaTy} tỷ.`;
       }
     }
 

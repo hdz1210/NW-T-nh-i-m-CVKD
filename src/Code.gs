@@ -1832,6 +1832,78 @@ function matchKhoangGia(candGia, priceBill) {
 }
 
 /**
+ * Hàm loại bỏ dấu tiếng Việt để so khớp tên không dấu
+ */
+function removeVietnameseTones(str) {
+  if (!str) return '';
+  str = String(str);
+  str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, 'a');
+  str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, 'e');
+  str = str.replace(/ì|í|ị|ỉ|ĩ/g, 'i');
+  str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, 'o');
+  str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, 'u');
+  str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, 'y');
+  str = str.replace(/đ/g, 'd');
+  str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, 'A');
+  str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, 'E');
+  str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, 'I');
+  str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, 'O');
+  str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, 'U');
+  str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, 'Y');
+  str = str.replace(/Đ/g, 'D');
+  return str;
+}
+
+/**
+ * Kiểm tra xem CVKD có phải chính là chuyên viên PTĐT đứng tên hay không.
+ * ví dụ: PKD là "PTĐT  Hà", CVKD là "Nguyễn Thu Hà" -> cùng người (true)
+ * ví dụ: PKD là "PTĐT  Trang", CVKD là "Hà Thu Hằng" -> khác người (false)
+ * ví dụ: PKD là "PTĐT Đỗ Trang", CVKD là "Đỗ Thùy Trang" -> cùng người (true)
+ */
+function isSamePtdtPerson(pkd, cvkd) {
+  if (!pkd || !cvkd) return false;
+
+  const ptdtRawName = String(pkd).replace(/PTĐT|PTDT/gi, '').trim();
+  if (!ptdtRawName) return false;
+
+  const matchTokens = (pStr, cStr) => {
+    const pTokens = pStr.toLowerCase().replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+    const cTokens = cStr.toLowerCase().replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+
+    if (pTokens.length === 0 || cTokens.length === 0) return false;
+
+    // 1 từ (tên gọi: Hà, Huế, Nhài, Trang, Minh, Sang,...)
+    if (pTokens.length === 1) {
+      return cTokens[cTokens.length - 1] === pTokens[0];
+    }
+
+    // 2 từ (ví dụ: Huyền Trang, Phương Anh, Đỗ Trang)
+    if (pTokens.length === 2) {
+      // Đệm + Tên ở cuối họ tên (ví dụ CVKD kết thúc bằng "Huyền Trang")
+      if (cTokens.length >= 2 && cTokens[cTokens.length - 2] === pTokens[0] && cTokens[cTokens.length - 1] === pTokens[1]) {
+        return true;
+      }
+      // Họ + Tên (ví dụ "Đỗ Trang" khớp với "Đỗ Thùy Trang")
+      if (cTokens.length >= 2 && cTokens[0] === pTokens[0] && cTokens[cTokens.length - 1] === pTokens[1]) {
+        return true;
+      }
+      return false;
+    }
+
+    // Nhiều hơn 2 từ: chuỗi CVKD chứa trọn vẹn tên PTĐT
+    return cTokens.join(' ').includes(pTokens.join(' '));
+  };
+
+  // 1. So khớp có dấu
+  if (matchTokens(ptdtRawName, cvkd)) return true;
+
+  // 2. Dự phòng so khớp không dấu
+  const pClean = removeVietnameseTones(ptdtRawName);
+  const cClean = removeVietnameseTones(cvkd);
+  return matchTokens(pClean, cClean);
+}
+
+/**
  * =========================================================================
  * ĐÁNH GIÁ 1 DÒNG DỮ LIỆU GIAO DỊCH VỚI MA TRẬN ĐIỂM THEO THÁNG
  * =========================================================================
@@ -1840,12 +1912,6 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
   // 1. Kiểm tra Ngày báo cáo
   const dateBC = parseDateSafe(row[0], row);
   if (!dateBC) return '';
-
-  // 2. BẮT BUỘC: Kiểm tra Cột Z (Loại Quỹ - index 25). Nếu chưa điền Cột Z -> KHÔNG TÍNH, trả về rỗng ''
-  const rawLoaiQuy = String(row[25] || '').trim();
-  if (!rawLoaiQuy) return '';
-
-  const loaiQuy = /NW/i.test(rawLoaiQuy) ? 'Quỹ NW' : 'Quỹ Chéo';
 
   const duAn = String(row[5] || '').trim();
   const maCan = String(row[6] || '').trim().toUpperCase();
@@ -1859,7 +1925,21 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
   const maNV = String(row[17] || '').trim().toUpperCase();
   const ghiChu = String(row[32] || '').trim();
 
-  if (trangThai === 'Hủy') return 0;
+  // Rule: Căn hủy auto 0 điểm (cột trạng thái - index 9)
+  const ttLower = trangThai.toLowerCase();
+  if (ttLower.includes('hủy') || ttLower.includes('huy')) return 0;
+
+  // Rule: Ở cột PKD (index 7): BLĐ/BO và CTV/ĐỐI TÁC là 0 điểm
+  const pkdClean = pkd.toUpperCase();
+  const isBldBo = /^(BLĐ|BLD|BO)($|[\s\/\-])/i.test(pkd) || /BLĐ\/BO|BLD\/BO/i.test(pkd) || /^BLĐ$|^BLD$|^BO$/i.test(pkdClean) || /BLĐ|BLD/i.test(pkdClean);
+  const isCtvDoiTac = /CTV/i.test(pkd) || /ĐỐI TÁC|DOI TAC/i.test(pkd);
+  if (isBldBo || isCtvDoiTac) return 0;
+
+  // 2. BẮT BUỘC: Kiểm tra Cột Z (Loại Quỹ - index 25). Nếu chưa điền Cột Z -> KHÔNG TÍNH, trả về rỗng ''
+  const rawLoaiQuy = String(row[25] || '').trim();
+  if (!rawLoaiQuy) return '';
+
+  const loaiQuy = /NW/i.test(rawLoaiQuy) ? 'Quỹ NW' : 'Quỹ Chéo';
 
   // Lấy context từ đối số
   const ctx = (rulesOrCtx && rulesOrCtx.thMap) ? rulesOrCtx : getRuleEngineContext();
@@ -2159,12 +2239,13 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
     timeMultiplier = 2;
   }
 
-  // Hệ số phòng PTĐT
+  // Hệ số phòng PTĐT: PTĐT bán chia đôi (x 0.5), giữ nguyên (x 1) nếu ở cột CVKD là PTĐT đứng tên
   let ptdtMultiplier = 1;
-  if (/PTĐT/i.test(pkd)) {
-    const verifiedName = ctx.cbnvMap.get(maNV);
+  if (/PTĐT|PTDT/i.test(pkd)) {
+    const samePerson = isSamePtdtPerson(pkd, cvkdName);
+    const verifiedName = (ctx && ctx.cbnvMap) ? ctx.cbnvMap.get(maNV) : null;
     const isInternalPolicy = /Cơ chế nội bộ/i.test(ghiChu);
-    if ((verifiedName && verifiedName === cvkdName) || isInternalPolicy) {
+    if (samePerson || (verifiedName && verifiedName.toLowerCase() === cvkdName.toLowerCase()) || isInternalPolicy) {
       ptdtMultiplier = 1;
     } else {
       ptdtMultiplier = 0.5;
@@ -2655,6 +2736,16 @@ function testEvaluateTransaction(txData) {
     const monthKey = parsedDate ? formatDateSafe(parsedDate, ss).substring(0, 7) : '';
     const score = evaluateRowWithRules(row, ctx);
 
+    const pkdVal = String(row[7] || '').trim();
+    const cvkdVal = String(row[8] || '').trim();
+    const ttVal = String(row[9] || '').trim().toLowerCase();
+    const pkdClean = pkdVal.toUpperCase();
+    const isBldBo = /^(BLĐ|BLD|BO)($|[\s\/\-])/i.test(pkdVal) || /BLĐ\/BO|BLD\/BO/i.test(pkdVal) || /^BLĐ$|^BLD$|^BO$/i.test(pkdClean) || /BLĐ|BLD/i.test(pkdClean);
+    const isCtvDoiTac = /CTV/i.test(pkdVal) || /ĐỐI TÁC|DOI TAC/i.test(pkdVal);
+    const isHuy = ttVal.includes('hủy') || ttVal.includes('huy');
+    const isPtdt = /PTĐT|PTDT/i.test(pkdVal);
+    const samePerson = isPtdt ? isSamePtdtPerson(pkdVal, cvkdVal) : false;
+
     return {
       success: true,
       score: score,
@@ -2665,6 +2756,14 @@ function testEvaluateTransaction(txData) {
       region: row[4],
       sanPham: row[14],
       loaiCan: row[16],
+      pkd: pkdVal,
+      cvkd: cvkdVal,
+      trangThai: row[9],
+      isHuy: isHuy,
+      isBldBo: isBldBo,
+      isCtvDoiTac: isCtvDoiTac,
+      isPtdt: isPtdt,
+      samePerson: samePerson,
       giaTy: (Number(txData.gia) / 1e9).toFixed(2),
       valInBillion: Number(txData.gia) / 1e9
     };
