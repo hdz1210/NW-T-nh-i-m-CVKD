@@ -4560,32 +4560,7 @@
             <input type="hidden" id="addNameF2" value="Tất cả">
           </div>
 
-          <!-- Khoảng Giá (Tỷ VNĐ) -->
-          <div class="form-group" style="margin-bottom:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <label class="field-label" style="margin-bottom:0; font-weight:700;">3. Khoảng Giá (tỷ VNĐ)</label>
-              <span id="addF2KhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">Tất cả</span>
-            </div>
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
-              <div style="display:flex; align-items:center; gap:6px; flex:1;">
-                <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Từ (Min):</span>
-                <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addF2GiaTu" placeholder="0" value="0" oninput="onPriceInputChange('addF2')">
-                <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
-              </div>
-              <span style="color:var(--text-tertiary); font-weight:700; padding:0 2px;">—</span>
-              <div style="display:flex; align-items:center; gap:6px; flex:1;">
-                <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Đến (Max):</span>
-                <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addF2GiaDen" placeholder="999" value="999" oninput="onPriceInputChange('addF2')">
-                <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
-              </div>
-              <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
-              <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
-                <input type="checkbox" id="addF2IsDat" style="cursor:pointer;" onchange="onPriceInputChange('addF2')">
-                <span>Chỉ tính tiền đất (VHHVB)</span>
-              </label>
-            </div>
-            <input type="hidden" id="addF2KhoangGiaInput" value="Tất cả">
-          </div>
+
 
           <!-- Cấu hình điểm & Tháng áp dụng -->
           <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 8px;">
@@ -4800,9 +4775,6 @@
         const scoreMonthEl = document.getElementById('addF2ScoreMonth');
         const scoreMonth = scoreMonthEl ? scoreMonthEl.value : 'ALL';
 
-        const khoangGiaEl = document.getElementById('addF2KhoangGiaInput');
-        const khoangGia = khoangGiaEl ? khoangGiaEl.value.trim() : 'Tất cả';
-
         const scoresObj = {};
         if (scoreMonth === 'ALL') {
           configData.f2Months.forEach(m => { scoresObj[m.dateStr] = score; });
@@ -4819,41 +4791,15 @@
           newRowsF2.push({
             name: projName,
             fund: 'Quỹ chéo',
-            scores: Object.assign({}, scoresObj),
-            khoangGia: khoangGia
+            scores: Object.assign({}, scoresObj)
           });
 
           configData.f2Rows.push({
             rowIdx: configData.f2Rows.length + 4,
             name: projName,
             fund: 'Quỹ chéo',
-            scores: Object.assign({}, scoresObj),
-            khoangGia: khoangGia
+            scores: Object.assign({}, scoresObj)
           });
-
-          // Nếu người dùng chọn khoảng giá khác 'Tất cả' hoặc nhập rule chung, đồng bộ thêm vào Tổng hợp để engine tính điểm khớp tuyệt đối
-          if (khoangGia !== 'Tất cả' || projName.toLowerCase() === 'tất cả') {
-            const thScoresObj = {};
-            if (scoreMonth === 'ALL') {
-              configData.thMonths.forEach(m => { thScoresObj[m.dateStr] = score; });
-            } else {
-              configData.thMonths.forEach(m => {
-                thScoresObj[m.dateStr] = (m.dateStr === scoreMonth) ? score : '';
-              });
-            }
-            newRowsTH.push({
-              status: 'Đang bán',
-              cdt: 'Tất cả',
-              code: projName,
-              name: projName,
-              region: 'Toàn quốc',
-              fund: 'Quỹ Chéo',
-              sanPham: 'Tất cả',
-              loaiCan: 'Tất cả',
-              khoangGia: khoangGia,
-              scores: thScoresObj
-            });
-          }
         });
 
         // Switch to F2 tab if user was on TH tab
@@ -5621,8 +5567,6 @@
           initialF2Score = (row.scores[latestF2M.dateStr] !== undefined && row.scores[latestF2M.dateStr] !== '') ? row.scores[latestF2M.dateStr] : '';
         }
 
-        const parsedPrice = parseKhoangGiaToMinMax(row.khoangGia || 'Tất cả');
-
         body.innerHTML = `
           <input type="hidden" id="editRowIdx" value="${rowIdx}">
           <input type="hidden" id="editTab" value="f2">
@@ -5654,33 +5598,6 @@
               </div>
             </div>
             <input type="hidden" id="editNameF2" value="${escapeHtml(row.name)}">
-          </div>
-
-          <!-- Khoảng Giá (Tỷ VNĐ) -->
-          <div class="form-group" style="margin-bottom:0;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <label class="field-label" style="margin-bottom:0; font-weight:700;">3. Khoảng Giá (tỷ VNĐ)</label>
-              <span id="editF2KhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">${escapeHtml(parsedPrice.label)}</span>
-            </div>
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
-              <div style="display:flex; align-items:center; gap:6px; flex:1;">
-                <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Từ (Min):</span>
-                <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="editF2GiaTu" placeholder="0" value="${parsedPrice.min}" oninput="onPriceInputChange('editF2')">
-                <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
-              </div>
-              <span style="color:var(--text-tertiary); font-weight:700; padding:0 2px;">—</span>
-              <div style="display:flex; align-items:center; gap:6px; flex:1;">
-                <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Đến (Max):</span>
-                <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="editF2GiaDen" placeholder="999" value="${parsedPrice.max}" oninput="onPriceInputChange('editF2')">
-                <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
-              </div>
-              <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
-              <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
-                <input type="checkbox" id="editF2IsDat" ${parsedPrice.isDat ? 'checked' : ''} style="cursor:pointer;" onchange="onPriceInputChange('editF2')">
-                <span>Chỉ tính tiền đất (VHHVB)</span>
-              </label>
-            </div>
-            <input type="hidden" id="editF2KhoangGiaInput" value="${escapeHtml(parsedPrice.label)}">
           </div>
 
           <!-- Cấu hình điểm & Tháng áp dụng -->
@@ -5951,11 +5868,9 @@
         const row = configData.f2Rows.find(r => r.rowIdx === rowIdx);
         const scoreMonthEl = document.getElementById('editF2ScoreMonth');
         const scoreValEl = document.getElementById('editF2ScoreVal');
-        const khoangGiaEl = document.getElementById('editF2KhoangGiaInput');
 
         const scoreMonth = scoreMonthEl ? scoreMonthEl.value : 'ALL';
         const scoreVal = scoreValEl ? scoreValEl.value.trim() : '';
-        const khoangGia = khoangGiaEl ? khoangGiaEl.value.trim() : 'Tất cả';
 
         const monthUpdates = [];
         if (scoreVal !== '') {
@@ -5981,7 +5896,6 @@
 
         if (row) {
           row.name = name;
-          row.khoangGia = khoangGia;
         }
 
         showLoading('Đang cập nhật dự án F2...');
@@ -6003,7 +5917,6 @@
           .updateMonthlyConfigRow('f2', rowIdx, { 
             name, 
             fund: 'Quỹ chéo',
-            khoangGia: khoangGia,
             monthUpdates: monthUpdates
           });
       }

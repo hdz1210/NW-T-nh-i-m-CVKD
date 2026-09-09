@@ -1326,14 +1326,17 @@ function getRuleEngineContext(ss) {
 
     const f2RowsData = f2Sheet.getRange(4, 1, f2Sheet.getLastRow() - 3, f2LastCol).getValues();
     f2RowsData.forEach(r => {
-      const duAnName = String(r[0] || '').trim().toLowerCase();
-      if (!duAnName) return;
+      const rawName = String(r[0] || '').trim();
+      if (!rawName) return;
       const monthScores = new Map();
       f2MonthsList.forEach((m) => {
         const s = r[m.colIdx - 1];
         if (s !== '' && s !== null && !isNaN(s)) monthScores.set(m.key, Number(s));
       });
-      f2Map.set(duAnName, monthScores);
+      rawName.split(/[,;\n]/).forEach(p => {
+        const duAnName = p.trim().toLowerCase();
+        if (duAnName) f2Map.set(duAnName, monthScores);
+      });
     });
   }
 
@@ -1817,46 +1820,41 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
     if (loaiQuy === 'Quỹ Chéo') {
       // 4.1 Tra cứu trong bảng Dự án F2
       const duAnKey = duAn.toLowerCase();
+      const tenDuAnKey = (String(row[28] || row[12] || '').trim()).toLowerCase(); // Cột AC (Tên dự án) hoặc M (Phân khu/Tòa)
       let matchedScore = null;
-      if (ctx.f2Map && ctx.f2Map.has(duAnKey) && ctx.f2Map.get(duAnKey).has(monthKey)) {
-        matchedScore = ctx.f2Map.get(duAnKey).get(monthKey);
-      } else if (ctx.f2Map && ctx.f2Map.has(duAnKey) && monthKey < '2026-09') {
-        const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
-        matchedScore = (latestKey && ctx.f2Map.get(duAnKey).has(latestKey)) ? ctx.f2Map.get(duAnKey).get(latestKey) : 1;
+
+      if (ctx.f2Map) {
+        // 1. Khớp chính xác mã / tên dự án trong F2
+        if (ctx.f2Map.has(duAnKey) && ctx.f2Map.get(duAnKey).has(monthKey)) {
+          matchedScore = ctx.f2Map.get(duAnKey).get(monthKey);
+        } else if (tenDuAnKey && ctx.f2Map.has(tenDuAnKey) && ctx.f2Map.get(tenDuAnKey).has(monthKey)) {
+          matchedScore = ctx.f2Map.get(tenDuAnKey).get(monthKey);
+        } else if (ctx.f2Map.has(duAnKey) && monthKey < '2026-09') {
+          const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
+          matchedScore = (latestKey && ctx.f2Map.get(duAnKey).has(latestKey)) ? ctx.f2Map.get(duAnKey).get(latestKey) : null;
+        } else if (tenDuAnKey && ctx.f2Map.has(tenDuAnKey) && monthKey < '2026-09') {
+          const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
+          matchedScore = (latestKey && ctx.f2Map.get(tenDuAnKey).has(latestKey)) ? ctx.f2Map.get(tenDuAnKey).get(latestKey) : null;
+        }
+
+        // 2. Nếu không khớp tên dự án riêng, kiểm tra rule 'Tất cả' hoặc '*' trong sheet Dự án F2
+        if (matchedScore === null) {
+          const allKey = ctx.f2Map.has('tất cả') ? 'tất cả' : (ctx.f2Map.has('*') ? '*' : null);
+          if (allKey) {
+            if (ctx.f2Map.get(allKey).has(monthKey)) {
+              matchedScore = ctx.f2Map.get(allKey).get(monthKey);
+            } else if (monthKey < '2026-09') {
+              const latestKey = ctx.f2MonthsList[0] ? ctx.f2MonthsList[0].key : null;
+              matchedScore = (latestKey && ctx.f2Map.get(allKey).has(latestKey)) ? ctx.f2Map.get(allKey).get(latestKey) : null;
+            }
+          }
+        }
       }
 
-      if (matchedScore !== null) {
-        baseScore = calculateProgressiveScore(valInBillion, matchedScore, 'Tất cả', monthKey);
+      if (matchedScore !== null && matchedScore !== '' && !isNaN(matchedScore)) {
+        baseScore = calculateProgressiveScore(valInBillion, Number(matchedScore), 'Tất cả', monthKey);
       } else {
-        // Kiểm tra rule Quỹ Chéo trong sheet Tổng Hợp (rule riêng hoặc rule chung theo khoảng giá)
-        let matchedQCheo = null;
-        if (ctx.thMap && ctx.thMap.has(duAnKey)) {
-          for (const r of ctx.thMap.get(duAnKey)) {
-            if (r.fund === 'Quỹ Chéo' && r.monthScores.has(monthKey)) {
-              if (matchRules(r.sanPham, r.loaiCan, r.khoangGia, sanPham, loaiCan, valInBillion)) {
-                matchedQCheo = r;
-                break;
-              }
-            }
-          }
-        }
-        if (!matchedQCheo) {
-          const genRules = ctx.generalRules || [];
-          for (const r of genRules) {
-            if (r.fund === 'Quỹ Chéo' && r.monthScores.has(monthKey)) {
-              if (matchRules(r.sanPham, r.loaiCan, r.khoangGia, sanPham, loaiCan, valInBillion)) {
-                matchedQCheo = r;
-                break;
-              }
-            }
-          }
-        }
-        if (matchedQCheo) {
-          const rawScore = matchedQCheo.monthScores.get(monthKey);
-          baseScore = calculateProgressiveScore(valInBillion, rawScore, matchedQCheo.khoangGia, monthKey);
-        } else {
-          baseScore = 1; // Mặc định Quỹ chéo không thuộc danh sách F2 là 1 điểm
-        }
+        baseScore = 1; // Mặc định Quỹ chéo không thuộc danh sách F2 là 1 điểm
       }
     } else {
       // 4.2 Quỹ NW: Tra cứu trong bảng Tổng Hợp
