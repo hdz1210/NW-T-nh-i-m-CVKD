@@ -419,14 +419,14 @@ Khi tính điểm cho một giao dịch trong sheet `DATA`, hệ thống duyệt
    - Trigger On-Edit xử lý thao tác nhập/sửa trực tiếp trên Google Sheets. Khi file A lấy dữ liệu từ file B bằng `IMPORTRANGE`, sửa file B không tạo sự kiện On-Edit tại A; hệ thống dùng trigger định kỳ bên dưới. [Tài liệu Google Apps Script](https://developers.google.com/apps-script/guides/triggers/installable).
 2. **Trigger Hàng Ngày (Chạy lúc 1:00 AM)**:
    - Mỗi đêm, hệ thống kiểm tra chu kỳ tháng. Nếu bước sang tháng mới, hệ thống tự động chèn cột tháng và sao chép điểm từ tháng trước sang.
-3. **Trigger IMPORTRANGE (Mỗi 5 phút)**:
+3. **Trigger IMPORTRANGE (Mỗi 1 phút)**:
    - Hàm `autoRecalculateImportedScores` đọc dữ liệu hiện tại ở file A, tính lại cả những dòng đã có điểm X và cập nhật điểm khi kết quả thay đổi. Không cần chỉnh sửa trực tiếp hay mở file A.
    - Ví dụ: bạn đổi trạng thái giao dịch trong B thành **Đã hủy**. Sau khi `IMPORTRANGE` cập nhật trạng thái ở A, lượt kiểm tra tiếp theo sẽ đổi X của giao dịch đó thành **0**.
    - Nếu dòng nguồn bị xóa hoặc không còn đủ điều kiện tính điểm, X được xóa trắng. Nếu dữ liệu đang tải hoặc có lỗi như `#REF!`, `#N/A`, lượt kiểm tra được bỏ qua và sẽ thử lại sau để tránh ghi điểm sai.
    - Điểm nhập tay tại Y được giữ theo quy tắc Căn xin cơ chế. Script ghi kết quả ở X; vùng `IMPORTRANGE` cần chừa cột X để script có thể ghi điểm.
-   - Thời gian cập nhật gồm độ trễ của `IMPORTRANGE` và lượt chạy định kỳ tiếp theo; không cam kết 5 phút kể từ lúc sửa B. [Thông tin cập nhật IMPORTRANGE của Google](https://support.google.com/docs/answer/3093340).
+   - Thời gian cập nhật gồm độ trễ của `IMPORTRANGE` và lượt chạy định kỳ tiếp theo; không cam kết 1 phút kể từ lúc sửa B. [Thông tin cập nhật IMPORTRANGE của Google](https://support.google.com/docs/answer/3093340).
 
-**Bật cơ chế mới:** Sau khi CI/CD triển khai mã mới, mở **file A** và chạy **Cấu Hình Điểm → Cài đặt Trigger tự động** một lần. Thông báo phải hiển thị **3 Trigger**, gồm mục **IMPORTRANGE - mỗi 5 phút**. Thao tác này cũng kiểm tra ngay những điểm cũ và thay thế các trigger cũ của tài khoản cài đặt để tránh trùng lặp. Việc push mã lên GitHub tự nó không tạo trigger định kỳ mới.
+**Bật cơ chế mới:** Sau khi CI/CD triển khai mã mới, mở **file A** và chạy **Cấu Hình Điểm → Cài đặt Trigger tự động** một lần. Thông báo phải hiển thị **3 Trigger**, gồm mục **IMPORTRANGE - mỗi 1 phút**. Thao tác này cũng kiểm tra ngay những điểm cũ và thay thế các trigger cũ của tài khoản cài đặt để tránh trùng lặp. Việc push mã lên GitHub tự nó không tạo trigger định kỳ mới.
 
 ### 6.2. Menu Tiện Ích Trên Thanh Công Cụ Google Sheets
 
@@ -446,7 +446,7 @@ Hệ thống tích hợp sẵn menu **Cấu Hình Điểm** trực tiếp trên 
 | | **Tính lại toàn bộ điểm Data** | Quét và tính lại điểm hàng loạt cho toàn bộ hơn 5.000 dòng dữ liệu từ đầu đến cuối. |
 | | **Quét & tính dòng chưa có điểm** | Tự động dò tìm các dòng dữ liệu mà cột điểm đang còn trống để tính bù điểm nhanh chóng. |
 | **Tiện ích Quản trị viên** | **Đồng bộ / Thêm cột tháng** | Kiểm tra và chèn thêm cột tháng mới (nếu chưa có) kèm sao chép điểm từ tháng trước. |
-| | **Cài đặt Trigger tự động** | Cài 3 trigger: On-Edit, kiểm tra IMPORTRANGE mỗi 5 phút và đồng bộ tháng hàng ngày; kiểm tra ngay các điểm cũ. |
+| | **Cài đặt Trigger tự động** | Cài 3 trigger: On-Edit, kiểm tra IMPORTRANGE mỗi 1 phút và đồng bộ tháng hàng ngày; kiểm tra ngay các điểm cũ. |
 
 ---
 *Tài liệu được cập nhật tự động theo phiên bản Enterprise UI v2.0.*

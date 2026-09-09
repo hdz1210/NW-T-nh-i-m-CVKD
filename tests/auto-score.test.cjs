@@ -352,7 +352,7 @@ for (const relativePath of ['src/Code.gs', 'Code.gs']) {
     assert.deepEqual(h.events.at(-1), ['release']);
   });
 
-  check('setup installs the five-minute poll once and immediately repairs existing scores', () => {
+  check('setup installs the one-minute poll once and immediately repairs existing scores', () => {
     const h = harness(sourcePath, [transaction()], { triggers: ['autoRecalculateImportedScores', 'onEditAutoScore', 'autoTriggerOnDataChange', 'unrelated'] });
     h.setup();
     h.setup();
@@ -360,7 +360,7 @@ for (const relativePath of ['src/Code.gs', 'Code.gs']) {
     assert.equal(h.properties.get('AUTO_SCORE_SPREADSHEET_ID'), 'file-A');
     const pollTriggers = h.triggers.filter(trigger => trigger.getHandlerFunction() === 'autoRecalculateImportedScores');
     assert.equal(pollTriggers.length, 1);
-    assert.equal(pollTriggers[0].minutes, 5);
+    assert.equal(pollTriggers[0].minutes, 1);
     assert.equal(h.triggers.length, 4);
     assert.ok(h.triggers.some(trigger => trigger.getHandlerFunction() === 'unrelated'));
     assert.ok(h.events.some(event => event[0] === 'alert' && String(event[2]).includes('3 Trigger')));

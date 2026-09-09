@@ -7,7 +7,7 @@
  */
 
 const APP_CONFIG = {
-  AUTO_SCORE_INTERVAL_MINUTES: 5,
+  AUTO_SCORE_INTERVAL_MINUTES: 1,
   SHEET_DATA: 'Data',
   SHEET_TONG_HOP: 'Tổng hợp',
   SHEET_DU_AN_F2: 'Dự án F2',
@@ -2645,7 +2645,7 @@ function hasAutoScoreInputError(row) {
 }
 
 /**
- * Cài lại các trigger On-Edit, kiểm tra IMPORTRANGE mỗi 5 phút và đồng bộ tháng hàng ngày.
+ * Cài lại các trigger On-Edit, kiểm tra IMPORTRANGE mỗi 1 phút và đồng bộ tháng hàng ngày.
  * Lưu ID file nhận dữ liệu để trigger định kỳ mở đúng file khi không có bảng tính đang mở.
  * Lượt kiểm tra đầu tiên cũng cập nhật các dòng đã có điểm cũ.
  */

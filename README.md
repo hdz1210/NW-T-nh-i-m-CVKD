@@ -17,7 +17,7 @@ Toàn bộ thông tin chi tiết về chức năng, luồng nghiệp vụ, sơ �
 - **Bảng Tổng Hợp (Quỹ NW)**: Quản lý ma trận điểm đa tháng theo từng dự án; khớp 3 tiêu chí động (Sản phẩm: Cao tầng/Thấp tầng, Loại căn: Studio/1PN/2PN/Duplex..., Khoảng giá: Min-Max, Tiền đất).
 - **Dự Án F2 (Quỹ Chéo)**: Quản lý điểm cho các dự án liên kết bán chéo, tự động chuẩn hóa chuỗi và nhận diện tên dự án.
 - **Điểm Chiến Dịch (Multi-Campaign)**: Hỗ trợ chạy đồng thời nhiều chiến dịch bán hàng ngắn hạn với ngày bắt đầu, ngày kết thúc và trạng thái (Đang chạy, Tạm dừng, Kết thúc). Điểm chiến dịch tự động đè điểm tháng khi thỏa mãn điều kiện.
-- **Tự Động Hóa**: Tính lại điểm khi sửa dữ liệu trực tiếp; kiểm tra dữ liệu từ `IMPORTRANGE` mỗi 5 phút, kể cả dòng đã có điểm; tự động thêm cột tháng và sao chép điểm lúc 1h sáng. Sau khi cập nhật mã, chạy **Cài đặt Trigger tự động** trong file nhận dữ liệu để cài đủ 3 trigger.
+- **Tự Động Hóa**: Tính lại điểm khi sửa dữ liệu trực tiếp; kiểm tra dữ liệu từ `IMPORTRANGE` mỗi 1 phút, kể cả dòng đã có điểm; tự động thêm cột tháng và sao chép điểm lúc 1h sáng. Sau khi cập nhật mã, chạy **Cài đặt Trigger tự động** trong file nhận dữ liệu để cài đủ 3 trigger.
 - **Trình Tạo Biểu Đồ & Báo Cáo (Chart Builder)**: Trực quan hóa dữ liệu bán hàng theo Dự án, CĐT, Vùng miền, Phòng ban, Nhân sự.
 
 ---
