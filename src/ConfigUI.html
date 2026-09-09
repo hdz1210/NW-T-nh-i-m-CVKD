@@ -2018,7 +2018,15 @@
         const cdtSelect = document.getElementById('cdtFilter');
         const curCdt = cdtSelect.value;
         const sourceRows = (activeTab === 'th') ? configData.thRows : (configData.campaign?.rows || []);
-        const cdts = Array.from(new Set(sourceRows.map(r => r.cdt).filter(Boolean))).sort();
+        const cdtRaw = sourceRows.map(r => r.cdt).filter(Boolean);
+        const cdtParts = [];
+        cdtRaw.forEach(c => {
+          c.split(/[,;]/).forEach(part => {
+            const t = part.trim();
+            if (t && !isConditionAll(t) && !t.toLowerCase().includes('khác') && !t.toLowerCase().includes('khac')) cdtParts.push(t);
+          });
+        });
+        const cdts = Array.from(new Set(cdtParts)).sort((a, b) => a.localeCompare(b, 'vi'));
         cdtSelect.innerHTML = '<option value="ALL">Tất cả CĐT</option>';
         cdts.forEach(c => {
           cdtSelect.innerHTML += `<option value="${c}">${c}</option>`;
@@ -2088,8 +2096,8 @@
 
       // Filter rows
       const filtered = configData.thRows.filter(r => {
-        if (selCdt !== 'ALL' && r.cdt !== selCdt) return false;
-        if (selRegion !== 'ALL' && r.region !== selRegion) return false;
+        if (selCdt !== 'ALL' && !(r.cdt || '').split(/[,;]/).some(p => p.trim() === selCdt)) return false;
+        if (selRegion !== 'ALL' && r.region !== selRegion && !isConditionAll(r.region) && !(r.region || '').split(/[,;]/).some(p => p.trim() === selRegion)) return false;
         if (selStatus !== 'ALL' && r.status !== selStatus) return false;
         if (onlyConfigured) {
           const sc = r.scores && r.scores[selMonth];
@@ -2261,8 +2269,8 @@
           const matchStr = `${r.campaignName || ''} ${r.code} ${r.name} ${r.cdt} ${r.sanPham} ${r.loaiCan} ${r.khoangGia}`.toLowerCase();
           if (!matchStr.includes(searchQ)) return false;
         }
-        if (selCdt !== 'ALL' && r.cdt !== selCdt) return false;
-        if (selRegion !== 'ALL' && r.region !== selRegion) return false;
+        if (selCdt !== 'ALL' && !(r.cdt || '').split(/[,;]/).some(p => p.trim() === selCdt)) return false;
+        if (selRegion !== 'ALL' && r.region !== selRegion && !isConditionAll(r.region) && !(r.region || '').split(/[,;]/).some(p => p.trim() === selRegion)) return false;
         if (selStatus !== 'ALL' && r.status !== selStatus) return false;
         return true;
       });
@@ -2604,32 +2612,39 @@
     function getExistingProjects() {
       const map = new Map();
       (configData.thRows || []).forEach(r => {
-        if (r.code && !map.has(r.code)) {
-          map.set(r.code, {
-            code: r.code,
-            name: r.name || '',
-            cdt: r.cdt || '',
-            region: r.region || 'Miền Bắc'
-          });
-        }
+        const rawCodes = (r.code || '').split(/[,;\n]/);
+        const rawNames = (r.name || '').split(/[,;\n]/);
+        rawCodes.forEach((c, idx) => {
+          const code = c.trim();
+          const name = (rawNames[idx] || rawNames[0] || code).trim();
+          if (code && !isConditionAll(code) && !map.has(code.toUpperCase())) {
+            map.set(code.toUpperCase(), {
+              code: code,
+              name: name,
+              cdt: r.cdt || '',
+              region: r.region || 'Miền Bắc'
+            });
+          }
+        });
       });
       return Array.from(map.values());
     }
 
     function getExistingCdts() {
-      const cdts = new Set();
-      (configData.thRows || []).forEach(r => {
-        if (r.cdt && r.cdt.trim()) cdts.add(r.cdt.trim());
-      });
-      return Array.from(cdts).sort();
+      return getAllCdtList();
     }
 
     function getExistingF2Projects() {
       const names = new Set();
       (configData.f2Rows || []).forEach(r => {
-        if (r.name && r.name.trim()) names.add(r.name.trim());
+        if (r.name && r.name.trim()) {
+          r.name.split(/[,;\n]/).forEach(part => {
+            const t = part.trim();
+            if (t && !isConditionAll(t)) names.add(t);
+          });
+        }
       });
-      return Array.from(names).sort();
+      return Array.from(names).sort((a, b) => a.localeCompare(b, 'vi'));
     }
 
     function closeAllAutocompletes() {
