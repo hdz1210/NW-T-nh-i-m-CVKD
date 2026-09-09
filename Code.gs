@@ -7,8 +7,8 @@
  */
 
 const APP_VERSION = {
-  COMMIT: 'bc7b652',
-  BUILD_TIME: '2026-09-09 14:20:08',
+  COMMIT: 'af770b9',
+  BUILD_TIME: '2026-09-09 15:00:08',
 };
 
 const APP_CONFIG = {
