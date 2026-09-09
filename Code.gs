@@ -2488,7 +2488,7 @@ function setupAutoTrigger() {
     }
 
     msg += `Hệ thống đã thiết lập 2 Trigger tự động chạy ngầm:\n` +
-      `1. [Trigger On-Edit]: Tự động tính điểm ngay lập tức khi bạn nhập hoặc dán dòng dữ liệu mới vào sheet "${APP_CONFIG.SHEET_DATA}".\n` +
+      `1. [Trigger On-Edit]: Tự động tính điểm khi nhập/dán dữ liệu mới và tính lại điểm cột X khi sửa/dán đè dòng đã có điểm vào sheet "${APP_CONFIG.SHEET_DATA}".\n` +
       `2. [Trigger Hàng Ngày (1h sáng)]: Tự động kiểm tra và chèn cột tháng mới mỗi khi sang tháng mới (kèm copy điểm từ tháng trước sang) mà không cần phải mở bảng cấu hình!`;
 
     SpreadsheetApp.getUi().alert('Cài Đặt Trigger Tự Động Hoàn Tất', msg, SpreadsheetApp.getUi().ButtonSet.OK);
@@ -2554,57 +2554,44 @@ function onEditAutoScore(e) {
     const lastDataRow = startRow + numRows - 1;
     if (lastDataRow < firstDataRow) return;
 
-    const rowCount = lastDataRow - firstDataRow + 1;
-    const rangeData = sheet.getRange(firstDataRow, 1, rowCount, 33).getValues();
-    const scoreData = sheet.getRange(firstDataRow, APP_CONFIG.COL_OUTPUT_SCORE, rowCount, 1).getValues();
-
-    const toProcess = [];
-    const toBlankIndices = [];
-    for (let i = 0; i < rowCount; i++) {
-      const rowData = rangeData[i];
-      const currentScore = scoreData[i][0];
-      const actualRowNum = firstDataRow + i;
-
-      // BẮT BUỘC: Cột Z (Loại Quỹ - index 25) PHẢI CÓ GIÁ TRỊ!
-      const hasFundType = String(rowData[25] || '').trim() !== '';
-
-      // Nếu Cột Z chưa điền mà Cột X đang có điểm cũ -> Gom vào để xóa trắng hàng loạt
-      if (!hasFundType) {
-        if (currentScore !== '' && currentScore !== null && currentScore !== undefined) {
-          toBlankIndices.push(i);
-        }
-        continue;
-      }
-
-      const hasIdentity = (
-        String(rowData[5] || '').trim() !== '' || 
-        String(rowData[6] || '').trim() !== '' || 
-        parseDateSafe(rowData[0], rowData) !== null ||
-        String(rowData[8] || '').trim() !== ''
-      );
-
-      if (hasIdentity && hasFundType) {
-        toProcess.push(actualRowNum);
-      }
-    }
-
-    if (toBlankIndices.length > 0) {
-      toBlankIndices.forEach(idx => { scoreData[idx][0] = ''; });
-      sheet.getRange(firstDataRow, APP_CONFIG.COL_OUTPUT_SCORE, rowCount, 1).setValues(scoreData);
-    }
-
-    if (toProcess.length === 0) return;
-
+    // Chờ lượt tính trước hoàn tất rồi mới đọc dữ liệu mới nhất của các dòng vừa sửa.
     const lock = LockService.getScriptLock();
-    if (!lock.tryLock(3000)) return;
+    lock.waitLock(30000);
 
     try {
-      calculateSpecificRows(toProcess);
+      const rowCount = lastDataRow - firstDataRow + 1;
+      const rangeData = sheet.getRange(firstDataRow, 1, rowCount, 33).getValues();
+      let ctx = null;
+      const outputScores = rangeData.map(rowData => {
+        const hasFundType = String(rowData[25] || '').trim() !== '';
+        const hasIdentity = (
+          String(rowData[5] || '').trim() !== '' ||
+          String(rowData[6] || '').trim() !== '' ||
+          parseDateSafe(rowData[0], rowData) !== null ||
+          String(rowData[8] || '').trim() !== ''
+        );
+
+        // Xóa điểm cũ nếu dữ liệu giao dịch không còn đủ điều kiện.
+        if (!hasFundType || !hasIdentity) return [''];
+
+        // Luôn tính lại dòng vừa sửa, kể cả khi cột X đã có điểm (bao gồm 0).
+        if (!ctx) ctx = getRuleEngineContext(sheet.getParent());
+        return [cleanScore(evaluateRowWithRules(rowData, ctx))];
+      });
+
+      // Ghi một lần cho toàn bộ các dòng vừa sửa/dán, không quét các dòng khác.
+      sheet.getRange(firstDataRow, APP_CONFIG.COL_OUTPUT_SCORE, rowCount, 1)
+        .setValues(outputScores)
+        .setNumberFormat('0.##')
+        .setHorizontalAlignment('center');
+
+      SpreadsheetApp.flush();
     } finally {
       lock.releaseLock();
     }
   } catch (error) {
     Logger.log('Lỗi onEditAutoScore: ' + (error.message || error));
+    throw error;
   }
 }
 
@@ -2614,6 +2601,9 @@ function onEditAutoScore(e) {
  * =========================================================================
  */
 function autoTriggerOnDataChange(e) {
+  // Tương thích trigger On-Edit cũ: xử lý dòng vừa sửa kể cả khi đã có điểm.
+  if (e && e.range) return onEditAutoScore(e);
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) {

@@ -413,7 +413,11 @@ Khi tính điểm cho một giao dịch trong sheet `DATA`, hệ thống duyệt
 
 ### 6.1. Tự Động Hóa 100% (Không cần bấm thủ công)
 1. **Trigger On-Edit (Ngay lập tức)**:
-   - Khi bạn nhập hoặc dán dòng dữ liệu mới vào sheet `DATA`, hệ thống nhận diện và tính điểm tức thì cho dòng đó.
+   - Khi bạn nhập hoặc dán dòng dữ liệu mới vào sheet `Data`, hệ thống nhận diện và tính điểm cho dòng đó.
+   - Khi sửa hoặc dán đè dữ liệu trên dòng đã có điểm, hệ thống tự động tính lại **cột X** theo dữ liệu mới và bộ quy tắc hiện tại, kể cả khi điểm cũ bằng 0. Chỉ các dòng vừa chỉnh sửa được tính lại.
+   - Nếu xóa Loại Quỹ (cột Z) hoặc dữ liệu giao dịch không còn đủ điều kiện tính điểm, điểm cũ ở cột X được xóa trắng. Điểm nhập tay ở cột Y vẫn được giữ theo quy tắc Căn xin cơ chế.
+   - Sau khi cập nhật mã nguồn, chọn **Cấu Hình Điểm → Cài đặt Trigger tự động** một lần để bảo đảm trigger On-Edit trỏ tới hàm `onEditAutoScore`. Với các dòng đã bị lệch điểm từ trước, chọn các dòng đó rồi chạy **Tính điểm dòng chọn / mới** để cập nhật ngay.
+   - Trigger On-Edit xử lý thao tác nhập/sửa trực tiếp trên Google Sheets. Thay đổi do công thức hoặc script/API cần gọi hàm tính điểm từ luồng cập nhật dữ liệu. [Tài liệu Google Apps Script](https://developers.google.com/apps-script/guides/triggers/installable).
 2. **Trigger Hàng Ngày (Chạy lúc 1:00 AM)**:
    - Mỗi đêm, hệ thống kiểm tra chu kỳ tháng. Nếu bước sang tháng mới, hệ thống tự động chèn cột tháng và sao chép điểm từ tháng trước sang.
 
@@ -439,4 +443,3 @@ Hệ thống tích hợp sẵn menu **Cấu Hình Điểm** trực tiếp trên 
 
 ---
 *Tài liệu được cập nhật tự động theo phiên bản Enterprise UI v2.0.*
-
