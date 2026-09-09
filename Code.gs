@@ -186,11 +186,13 @@ function parseDateSafe(val, row) {
  */
 function isPastMonthRow(row) {
   if (!row) return false;
-  // 1. Ưu tiên Cột C (Tháng: index 2) & Cột D (Năm: index 3)
-  if (row[2] !== undefined && row[2] !== null && row[2] !== '' &&
-      row[3] !== undefined && row[3] !== null && row[3] !== '') {
-    const y = parseInt(row[3], 10);
-    const m = parseInt(row[2], 10);
+  // 1. Kiểm tra Cột C (Tháng: index 2) & Cột D (Năm: index 3)
+  if (row[2] !== undefined && row[2] !== null && String(row[2]).trim() !== '' &&
+      row[3] !== undefined && row[3] !== null && String(row[3]).trim() !== '') {
+    const rawY = String(row[3]).replace(/\D/g, '');
+    const rawM = String(row[2]).replace(/\D/g, '');
+    const y = parseInt(rawY, 10);
+    const m = parseInt(rawM, 10);
     if (!isNaN(y) && !isNaN(m)) {
       if (y < 2026) return true;
       if (y === 2026 && m < 9) return true;
@@ -1977,6 +1979,14 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
   // Xác định monthKey của giao dịch (YYYY-MM)
   const monthKey = `${dateBC.getFullYear()}-${String(dateBC.getMonth() + 1).padStart(2, '0')}`;
 
+  // ĐÓNG BĂNG TUYỆT ĐỐI ĐIỂM TRƯỚC THÁNG 9/2026:
+  // Không cho phép tính điểm cho bất kỳ đơn hàng nào trước tháng 9/2026.
+  // Giữ nguyên điểm cũ tại cột X (nếu có), hoặc trả về rỗng '', tuyệt đối không tính điểm mới!
+  if (monthKey < '2026-09' || isPastMonthRow(row)) {
+    const existing = row[APP_CONFIG.COL_OUTPUT_SCORE - 1];
+    return (existing !== undefined && existing !== null) ? existing : '';
+  }
+
   const duAn = String(row[5] || '').trim();
   const maCan = String(row[6] || '').trim().toUpperCase();
   const pkd = String(row[7] || '').trim();
@@ -2338,9 +2348,10 @@ function calculateAllScoresWithRules() {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const existingScore = row[APP_CONFIG.COL_OUTPUT_SCORE - 1];
-      // ĐÓNG BĂNG ĐIỂM THÁNG CŨ: Nếu đơn hàng thuộc Tháng 8/2026 trở về trước và đã có điểm -> GIỮ NGUYÊN
-      if (isPastMonthRow(row) && existingScore !== '' && existingScore !== null && existingScore !== undefined) {
-        outputScores.push([existingScore]);
+      // ĐÓNG BĂNG TUYỆT ĐỐI ĐIỂM TRƯỚC THÁNG 9/2026:
+      // Giữ nguyên điểm cũ sẵn có ở Cột X (hoặc rỗng nếu chưa có), tuyệt đối không tính lại!
+      if (isPastMonthRow(row)) {
+        outputScores.push([existingScore !== undefined && existingScore !== null ? existingScore : '']);
         continue;
       }
       const score = evaluateRowWithRules(row, ctx);
@@ -2441,8 +2452,9 @@ function calculateSpecificRows(rowNumbers) {
         if (targetSet.has(actualRow)) {
           const rowData = rangeData[i];
           const existingScore = scoreData[i][0];
-          // ĐÓNG BĂNG ĐIỂM THÁNG CŨ: Nếu dòng thuộc Tháng 8/2026 trở về trước và đã có điểm -> giữ nguyên
-          if (isPastMonthRow(rowData) && existingScore !== '' && existingScore !== null && existingScore !== undefined) {
+          // ĐÓNG BĂNG TUYỆT ĐỐI ĐIỂM TRƯỚC THÁNG 9/2026:
+          // Tuyệt đối không tính điểm cho các đơn hàng trước tháng 9
+          if (isPastMonthRow(rowData)) {
             continue;
           }
           const score = evaluateRowWithRules(rowData, ctx);
@@ -2484,8 +2496,8 @@ function calculateSpecificRows(rowNumbers) {
           if (cSet.has(cStart + j)) {
             const rowData = cData[j];
             const existingScore = cScores[j][0];
-            // ĐÓNG BĂNG ĐIỂM THÁNG CŨ: Nếu dòng thuộc Tháng 8/2026 trở về trước và đã có điểm -> giữ nguyên
-            if (isPastMonthRow(rowData) && existingScore !== '' && existingScore !== null && existingScore !== undefined) {
+            // ĐÓNG BĂNG TUYỆT ĐỐI ĐIỂM TRƯỚC THÁNG 9/2026:
+            if (isPastMonthRow(rowData)) {
               continue;
             }
             const score = evaluateRowWithRules(rowData, ctx);
@@ -2671,9 +2683,10 @@ function autoRecalculateImportedScores() {
     const changedIndices = [];
     const outputScores = rows.map((row, index) => {
       const existingScore = row[APP_CONFIG.COL_OUTPUT_SCORE - 1];
-      // ĐÓNG BĂNG ĐIỂM THÁNG CŨ: Trigger định kỳ tuyệt đối không sửa điểm của tháng cũ
-      if (isPastMonthRow(row) && existingScore !== '' && existingScore !== null && existingScore !== undefined) {
-        return [existingScore];
+      // ĐÓNG BĂNG TUYỆT ĐỐI ĐIỂM TRƯỚC THÁNG 9/2026:
+      // Trigger định kỳ tuyệt đối không tính hay sửa điểm của tháng cũ
+      if (isPastMonthRow(row)) {
+        return [existingScore !== undefined && existingScore !== null ? existingScore : ''];
       }
 
       let score = '';
@@ -2685,6 +2698,8 @@ function autoRecalculateImportedScores() {
       return [score];
     });
 
+    if (changedIndices.length === 0) return { success: true, count: 0 };
+
     // Gom các dòng liền nhau để hạn chế số lần gọi Sheets.
     const groups = [];
     changedIndices.forEach(index => {
@@ -2692,8 +2707,10 @@ function autoRecalculateImportedScores() {
       if (group && index === group.end + 1) group.end = index;
       else groups.push({ start: index, end: index });
     });
-    // Nếu thay đổi rải rác quá nhiều, ghi cột kết quả một lần thay vì hàng nghìn RPC.
-    const writeGroups = groups.length > 20 ? [{ start: 0, end: rows.length - 1 }] : groups;
+    // Nếu thay đổi rải rác quá nhiều, chỉ ghi dải từ dòng đầu thay đổi đến dòng cuối thay đổi (không ghi đè tháng cũ)
+    const writeGroups = groups.length > 20 
+      ? [{ start: changedIndices[0], end: changedIndices[changedIndices.length - 1] }] 
+      : groups;
     writeGroups.forEach(group => {
       sheet.getRange(group.start + 2, APP_CONFIG.COL_OUTPUT_SCORE, group.end - group.start + 1, 1)
         .setValues(outputScores.slice(group.start, group.end + 1))
@@ -2714,6 +2731,7 @@ function autoRecalculateImportedScores() {
 }
 
 function canAutoScoreRow(row) {
+  if (isPastMonthRow(row)) return false;
   return String(row[25] || '').trim() !== '' && (
     String(row[5] || '').trim() !== '' ||
     String(row[6] || '').trim() !== '' ||
@@ -2823,9 +2841,13 @@ function autoDailyCheckAndSyncMonth() {
     const dataSheet = ss.getSheetByName(APP_CONFIG.SHEET_DATA);
     if (dataSheet && dataSheet.getLastRow() >= 2) {
       const numRows = dataSheet.getLastRow() - 1;
+      const dataRows = dataSheet.getRange(2, 1, numRows, 33).getValues();
       const scoreVals = dataSheet.getRange(2, APP_CONFIG.COL_OUTPUT_SCORE, numRows, 1).getValues();
       const unscored = [];
       for (let i = 0; i < numRows; i++) {
+        // Đóng băng tuyệt đối tháng cũ: chỉ tính các dòng từ tháng 9/2026 trở đi
+        if (isPastMonthRow(dataRows[i])) continue;
+
         if (scoreVals[i][0] === '' || scoreVals[i][0] === null || scoreVals[i][0] === undefined) {
           unscored.push(i + 2);
         }
@@ -2868,12 +2890,10 @@ function onEditAutoScore(e) {
       const outputScores = rangeData.map(rowData => {
         const existingScore = rowData[APP_CONFIG.COL_OUTPUT_SCORE - 1];
 
-        // ĐÓNG BĂNG ĐIỂM THÁNG CŨ:
-        // Nếu dòng thuộc tháng cũ (<= 08/2026) và đã có điểm:
-        // Giữ nguyên điểm cũ, TRỪ KHI người dùng chủ động sửa cột Ngày/Tháng/Năm (Cột 1 đến 4)
-        const isMonthDateEdit = e && e.range && (e.range.getColumn() <= 4);
-        if (isPastMonthRow(rowData) && !isMonthDateEdit && existingScore !== '' && existingScore !== null && existingScore !== undefined) {
-          return [existingScore];
+        // ĐÓNG BĂNG TUYỆT ĐỐI ĐIỂM TRƯỚC THÁNG 9/2026:
+        // Đơn hàng trước tháng 9 tuyệt đối không tính điểm. Giữ nguyên điểm cũ sẵn có (hoặc rỗng nếu chưa có).
+        if (isPastMonthRow(rowData)) {
+          return [existingScore !== undefined && existingScore !== null ? existingScore : ''];
         }
 
         // Xóa điểm cũ nếu dữ liệu giao dịch không còn đủ điều kiện.
@@ -2937,6 +2957,9 @@ function autoTriggerOnDataChange(e) {
       const row = dataRange[i];
       const currentScore = scoreRange[i][0];
       const actualRowNum = i + 2;
+
+      // Đóng băng tuyệt đối tháng cũ: không tính điểm cho đơn hàng trước tháng 9/2026
+      if (isPastMonthRow(row)) continue;
 
       const hasFundType = String(row[25] || '').trim() !== '';
       const hasIdentity = (

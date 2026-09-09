@@ -165,7 +165,7 @@ for (const relativePath of ['src/Code.gs', 'Code.gs']) {
   });
 
   check('uses the updated month to select a new score', () => {
-    const h = harness(sourcePath, [transaction({ 2: 8, 3: 2026 })]);
+    const h = harness(sourcePath, [transaction({ 2: 10, 3: 2026 })]);
     h.edit({ column: 3 });
     assert.equal(h.cells[1][23], 3);
   });
@@ -286,25 +286,18 @@ for (const relativePath of ['src/Code.gs', 'Code.gs']) {
     assert.equal(h.cells[1][23], 99);
   });
 
-  check('does not apply cancelled deal penalty to past months (<= 08/2026)', () => {
-    // Đơn hàng tháng 8 bị hủy nhưng không có điểm cũ: Khi tính toán vẫn tính điểm bình thường (3), không bị auto 0
-    const h = harness(sourcePath, [transaction({ 2: 8, 3: 2026, 9: 'Đã hủy', 23: '' })]);
+  check('does not calculate or alter scores for past months (<= 08/2026)', () => {
+    // Đơn hàng tháng 8: Tuyệt đối không tính điểm, nếu rỗng giữ nguyên rỗng, nếu có điểm giữ nguyên điểm cũ
+    const h = harness(sourcePath, [
+      transaction({ 2: 8, 3: 2026, 9: 'Đã hủy', 23: '' }),
+      transaction({ 2: 8, 3: 2026, 7: 'BLĐ', 23: '' }),
+      transaction({ 2: 8, 3: 2026, 23: 77 })
+    ]);
     h.poll();
-    assert.equal(h.cells[1][23], 3);
-  });
-
-  check('applies cancelled deal penalty to month 9 onwards (>= 09/2026)', () => {
-    // Đơn hàng từ tháng 9 trở đi bị hủy: Tự động tính 0 điểm
-    const h = harness(sourcePath, [transaction({ 2: 9, 3: 2026, 9: 'Đã hủy', 23: '' })]);
-    h.poll();
-    assert.equal(h.cells[1][23], 0);
-  });
-
-  check('does not apply BLD/BO or CTV penalties to past months (<= 08/2026)', () => {
-    // Đơn hàng tháng 8 thuộc BLĐ/BO hoặc CTV: Không bị auto 0
-    const h = harness(sourcePath, [transaction({ 2: 8, 3: 2026, 7: 'BLĐ', 23: '' })]);
-    h.poll();
-    assert.equal(h.cells[1][23], 3);
+    assert.equal(h.cells[1][23], '');
+    assert.equal(h.cells[2][23], '');
+    assert.equal(h.cells[3][23], 77);
+    assert.equal(h.writes.length, 0);
   });
 
   check('applies BLD/BO and CTV penalties to month 9 onwards (>= 09/2026)', () => {
@@ -323,6 +316,28 @@ for (const relativePath of ['src/Code.gs', 'Code.gs']) {
     h.recalcAll();
     assert.equal(h.cells[1][23], 88); // Giữ nguyên điểm tháng 8
     assert.equal(h.cells[2][23], 4);  // Tính lại điểm tháng 9 thành 4
+  });
+
+  check('onEditAutoScore preserves existing score or blank for past months (<= 08/2026)', () => {
+    const h = harness(sourcePath, [
+      transaction({ 2: 8, 3: 2026, 23: 88 }),
+      transaction({ 2: 7, 3: 2026, 23: '' }),
+      transaction({ 2: 9, 3: 2026, 23: 99 })
+    ]);
+    h.edit({ row: 2, rowCount: 3 });
+    assert.equal(h.cells[1][23], 88); // Giữ nguyên 88
+    assert.equal(h.cells[2][23], ''); // Giữ nguyên rỗng
+    assert.equal(h.cells[3][23], 4);  // Tháng 9 tính điểm thành 4
+  });
+
+  check('autoTriggerOnDataChange ignores unscored past months and only scores month 9+', () => {
+    const h = harness(sourcePath, [
+      transaction({ 2: 8, 3: 2026, 23: '' }),
+      transaction({ 2: 9, 3: 2026, 23: '' })
+    ]);
+    h.scan();
+    assert.equal(h.cells[1][23], ''); // Tháng 8 không bị tính điểm
+    assert.equal(h.cells[2][23], 4);  // Tháng 9 được tính điểm thành 4
   });
 
   check('does not rewrite scores when a periodic scan finds no result changes', () => {
