@@ -1119,7 +1119,7 @@
           <span>Bảng Cấu Hình Điểm</span>
           <span class="commit-badge" title="Mã commit phiên bản hiện tại của hệ thống">
             <span class="commit-text">Commit</span>
-            <span class="commit-hash" id="commitHashDisplay">f375716</span>
+            <span class="commit-hash" id="commitHashDisplay">7b42582</span>
           </span>
         </h1>
 
@@ -6405,9 +6405,23 @@
       } else {
         resultBox.style.display = 'block';
         scoreBadge.innerText = 'Chế độ mô phỏng';
-        detailText.innerHTML = `Đã nhận thông số: CĐT=${cdt}, Dự án=${code}, PKD=${pkd}, CVKD=${cvkd}, Trạng thái=${trangThai}, Giá=${giaTy} tỷ.`;
-      }
     }
+
+    // Tự động đồng bộ commit version từ Google Apps Script server
+    try {
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.getAppVersion) {
+        google.script.run.withSuccessHandler(function(ver) {
+          if (ver && ver.COMMIT) {
+            var el = document.getElementById('commitHashDisplay');
+            if (el) el.textContent = ver.COMMIT;
+            var badge = el ? el.closest('.commit-badge') : null;
+            if (badge && ver.BUILD_TIME) {
+              badge.title = 'Mã commit: ' + ver.COMMIT + ' (Build: ' + ver.BUILD_TIME + ')';
+            }
+          }
+        }).getAppVersion();
+      }
+    } catch (e) {}
 
 </script>
 </body>

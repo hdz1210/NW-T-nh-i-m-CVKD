@@ -7,8 +7,8 @@
  */
 
 const APP_VERSION = {
-  COMMIT: 'f375716',
-  BUILD_TIME: '2026-09-09 14:11:07',
+  COMMIT: '7b42582',
+  BUILD_TIME: '2026-09-09 14:19:42',
 };
 
 const APP_CONFIG = {
@@ -253,6 +253,13 @@ function showVersionInfo() {
     `Mã nguồn Google Apps Script đã được build và triển khai thành công từ commit ${APP_VERSION.COMMIT}.`,
     SpreadsheetApp.getUi().ButtonSet.OK
   );
+}
+
+/**
+ * Trả về thông tin phiên bản ứng dụng cho client UI
+ */
+function getAppVersion() {
+  return APP_VERSION;
 }
 
 /**
