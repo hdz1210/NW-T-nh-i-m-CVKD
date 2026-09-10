@@ -17,8 +17,12 @@ function harness(sourcePath, rows, options = {}) {
   const cells = [Array(33).fill('Header'), ...rows.map(row => [...row])];
   const colors = cells.map(() => Array(33).fill('#000000'));
   const weights = cells.map(() => Array(33).fill('normal'));
+  const formulas = cells.map(() => Array(33).fill(''));
+  const numberFormats = cells.map(() => Array(33).fill('General'));
+  const alignments = cells.map(() => Array(33).fill('left'));
   const events = [];
   const writes = [];
+  const mutations = [];
   const logs = [];
   const properties = new Map(options.spreadsheetId ? [['AUTO_SCORE_SPREADSHEET_ID', options.spreadsheetId]] : []);
   const triggers = (options.triggers || []).map(handler => ({ getHandlerFunction: () => handler }));
@@ -42,7 +46,8 @@ function harness(sourcePath, rows, options = {}) {
     getParent: () => ss,
     getLastRow: () => cells.length,
     getLastColumn: () => 33,
-    getConditionalFormatRules: () => [],
+    getConditionalFormatRules: () => options.conditionalRules || [],
+    setConditionalFormatRules(rules) { mutations.push({ method: 'setConditionalFormatRules', rules }); },
     getMaxRows: () => cells.length,
     getRange(row, column, rowCount = 1, columnCount = 1) {
       function read(matrix) {
@@ -55,19 +60,27 @@ function harness(sourcePath, rows, options = {}) {
           for (let j = 0; j < columnCount; j++) matrix[row - 1 + i][column - 1 + j] = values[i][j];
         }
       }
+      function record(method) {
+        mutations.push({ method, row, column, rowCount, columnCount });
+      }
+      function fill(matrix, value) {
+        write(matrix, Array.from({ length: rowCount }, () => Array(columnCount).fill(value)));
+      }
       const range = {
         getValues: () => read(cells),
         getFontColors: () => read(colors),
         getFontWeights: () => read(weights),
         setValues(values) {
-          writes.push({ row, column, rowCount, locked });
+          record('setValues');
+          writes.push({ row, column, rowCount, columnCount, locked });
           write(cells, values);
+          fill(formulas, '');
           return range;
         },
-        setFontColors(values) { write(colors, values); return range; },
-        setFontWeights(values) { write(weights, values); return range; },
-        setNumberFormat: () => range,
-        setHorizontalAlignment: () => range
+        setFontColors(values) { record('setFontColors'); write(colors, values); return range; },
+        setFontWeights(values) { record('setFontWeights'); write(weights, values); return range; },
+        setNumberFormat(value) { record('setNumberFormat'); fill(numberFormats, value); return range; },
+        setHorizontalAlignment(value) { record('setHorizontalAlignment'); fill(alignments, value); return range; }
       };
       return range;
     }
@@ -127,7 +140,7 @@ function harness(sourcePath, rows, options = {}) {
   `, context);
   if (options.ruleError) context.getRuleEngineContext = () => { throw new Error('Rules unavailable'); };
   return {
-    cells, events, writes, logs, properties, triggers,
+    cells, colors, weights, formulas, numberFormats, alignments, events, writes, mutations, logs, properties, triggers,
     poll() { return context.autoRecalculateImportedScores(); },
     setup() { context.setupAutoTrigger(); },
     edit({ row = 2, rowCount = 1, column = 12, columnCount = 1, handler = 'onEditAutoScore' } = {}) {
@@ -137,7 +150,9 @@ function harness(sourcePath, rows, options = {}) {
       } });
     },
     scan() { context.autoTriggerOnDataChange(); },
-    recalcAll() { return context.calculateAllScoresWithRules(); }
+    recalcAll() { return context.calculateAllScoresWithRules(); },
+    recalcRows(rowNumbers) { return context.calculateSpecificRows(rowNumbers); },
+    daily() { context.autoDailyCheckAndSyncMonth(); }
   };
 }
 
@@ -428,16 +443,64 @@ for (const relativePath of ['src/Code.gs', 'Code.gs']) {
     assert.ok(h.events.some(event => event[0] === 'alert' && String(event[2]).includes('3 Trigger')));
   });
 
-  if (relativePath === 'src/Code.gs') {
-    check('preserves manual Y scores while recalculating X without modifying Y', () => {
-      const h = harness(sourcePath, [
-        transaction({ 24: 7, 27: 'Căn xin cơ chế' }),
-        transaction({ 24: 0, 27: 'Căn xin cơ chế' }),
-        transaction({ 24: '', 27: 'Căn xin cơ chế' }),
-        transaction({ 24: 'chưa có điểm', 27: 'Căn xin cơ chế' })
-      ]);
-      h.edit({ rowCount: 4 });
-      assert.deepEqual(h.cells.slice(1).map(row => [row[23], row[24]]), [[4, 7], [4, 0], [4, ''], [4, '']]);
+  const scoreRuns = {
+    'direct edits to Y': h => h.edit({ rowCount: h.cells.length - 1, column: 25 }),
+    'edits to AB': h => h.edit({ rowCount: h.cells.length - 1, column: 28 }),
+    'pasted data with the legacy edit trigger': h => h.edit({ rowCount: h.cells.length - 1, column: 1, columnCount: 33, handler: 'autoTriggerOnDataChange' }),
+    'periodic import refresh': h => assert.equal(h.poll().success, true),
+    'full recalculation': h => assert.equal(h.recalcAll().success, true),
+    'selected row recalculation': h => assert.equal(h.recalcRows(h.cells.slice(1).map((_, index) => index + 2)).success, true),
+    'manual scan': h => h.scan(),
+    'daily trigger': h => h.daily(),
+    'trigger setup': h => h.setup()
+  };
+  for (const [name, run] of Object.entries(scoreRuns)) {
+    check(`preserves all Y content and formatting during ${name}`, () => {
+      const verifyValues = [7, 0, '', 'chưa có điểm', 'chua co diem', '  CHƯA CÓ ĐIỂM  ', 'ghi chú nhập tay', 12, '#N/A'];
+      const flags = ['Căn xin cơ chế', 'can xin co che', 'Xin cơ chế', 'xin co che', 'Cơ chế', 'co che', '', 'Thông thường'];
+      const rows = verifyValues.map((value, index) => transaction({ 23: '', 24: value, 27: flags[index % flags.length] }));
+      rows.push(transaction({ 23: 88, 24: 'chưa có điểm', 27: '', 2: 8, 3: 2026 }));
+      rows.push(transaction({ 23: 99, 24: 'chua co diem', 25: '', 27: '' }));
+      const h = harness(sourcePath, rows, { conditionalRules: [{
+        getRanges: () => [{ getColumn: () => 25 }],
+        getBooleanCondition: () => ({ getCriteriaValues: () => ['chưa có điểm'] })
+      }] });
+      h.formulas[8][24] = '=SUM(5,7)';
+      for (let row = 1; row < h.cells.length; row++) {
+        h.colors[row][24] = '#ff0000';
+        h.weights[row][24] = 'bold';
+        h.numberFormats[row][24] = '0.000';
+        h.alignments[row][24] = 'right';
+      }
+      const snapshotY = () => h.cells.map((row, index) => [row[24], h.formulas[index][24],
+        h.colors[index][24], h.weights[index][24], h.numberFormats[index][24], h.alignments[index][24]]);
+      const before = snapshotY();
+      run(h);
+      assert.deepEqual(snapshotY(), before);
+      assert.ok(h.cells.slice(1, verifyValues.length + 1).every(row => row[23] === 4));
+      assert.equal(h.cells[verifyValues.length + 1][23], 88);
+      assert.ok(h.mutations.length > 0);
+      assert.ok(h.mutations.every(mutation => mutation.column === 24 && mutation.columnCount === 1),
+        'Scoring may only write or format column X in Data');
+      assert.ok(!h.logs.some(message => /Lỗi|Error/i.test(message)));
     });
   }
+
+  check('leaves Y untouched in separated chunks and in unselected rows', () => {
+    const h = harness(sourcePath, Array.from({ length: 3002 }, () =>
+      transaction({ 24: 'chưa có điểm', 27: 'Căn xin cơ chế' })));
+    assert.equal(h.recalcRows([2, 4, 3003]).success, true);
+    assert.deepEqual([h.cells[1][23], h.cells[2][23], h.cells[3][23], h.cells[3002][23]], [4, 99, 4, 4]);
+    assert.ok(h.cells.slice(1).every(row => row[24] === 'chưa có điểm'));
+    assert.ok(h.mutations.every(mutation => mutation.column === 24 && mutation.columnCount === 1));
+  });
+
+  check('leaves Y untouched when no X scores need updating', () => {
+    for (const run of [h => h.poll(), h => h.scan(), h => h.daily()]) {
+      const h = harness(sourcePath, [transaction({ 23: 4, 24: 'chưa có điểm' })]);
+      run(h);
+      assert.equal(h.cells[1][24], 'chưa có điểm');
+      assert.equal(h.mutations.length, 0);
+    }
+  });
 }

@@ -398,7 +398,7 @@ Khi tính điểm cho một giao dịch trong sheet `DATA`, hệ thống duyệt
 1. **Trigger On-Edit (Ngay lập tức)**:
    - Khi bạn nhập hoặc dán dòng dữ liệu mới vào sheet `Data`, hệ thống nhận diện và tính điểm cho dòng đó.
    - Khi sửa hoặc dán đè dữ liệu trên dòng đã có điểm, hệ thống tự động tính lại **cột X** theo dữ liệu mới và bộ quy tắc hiện tại, kể cả khi điểm cũ bằng 0. Chỉ các dòng vừa chỉnh sửa được tính lại.
-   - Nếu xóa Loại Quỹ (cột Z) hoặc dữ liệu giao dịch không còn đủ điều kiện tính điểm, điểm cũ ở cột X được xóa trắng. Điểm nhập tay ở cột Y vẫn được giữ theo quy tắc Căn xin cơ chế.
+   - Nếu xóa Loại Quỹ (cột Z) hoặc dữ liệu giao dịch không còn đủ điều kiện tính điểm, điểm cũ ở cột X được xóa trắng. Cột Y “Điểm Verify” được giữ nguyên toàn bộ giá trị, công thức và định dạng; script không tự động ghi, xóa hoặc dọn dẹp nội dung ở Y, kể cả chữ “chưa có điểm”.
    - Trigger On-Edit xử lý thao tác nhập/sửa trực tiếp trên Google Sheets. Khi file A lấy dữ liệu từ file B bằng `IMPORTRANGE`, sửa file B không tạo sự kiện On-Edit tại A; hệ thống dùng trigger định kỳ bên dưới. [Tài liệu Google Apps Script](https://developers.google.com/apps-script/guides/triggers/installable).
 2. **Trigger Hàng Ngày (Chạy lúc 1:00 AM)**:
    - Mỗi đêm, hệ thống kiểm tra chu kỳ tháng. Nếu bước sang tháng mới, hệ thống tự động chèn cột tháng và sao chép điểm từ tháng trước sang.
@@ -406,7 +406,7 @@ Khi tính điểm cho một giao dịch trong sheet `DATA`, hệ thống duyệt
    - Hàm `autoRecalculateImportedScores` đọc dữ liệu hiện tại ở file A, tính lại cả những dòng đã có điểm X và cập nhật điểm khi kết quả thay đổi. Không cần chỉnh sửa trực tiếp hay mở file A.
    - Ví dụ: bạn đổi trạng thái giao dịch trong B thành **Đã hủy**. Sau khi `IMPORTRANGE` cập nhật trạng thái ở A, lượt kiểm tra tiếp theo sẽ đổi X của giao dịch đó thành **0**.
    - Nếu dòng nguồn bị xóa hoặc không còn đủ điều kiện tính điểm, X được xóa trắng. Nếu dữ liệu đang tải hoặc có lỗi như `#REF!`, `#N/A`, lượt kiểm tra được bỏ qua và sẽ thử lại sau để tránh ghi điểm sai.
-   - Điểm nhập tay tại Y được giữ theo quy tắc Căn xin cơ chế. Script ghi kết quả ở X; vùng `IMPORTRANGE` cần chừa cột X để script có thể ghi điểm.
+   - Script chỉ ghi kết quả ở X, không can thiệp dữ liệu, công thức hoặc định dạng tại Y. Nội dung cột AB không kích hoạt xử lý riêng cho Y. Vùng `IMPORTRANGE` cần chừa cột X để script có thể ghi điểm.
    - Thời gian cập nhật gồm độ trễ của `IMPORTRANGE` và lượt chạy định kỳ tiếp theo; không cam kết 1 phút kể từ lúc sửa B. [Thông tin cập nhật IMPORTRANGE của Google](https://support.google.com/docs/answer/3093340).
 
 **Bật cơ chế mới:** Sau khi CI/CD triển khai mã mới, mở **file A** và chạy **Cấu Hình Điểm → Cài đặt Trigger tự động** một lần. Thông báo phải hiển thị **3 Trigger**, gồm mục **IMPORTRANGE - mỗi 1 phút**. Thao tác này cũng kiểm tra ngay những điểm cũ và thay thế các trigger cũ của tài khoản cài đặt để tránh trùng lặp. Việc push mã lên GitHub tự nó không tạo trigger định kỳ mới.
