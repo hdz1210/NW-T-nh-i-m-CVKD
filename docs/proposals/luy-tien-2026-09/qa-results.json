@@ -1,0 +1,24 @@
+[
+  {
+    "fund": "th",
+    "fontLoaded": true,
+    "errors": [],
+    "layout": {
+      "width": 430,
+      "scrollWidth": 430
+    },
+    "source": "src/ConfigUI.html",
+    "change": "Only score tabs and two progressive inputs added"
+  },
+  {
+    "fund": "f2",
+    "fontLoaded": true,
+    "errors": [],
+    "layout": {
+      "width": 430,
+      "scrollWidth": 430
+    },
+    "source": "src/ConfigUI.html",
+    "change": "Only score tabs and two progressive inputs added"
+  }
+]

@@ -2587,17 +2587,11 @@ function calculateSpecificRows(rowNumbers) {
 
 /**
  * =========================================================================
- * QUY TẮC CĂN XIN CƠ CHẾ (CỘT AB & CỘT Y)
+* QUY TẮC CĂN XIN CƠ CHẾ (CỘT AB & CỘT Y) - ĐÃ BỎ THEO YÊU CẦU
  * =========================================================================
- * - Cột AB nếu có "Căn xin cơ chế":
- *   + Cột Y là nơi nhập điểm manual.
- *   + Nếu Cột Y chưa có điểm (trống hoặc đang là 'chưa có điểm'):
- *     -> Đánh dấu chữ "chưa có điểm" màu đỏ (#dc2626), in đậm.
- *   + Nếu Cột Y đã được nhập điểm manual:
- *     -> Giữ nguyên điểm manual đó, font màu đen (#000000), chữ thường.
- * - Cột AB nếu không có "Căn xin cơ chế":
- *   + Nếu Cột Y đang có chữ "chưa có điểm", tự động xóa trắng ('') và reset định dạng.
- * Lưu ý: Quy tắc này độc lập, hoàn toàn không làm thay đổi việc tính điểm Cột X.
+ * - Tuyệt đối không can thiệp, không sửa đổi dữ liệu ở Cột Y.
+ * - Tự động dọn dẹp xóa bỏ text "chưa có điểm" cũ (nếu còn sót lại từ rule trước)
+ *   và gỡ bỏ quy tắc định dạng báo đỏ để Cột AA hiển thị đúng điểm từ Cột X.
  */
 
 function isCanXinCoChe(val) {
@@ -2611,7 +2605,6 @@ function processCanXinCoCheRule(dataSheet, startRow, rowCount, dataRange) {
   startRow = startRow || 2;
 
   try {
-    const rangeValues = dataRange || dataSheet.getRange(startRow, 1, rowCount, Math.max(28, dataSheet.getLastColumn())).getValues();
     const rangeY = dataSheet.getRange(startRow, APP_CONFIG.COL_VERIFY_SCORE, rowCount, 1);
     const currentYVals = rangeY.getValues();
     const currentColors = rangeY.getFontColors();
@@ -2620,37 +2613,15 @@ function processCanXinCoCheRule(dataSheet, startRow, rowCount, dataRange) {
     let hasChange = false;
 
     for (let i = 0; i < rowCount; i++) {
-      const row = rangeValues[i];
-      const rawValAB = row.length >= 28 ? row[27] : ''; // Cột AB: index 27 (1-based: 28)
       const rawValY = currentYVals[i][0];
+      const strY = String(rawValY !== null && rawValY !== undefined ? rawValY : '').trim().toLowerCase();
 
-      const isCoChe = isCanXinCoChe(rawValAB);
-      const strY = String(rawValY !== null && rawValY !== undefined ? rawValY : '').trim();
-      const isPlaceholder = strY.toLowerCase() === 'chưa có điểm' || strY.toLowerCase() === 'chua co diem';
-      const hasManualScore = strY !== '' && !isPlaceholder;
-
-      if (isCoChe) {
-        if (!hasManualScore) {
-          if (rawValY !== 'chưa có điểm' || currentColors[i][0] !== '#dc2626' || currentWeights[i][0] !== 'bold') {
-            currentYVals[i][0] = 'chưa có điểm';
-            currentColors[i][0] = '#dc2626';
-            currentWeights[i][0] = 'bold';
-            hasChange = true;
-          }
-        } else {
-          if (currentColors[i][0] === '#dc2626' || currentWeights[i][0] === 'bold') {
-            currentColors[i][0] = '#000000';
-            currentWeights[i][0] = 'normal';
-            hasChange = true;
-          }
-        }
-      } else {
-        if (isPlaceholder) {
-          currentYVals[i][0] = '';
-          currentColors[i][0] = '#000000';
-          currentWeights[i][0] = 'normal';
-          hasChange = true;
-        }
+      // Chỉ dọn dẹp các ô đang chứa text placeholder "chưa có điểm" do rule cũ để lại
+      if (strY === 'chưa có điểm' || strY === 'chua co diem') {
+        currentYVals[i][0] = '';
+        currentColors[i][0] = '#000000';
+        currentWeights[i][0] = 'normal';
+        hasChange = true;
       }
     }
 
@@ -2666,31 +2637,28 @@ function processCanXinCoCheRule(dataSheet, startRow, rowCount, dataRange) {
 }
 
 function ensureCanXinCoCheConditionalFormatting(sheet) {
+  // Đã bỏ rule báo đỏ căn xin cơ chế ở cột Y. Tự động gỡ bỏ rule báo đỏ cũ nếu còn sót lại.
+  removeCanXinCoCheConditionalFormatting(sheet);
+}
+
+function removeCanXinCoCheConditionalFormatting(sheet) {
   if (!sheet) return;
   try {
     const rules = sheet.getConditionalFormatRules() || [];
-    const exists = rules.some(r => {
+    const filteredRules = rules.filter(r => {
       const ranges = r.getRanges();
-      return ranges.some(rg => rg.getColumn() === APP_CONFIG.COL_VERIFY_SCORE) &&
-        r.getBooleanCondition() &&
-        r.getBooleanCondition().getCriteriaType() === SpreadsheetApp.BooleanCriteria.TEXT_EQUAL_TO &&
-        String(r.getBooleanCondition().getCriteriaValues()[0]).toLowerCase() === 'chưa có điểm';
+      const isColY = ranges.some(rg => rg.getColumn() === APP_CONFIG.COL_VERIFY_SCORE);
+      const cond = r.getBooleanCondition();
+      const isChuaCoDiem = cond && cond.getCriteriaValues && cond.getCriteriaValues()[0] &&
+        String(cond.getCriteriaValues()[0]).toLowerCase().includes('chưa có điểm');
+      return !(isColY && isChuaCoDiem);
     });
-    if (!exists) {
-      const maxRows = Math.max(10, sheet.getMaxRows());
-      const rangeY = sheet.getRange(2, APP_CONFIG.COL_VERIFY_SCORE, maxRows - 1, 1);
-      const rule = SpreadsheetApp.newConditionalFormatRule()
-        .whenTextEqualTo('chưa có điểm')
-        .setFontColor('#dc2626')
-        .setBold(true)
-        .setBackground('#fef2f2')
-        .setRanges([rangeY])
-        .build();
-      rules.push(rule);
-      sheet.setConditionalFormatRules(rules);
+    if (filteredRules.length !== rules.length) {
+      sheet.setConditionalFormatRules(filteredRules);
+      Logger.log('Đã gỡ bỏ conditional formatting báo đỏ "chưa có điểm" ở cột Y.');
     }
   } catch (e) {
-    Logger.log('ensureCanXinCoCheConditionalFormatting error: ' + e);
+    Logger.log('removeCanXinCoCheConditionalFormatting error: ' + e);
   }
 }
 
@@ -2705,14 +2673,13 @@ function checkAndFormatCanXinCoChe() {
 
     const lastRow = dataSheet.getLastRow();
     const numRows = lastRow - 1;
-    const dataRange = dataSheet.getRange(2, 1, numRows, 33).getValues();
 
-    processCanXinCoCheRule(dataSheet, 2, numRows, dataRange);
-    ensureCanXinCoCheConditionalFormatting(dataSheet);
+    processCanXinCoCheRule(dataSheet, 2, numRows);
+    removeCanXinCoCheConditionalFormatting(dataSheet);
 
-    SpreadsheetApp.getActiveSpreadsheet().toast('Đã kiểm tra & cập nhật trạng thái Căn xin cơ chế (Cột AB & Y)!', 'Thành công', 3);
+    SpreadsheetApp.getActiveSpreadsheet().toast('Đã dọn dẹp text "chưa có điểm" và gỡ bỏ báo đỏ ở Cột Y!', 'Thành công', 3);
   } catch (err) {
-    SpreadsheetApp.getUi().alert('Lỗi kiểm tra Căn xin cơ chế: ' + err.toString());
+    SpreadsheetApp.getUi().alert('Lỗi: ' + err.toString());
   }
 }
 

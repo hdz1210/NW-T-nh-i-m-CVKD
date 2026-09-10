@@ -338,33 +338,16 @@ Toàn bộ thông tin dự án, 3 tiêu chí khớp và điểm số từng thá
   - **Cột B (CĐT)**: Chủ đầu tư dự án (`Masterise`, `Vinhomes`...).
   - **Cột C (Mã dự án)**: Mã nhận diện dự án (`MAS OCP2`, `MAS VGG`, `MLB`...).
   - **Cột D (Dự án)**: Tên đầy đủ của dự án bất động sản.
-  - **Cột E (Miền)**: Phân vùng địa lý (`Miền Bắc`, `Miền Nam`, `Miền Trung`).
-  - **Cột F (Loại Quỹ)**: Luôn mang giá trị `Quỹ NW`.
-  - **Cột G (Sản Phẩm)**: Phân loại hình bất động sản (`Thấp tầng`, `Cao tầng`, hoặc `Tất cả`).
-  - **Cột H (Loại Căn)**: Phân loại căn hộ (`Studio`, `1PN`, `2PN`, `3PN`, `Duplex`, `Shophouse`, hoặc `Tất cả`).
-  - **Cột I (Khoảng Giá)**: Khoảng giá tính theo tỷ VNĐ (`<= 20`, `20 - 30`, `>= 30`, hoặc `Tất cả`).
-  - **Cột J trở đi (Ma trận tháng)**: Điểm số của từng tháng cụ thể (`09/2026`, `08/2026`, `07/2026`...). Cột tháng mới nhất luôn được tự động chèn ở vị trí Cột J.
-
----
-
-#### 4.6.2. Sheet "Dự án F2" (Quỹ Chéo)
-
-Điểm số của các dự án liên kết bán chéo được lưu trữ theo tên dự án và từng tháng giao dịch:
-
-![Cấu trúc Sheet Dự án F2 sau khi lưu](docs/images/sheet_du_an_f2.png)
-
-*Hình ảnh: Cấu trúc sheet "Dự án F2" trên Google Sheets sau khi lưu - 2 cột thông tin cố định và ma trận điểm qua các tháng.*
-
-- **Dòng 2 - 3 (Header)**:
-  - **Cột A (Dự án)**: Tên dự án F2 (`The Gió`, `SBC`, `TFL`, `SCT`, `TPV`, `SFS`, `ER`...).
-  - **Cột B (Loại Quỹ)**: Luôn mang giá trị `Quỹ chéo`.
-  - **Cột C trở đi (Ma trận tháng)**: Điểm số áp dụng cho dự án theo từng tháng giao dịch.
-
----
-
-#### 4.6.3. Sheet "Điểm Chiến Dịch" (Multi-Campaign)
-
-Toàn bộ các chiến dịch thi đua, thời gian hiệu lực và mức điểm thưởng thay thế được lưu trữ chi tiết:
+  - **Cột E    - Nếu xóa Loại Quỹ (cột Z) hoặc dữ liệu giao dịch không còn đủ điều kiện tính điểm, điểm cũ ở cột X được xóa trắng. Điểm nhập tay ở cột Y được giữ nguyên hoàn toàn (script không can thiệp hay sửa cột Y).
+    - Trigger On-Edit xử lý thao tác nhập/sửa trực tiếp trên Google Sheets. Khi file A lấy dữ liệu từ file B bằng `IMPORTRANGE`, sửa file B không tạo sự kiện On-Edit tại A; hệ thống dùng trigger định kỳ bên dưới. [Tài liệu Google Apps Script](https://developers.google.com/apps-script/guides/triggers/installable).
+2. **Trigger Hàng Ngày (Chạy lúc 1:00 AM)**:
+   - Mỗi đêm, hệ thống kiểm tra chu kỳ tháng. Nếu bước sang tháng mới, hệ thống tự động chèn cột tháng và sao chép điểm từ tháng trước sang.
+3. **Trigger IMPORTRANGE (Mỗi 1 phút)**:
+   - Hàm `autoRecalculateImportedScores` đọc dữ liệu hiện tại ở file A, tính lại cả những dòng đã có điểm X và cập nhật điểm khi kết quả thay đổi. Không cần chỉnh sửa trực tiếp hay mở file A.
+   - Ví dụ: bạn đổi trạng thái giao dịch trong B thành **Đã hủy**. Sau khi `IMPORTRANGE` cập nhật trạng thái ở A, lượt kiểm tra tiếp theo sẽ đổi X của giao dịch đó thành **0**.
+   - Nếu dòng nguồn bị xóa hoặc không còn đủ điều kiện tính điểm, X được xóa trắng. Nếu dữ liệu đang tải hoặc có lỗi như `#REF!`, `#N/A`, lượt kiểm tra được bỏ qua và sẽ thử lại sau để tránh ghi điểm sai.
+   - Điểm nhập tay tại Y được giữ nguyên; script chỉ ghi kết quả ở cột X, hoàn toàn không sửa đổi cột Y. Vùng `IMPORTRANGE` cần chừa cột X để script có thể ghi điểm.
+   - Thời gian cập nhật gồm độ trễ của `IMPORTRANGE` và lượt chạy định kỳ tiếp theo; không cam kết 1 phút kể từ lúc sửa B. [Thông tin cập nhật IMPORTRANGE của Google](https://support.google.com/docs/answer/3093340).tiết:
 
 ![Cấu trúc Sheet Điểm Chiến Dịch sau khi lưu](docs/images/sheet_diem_chien_dich.png)
 

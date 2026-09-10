@@ -429,14 +429,15 @@ for (const relativePath of ['src/Code.gs', 'Code.gs']) {
   });
 
   if (relativePath === 'src/Code.gs') {
-    check('preserves manual Y scores while recalculating X and processing the AB rule', () => {
+    check('preserves manual Y scores while recalculating X without modifying Y', () => {
       const h = harness(sourcePath, [
         transaction({ 24: 7, 27: 'Căn xin cơ chế' }),
         transaction({ 24: 0, 27: 'Căn xin cơ chế' }),
-        transaction({ 24: '', 27: 'Căn xin cơ chế' })
+        transaction({ 24: '', 27: 'Căn xin cơ chế' }),
+        transaction({ 24: 'chưa có điểm', 27: 'Căn xin cơ chế' })
       ]);
-      h.edit({ rowCount: 3 });
-      assert.deepEqual(h.cells.slice(1).map(row => [row[23], row[24]]), [[4, 7], [4, 0], [4, 'chưa có điểm']]);
+      h.edit({ rowCount: 4 });
+      assert.deepEqual(h.cells.slice(1).map(row => [row[23], row[24]]), [[4, 7], [4, 0], [4, ''], [4, '']]);
     });
   }
 }
