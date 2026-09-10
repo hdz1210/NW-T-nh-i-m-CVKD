@@ -2369,7 +2369,7 @@ function evaluateRowWithRules(row, rulesOrCtx, masVCGSet, gianXayMap, cbnvMap) {
 
   const baseVal = baseScore + bonusScore;
 
-  // Hệ số chiến dịch thời gian (chỉ áp dụng dự phòng nếu chưa có điểm chiến dịch riêng)
+  // Hệ số chiến dịch thời gian (chỉ áp dụng dự phòng khi không khớp chiến dịch riêng)
   let timeMultiplier = 1;
   if (!isCampaignMatched && dateBC >= new Date(2026, 1, 14) && dateBC <= new Date(2026, 1, 28)) {
     timeMultiplier = 2;
@@ -2757,7 +2757,7 @@ function autoDailyCheckAndSyncMonth() {
       Logger.log(`[Daily Trigger] Cột tháng hiện tại (${res ? res.monthDisplay : ''}) đã tồn tại đầy đủ.`);
     }
 
-    // Tự động quét và tính điểm bổ sung cho các dòng Data chưa có điểm (nếu có)
+    // Tính bù điểm vào cột X đang trống trong Data; giữ nguyên toàn bộ cột Y.
     const dataSheet = ss.getSheetByName(APP_CONFIG.SHEET_DATA);
     if (dataSheet && dataSheet.getLastRow() >= 2) {
       const numRows = dataSheet.getLastRow() - 1;
@@ -2774,7 +2774,7 @@ function autoDailyCheckAndSyncMonth() {
       }
       if (unscored.length > 0) {
         calculateSpecificRows(unscored);
-        Logger.log(`[Daily Trigger] Đã tự động tính điểm cho ${unscored.length} dòng chưa có điểm.`);
+        Logger.log(`[Daily Trigger] Đã tự động tính bù điểm cột X cho ${unscored.length} dòng.`);
       }
     }
   } catch (err) {
@@ -2842,7 +2842,7 @@ function onEditAutoScore(e) {
 
 /**
  * =========================================================================
- * [QUÉT THỦ CÔNG]: TÌM & TÍNH TẤT CẢ DÒNG CHƯA CÓ ĐIỂM TRÊN SHEET
+ * [QUÉT THỦ CÔNG]: TÌM & TÍNH CÁC DÒNG CÒN THIẾU ĐIỂM CỘT X TRONG DATA
  * =========================================================================
  */
 function autoTriggerOnDataChange(e) {
