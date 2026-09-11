@@ -1,14 +1,29 @@
 # Kế hoạch cấu hình lũy tiến
 
-Tài liệu BA hiện hành: [BA.md](BA.md).
+Tài liệu nghiệp vụ: [BA.md](BA.md).
 
-Yêu cầu UI mới nhất: bám sát setting hiện tại, chỉ thêm tab **Lũy tiến theo giá** trong khối cấu hình điểm và hai ô **Mỗi (tỷ VNĐ)** / **Cộng thêm (điểm)**. Giữ Min/Max, Điểm Cơ Sở, tháng áp dụng và Hủy/Thêm Ngay. Không có phần xem trước hoặc khung giải thích/ví dụ.
+## Trạng thái
 
-- Mockup hiện hành dựng từ DOM/CSS của `src/ConfigUI.html`: `mockup-quy-nw.png`, `mockup-quy-cheo.png`.
-- Tab cố định để đối chiếu: `mockup-quy-nw-co-dinh.png`, `mockup-quy-cheo-co-dinh.png`.
-- Bản mô phỏng: `mockup.html`, `mockup-f2.html`.
-- `mockup-bang-rule.png` là phương án cũ, không còn nằm trong phạm vi UI đề xuất mới nhất.
+Đã hoàn tất trong code local, chưa deploy Apps Script.
 
-BA mô tả đầy đủ schema trước/sau, hai cột metadata Rule_ID/Rule_Config, dữ liệu JSON mẫu, công thức đủ bậc, bảo toàn tháng, lưu/sửa/rollover, chuyển đổi legacy và tiêu chí nghiệm thu.
+## Hạng mục triển khai
 
-Cách tính đã chốt: giá >50 tỷ, điểm cơ sở 5, mỗi 10 tỷ tăng đủ cộng 1 điểm; 55 tỷ=5, 60 tỷ=6. Schema và phương án triển khai vẫn là đề xuất. Chưa sửa ứng dụng, dữ liệu thật hoặc triển khai Apps Script.
+1. Giữ nguyên modal setting và thêm tab **Lũy tiến theo giá** cùng hai ô **Mỗi (tỷ VNĐ)** / **Cộng thêm (điểm)** cho Quỹ NW và Quỹ Chéo.
+2. Đổi schema Sheet sang ba cột hiển thị ngay sau `Khoảng Giá`:
+   - `Cách tính điểm`
+   - `Mỗi (tỷ VNĐ)`
+   - `Cộng thêm (điểm)`
+3. Chuyển dữ liệu thử nghiệm từ `Rule_Config` sang ba cột mới và xóa `Rule_ID` / `Rule_Config`.
+4. Dời điểm bắt đầu các cột tháng sang M với NW và G với Quỹ Chéo; cập nhật fetch, save, edit và rollover.
+5. Dùng chung công thức đủ bậc cho hai quỹ: 55=5, 60=6, 70=7 với mốc 50, bước 10 và +1 điểm.
+6. Khi sửa cấu hình riêng một tháng trên dòng có lịch sử, tạo dòng phiên bản mới để các tháng cũ giữ cấu hình cũ.
+7. Chạy test backend, UI syntax, biên giá và hai nhánh quỹ trước khi deploy.
+
+## Mockup đối chiếu
+
+- `mockup-quy-nw.png`
+- `mockup-quy-cheo.png`
+- `mockup-quy-nw-co-dinh.png`
+- `mockup-quy-cheo-co-dinh.png`
+
+Các mockup giữ form hiện tại và không có phần xem trước/bảng giải thích trong UI.

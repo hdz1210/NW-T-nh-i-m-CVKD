@@ -132,9 +132,10 @@ function harness(sourcePath, rows, options = {}) {
           monthScores: new Map([['2026-09', 4], ['2026-08', 3], ['2026-10', 3]])
         }]]]),
         f2Map: new Map([['cross', [{
-          khoangGia: 'Tất cả', monthScores: new Map([['2026-09', 5]])
+          khoangGia: '> 50', scoreMode: 'progressive', stepBillion: 10, stepPoints: 1,
+          monthScores: new Map([['2026-09', 5]])
         }]]]), generalRules: [], activeCampaigns: [],
-        masVCGSet: new Set(), gianXayMap: new Map(), cbnvMap: new Map()
+        cbnvMap: new Map()
       };
     };
   `, context);
@@ -185,16 +186,16 @@ for (const relativePath of ['src/Code.gs', 'Code.gs']) {
     assert.equal(h.cells[1][23], 3);
   });
 
-  check('uses the updated fund type', () => {
+  check('clears the score when the updated fund has no matching sheet rule', () => {
     const h = harness(sourcePath, [transaction({ 25: 'Quỹ Chéo' })]);
     h.edit({ column: 26 });
-    assert.equal(h.cells[1][23], 1);
+    assert.equal(h.cells[1][23], '');
   });
 
   check('uses the updated price to calculate a progressive score', () => {
     const h = harness(sourcePath, [transaction({ 5: 'CROSS', 25: 'Quỹ Chéo', 11: 61e9 })]);
     h.edit();
-    assert.equal(h.cells[1][23], 7);
+    assert.equal(h.cells[1][23], 6);
   });
 
   check('clears a stale score when the fund type is removed', () => {

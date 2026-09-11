@@ -245,7 +245,7 @@ Tab **Bảng Tổng Hợp (Quỹ NW)** dùng để quản lý điểm cho các d
 6. **Cấu hình 3 Tiêu Chí Khớp**:
    - **Sản phẩm**: Chọn `Tất cả (Cao & Thấp tầng)`, `Cao tầng`, hoặc `Thấp tầng`.
    - **Loại căn**: Chọn dropdown đa chọn (Studio, 1PN, 2PN, 3PN, Duplex, Penthouse, Shophouse...). Hỗ trợ tìm kiếm nhanh và chọn hàng loạt.
-   - **Khoảng giá**: Nhập khoảng giá Min - Max (tỷ VNĐ). Nếu dự án chỉ áp dụng trên tiền đất, tích chọn **Chỉ tính tiền đất (VHHVB)**.
+   - **Khoảng giá**: Nhập khoảng giá Min - Max (tỷ VNĐ). Giá đối chiếu là giá giao dịch gồm VAT + KPBT; nếu trống hoặc bằng 0 thì dùng giá chưa VAT.
 7. Nhập **Điểm Cơ Sở** ban đầu cho các tháng.
 8. Bấm **Thêm Ngay**.
 
@@ -381,7 +381,7 @@ Khi tính điểm cho một giao dịch trong sheet `DATA`, hệ thống duyệt
     └── Khớp: Mã DA + Tháng giao dịch + 3 Tiêu Chí Khớp:
          ├── Tiêu chí 1 (Sản phẩm): Khớp chính xác hoặc '*' (Tất cả)
          ├── Tiêu chí 2 (Loại căn): Chuỗi loại căn chứa loại căn GD hoặc '*' (Tất cả)
-         └── Tiêu chí 3 (Khoảng giá): Giá GD nằm trong [Min, Max]. Nếu chọn giá đất, so khớp theo cột giá đất.
+         └── Tiêu chí 3 (Khoảng giá): Giá GD nằm trong [Min, Max].
               └── Quy tắc độ sâu: Dòng nào có điều kiện chi tiết hơn sẽ được ưu tiên trước dòng chung chung (*).
 
 Ưu Tiên 3: ĐIỂM THÁNG QUỸ CHÉO (Bảng Dự Án F2)

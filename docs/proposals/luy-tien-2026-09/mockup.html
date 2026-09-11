@@ -1890,11 +1890,6 @@ body{padding:0;background:#eef2f6}
                   <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addGiaDen" placeholder="999" value="999">
                   <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
                 </div>
-                <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
-                <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
-                  <input type="checkbox" id="addIsDat" style="cursor:pointer;">
-                  <span>Chỉ tính tiền đất (VHHVB)</span>
-                </label>
               </div>
               <input type="hidden" id="addKhoangGiaInput" value="Tất cả">
             </div>
@@ -1943,7 +1938,6 @@ let progressive=true;
 function updateProposal(){
   const min=Number(minEl.value),max=Number(maxEl.value);
   let range=progressive?(max>=999?'> '+min:min+' < Giá ≤ '+max):(min<=0&&max>=999?'Tất cả':min===max?'= '+min:min<=0?'< '+max:max>=999?'>= '+min:min+' - '+max);
-  if(document.getElementById(prefix+'IsDat').checked&&range!=='Tất cả')range='Giá đất '+range;
   priceLabel.textContent=range;
   priceLabel.style.color=range==='Tất cả'?'var(--text-tertiary)':'#92400e';
   priceLabel.style.background=range==='Tất cả'?'var(--bg-muted)':'#fef3c7';

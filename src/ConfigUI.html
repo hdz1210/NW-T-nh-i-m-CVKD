@@ -711,6 +711,7 @@
       flex-direction: column;
       gap: 16px;
       animation: slideIn 0.15s ease-out;
+      max-height: 94vh;
     }
 
     .form-row-2 {
@@ -723,6 +724,52 @@
       display: grid;
       grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr);
       gap: 10px;
+    }
+
+    .score-mode-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      padding: 3px;
+      background: #e2e8f0;
+      border-radius: var(--radius-md);
+    }
+    .score-mode-tab {
+      min-height: 34px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-secondary);
+      font: inherit;
+      font-size: var(--text-xs);
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .score-mode-tab.active {
+      background: #ffffff;
+      color: var(--brand);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+    }
+    .progressive-fields {
+      padding-top: 2px;
+    }
+    @media (max-width: 560px) {
+      .form-row-2, .form-row-3 { grid-template-columns: 1fr; }
+      .price-range-controls {
+        flex-wrap: wrap;
+        justify-content: flex-start !important;
+      }
+      .price-range-controls > div[style*="height:20px"] { display: none; }
+      .price-range-controls > label {
+        flex-basis: 100%;
+        white-space: normal !important;
+      }
+      .score-config-heading {
+        align-items: flex-start !important;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .score-config-heading > span:first-child { flex-basis: 100%; }
     }
 
     /* Custom Autocomplete Dropdown */
@@ -1072,6 +1119,7 @@
       align-items: center;
       border-bottom: 1px solid var(--border-subtle);
       padding-bottom: 12px;
+      flex: 0 0 auto;
     }
     .modal-title { font-size: var(--text-md); font-weight: 800; color: var(--text-primary); }
     .modal-close { background: none; border: none; font-size: 20px; color: var(--text-tertiary); cursor: pointer; }
@@ -1080,6 +1128,10 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      overflow-y: auto;
+      padding-right: 2px;
+      min-height: 0;
+      flex: 1 1 auto;
     }
 
     .form-group {
@@ -1095,6 +1147,7 @@
       gap: 8px;
       border-top: 1px solid var(--border-subtle);
       padding-top: 12px;
+      flex: 0 0 auto;
     }
   </style>
 </head>
@@ -1160,11 +1213,11 @@
     <nav class="tab-bar" aria-label="Chuyển đổi bảng cấu hình">
       <button type="button" class="tab-btn active" id="tabBtnTH" onclick="switchTab('th')">
         Rule Quỹ NW (Quỹ NW)
-        <span class="tab-badge" id="badgeTHCount">106</span>
+        <span class="tab-badge" id="badgeTHCount">0</span>
       </button>
       <button type="button" class="tab-btn" id="tabBtnF2" onclick="switchTab('f2')">
         Dự Án Quỹ Chéo (Rule Quỹ Chéo)
-        <span class="tab-badge" id="badgeF2Count">29</span>
+        <span class="tab-badge" id="badgeF2Count">0</span>
       </button>
       <button type="button" class="tab-btn" id="tabBtnCampaign" onclick="switchTab('campaign')">
         Điểm Chiến Dịch
@@ -1679,14 +1732,34 @@
             renderStats();
             renderTable();
           } else {
-            showToast('Lỗi tải cấu hình: ' + (res.error || 'Không rõ nguyên nhân'), true);
+            const message = res && res.error ? res.error : 'Không rõ nguyên nhân';
+            renderLoadError(message);
+            showToast('Lỗi tải cấu hình: ' + message, true);
           }
         })
         .withFailureHandler(function(err) {
           hideLoading();
-          showToast('Lỗi máy chủ: ' + (err.message || err), true);
+          const message = err && err.message ? err.message : String(err || 'Không rõ nguyên nhân');
+          renderLoadError(message);
+          showToast('Lỗi máy chủ: ' + message, true);
         })
         .fetchMonthlyConfigData();
+    }
+
+    function renderLoadError(message) {
+      const thead = document.getElementById('tableHead');
+      const tbody = document.getElementById('tableBody');
+      if (thead) thead.innerHTML = '';
+      if (tbody) {
+        tbody.innerHTML = `<tr><td class="empty-state" style="padding:36px 16px; color:var(--danger);">
+          <div style="font-weight:800; margin-bottom:5px;">Không tải được dữ liệu cấu hình</div>
+          <div style="font-size:12px; font-weight:500;">${escapeHtml(message)}</div>
+        </td></tr>`;
+      }
+      const badgeTH = document.getElementById('badgeTHCount');
+      const badgeF2 = document.getElementById('badgeF2Count');
+      if (badgeTH) badgeTH.innerText = '0';
+      if (badgeF2) badgeF2.innerText = '0';
     }
 
     let selectedCampaignFilter = 'ALL';
@@ -3904,6 +3977,104 @@
     }
 
     // --- MONTH CONFIG & NOTICE ---
+    function getMonthScoringSettings(row, dateStr) {
+      return {
+        mode: row && row.scoreMode === 'progressive' ? 'progressive' : 'fixed',
+        stepBillion: row && Number(row.stepBillion) > 0 ? Number(row.stepBillion) : 10,
+        stepPoints: row && Number(row.stepPoints) > 0 ? Number(row.stepPoints) : 1
+      };
+    }
+
+    function buildScoringModeMarkup(prefix, settings) {
+      const value = settings || { mode: 'fixed', stepBillion: 10, stepPoints: 1 };
+      const progressive = value.mode === 'progressive';
+      return `
+        <input type="hidden" id="${prefix}ScoreMode" value="${progressive ? 'progressive' : 'fixed'}">
+        <div class="score-mode-tabs" role="tablist" aria-label="Cách tính điểm">
+          <button type="button" class="score-mode-tab ${progressive ? '' : 'active'}" data-score-prefix="${prefix}" data-score-mode="fixed" onclick="setRuleScoreMode('${prefix}', 'fixed')">Điểm cố định</button>
+          <button type="button" class="score-mode-tab ${progressive ? 'active' : ''}" data-score-prefix="${prefix}" data-score-mode="progressive" onclick="setRuleScoreMode('${prefix}', 'progressive')">Lũy tiến theo giá</button>
+        </div>
+        <div class="progressive-fields form-row-2" id="${prefix}ProgressiveFields" style="display:${progressive ? 'grid' : 'none'};">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="field-label" for="${prefix}StepBillion">Mỗi (tỷ VNĐ) <span style="color:var(--danger)">*</span></label>
+            <input type="number" min="0.5" step="0.5" class="filter-input" style="width:100%; height:36px; font-weight:700;" id="${prefix}StepBillion" value="${value.stepBillion || 10}">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="field-label" for="${prefix}StepPoints">Cộng thêm (điểm) <span style="color:var(--danger)">*</span></label>
+            <input type="number" min="0.5" step="0.5" class="filter-input" style="width:100%; height:36px; font-weight:700;" id="${prefix}StepPoints" value="${value.stepPoints || 1}">
+          </div>
+        </div>`;
+    }
+
+    function setRuleScoreMode(prefix, mode) {
+      const normalizedMode = mode === 'progressive' ? 'progressive' : 'fixed';
+      const modeInput = document.getElementById(prefix + 'ScoreMode');
+      const fields = document.getElementById(prefix + 'ProgressiveFields');
+      const monthSelect = document.getElementById(prefix + 'ScoreMonth');
+      if (modeInput) modeInput.value = normalizedMode;
+      document.querySelectorAll(`[data-score-prefix="${prefix}"]`).forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.scoreMode === normalizedMode);
+      });
+      if (fields) fields.style.display = normalizedMode === 'progressive' ? 'grid' : 'none';
+      if (normalizedMode === 'progressive' && monthSelect && monthSelect.value === 'ALL') {
+        const firstMonth = Array.from(monthSelect.options).find(option => option.value !== 'ALL');
+        if (firstMonth) monthSelect.value = firstMonth.value;
+        onScoreMonthChange(prefix);
+      }
+      onPriceInputChange(prefix);
+    }
+
+    function applyScoringSettingsToForm(prefix, settings) {
+      const value = settings || { mode: 'fixed', stepBillion: 10, stepPoints: 1 };
+      const stepEl = document.getElementById(prefix + 'StepBillion');
+      const pointEl = document.getElementById(prefix + 'StepPoints');
+      if (stepEl) stepEl.value = value.stepBillion || 10;
+      if (pointEl) pointEl.value = value.stepPoints || 1;
+      setRuleScoreMode(prefix, value.mode);
+    }
+
+    function readScoringConfig(prefix) {
+      const modeEl = document.getElementById(prefix + 'ScoreMode');
+      const monthEl = document.getElementById(prefix + 'ScoreMonth');
+      const minEl = document.getElementById(prefix + 'GiaTu');
+      const maxEl = document.getElementById(prefix + 'GiaDen');
+      const mode = modeEl && modeEl.value === 'progressive' ? 'progressive' : 'fixed';
+      const targetMonth = monthEl ? monthEl.value : 'ALL';
+      const minBillion = Number(minEl ? minEl.value : 0);
+      const maxBillion = Number(maxEl ? maxEl.value : 999);
+
+      if (!isFinite(minBillion) || !isFinite(maxBillion) || maxBillion <= minBillion) {
+        return { valid: false, error: 'Khoảng giá không hợp lệ: giá Max phải lớn hơn giá Min.' };
+      }
+      if (mode === 'progressive') {
+        const stepBillion = Number(document.getElementById(prefix + 'StepBillion')?.value || 0);
+        const stepPoints = Number(document.getElementById(prefix + 'StepPoints')?.value || 0);
+        if (targetMonth === 'ALL') return { valid: false, error: 'Lũy tiến theo giá chỉ áp dụng cho một tháng cụ thể.' };
+        if (maxBillion < 999) return { valid: false, error: 'Rule lũy tiến cần để Đến (Max) = 999 để áp dụng cho toàn bộ phần giá trên mốc.' };
+        if (!(stepBillion > 0) || !(stepPoints > 0)) return { valid: false, error: 'Mức giá lũy tiến và điểm cộng phải lớn hơn 0.' };
+        return {
+          valid: true,
+          value: {
+            targetMonth: targetMonth,
+            mode: mode,
+            stepBillion: stepBillion,
+            stepPoints: stepPoints,
+            price: { basis: 'total', minBillion, maxBillion, minInclusive: false, maxInclusive: true }
+          }
+        };
+      }
+      return {
+        valid: true,
+        value: {
+          targetMonth: targetMonth,
+          mode: mode,
+          stepBillion: 0,
+          stepPoints: 0,
+          price: { basis: 'total', minBillion, maxBillion, minInclusive: true, maxInclusive: true }
+        }
+      };
+    }
+
     function onScoreMonthChange(prefix) {
       const select = document.getElementById(prefix + 'ScoreMonth');
       const badge = document.getElementById(prefix + 'ScoreMonthBadge');
@@ -3911,6 +4082,8 @@
 
       const val = select.value;
       if (val === 'ALL') {
+        const modeEl = document.getElementById(prefix + 'ScoreMode');
+        if (modeEl && modeEl.value === 'progressive') setRuleScoreMode(prefix, 'fixed');
         if (badge) {
           badge.innerText = '⚠️ Áp dụng tất cả các tháng';
           badge.style.background = '#fef2f2';
@@ -3959,6 +4132,7 @@
           badge.style.borderColor = '#fdba74';
         }
       }
+      applyScoringSettingsToForm('edit', val === 'ALL' ? { mode: 'fixed', stepBillion: 10, stepPoints: 1 } : getMonthScoringSettings(row, val));
     }
 
     function onEditScoreMonthChangeF2(rowIdx) {
@@ -3990,16 +4164,15 @@
           badge.style.borderColor = '#fdba74';
         }
       }
+      applyScoringSettingsToForm('editF2', val === 'ALL' ? { mode: 'fixed', stepBillion: 10, stepPoints: 1 } : getMonthScoringSettings(row, val));
     }
 
     function parseKhoangGiaToMinMax(val) {
       if (!val || val === '*' || val === 'Tất cả' || val === 'tat ca' || val === 'all' || val === 'none') {
-        return { min: 0, max: 999, isDat: false, preset: 'all', label: 'Tất cả' };
+        return { min: 0, max: 999, preset: 'all', label: 'Tất cả' };
       }
       const s = String(val).trim();
       const sLow = s.toLowerCase();
-      const isDat = sLow.includes('giá đất');
-      const prefix = isDat ? 'Giá đất ' : '';
 
       // 1. X - Y hoặc Từ X-Y
       const mRange = sLow.match(/(?:từ\s*)?(\d+(?:[.,]\d+)?)\s*(?:-|đến)\s*(\d+(?:[.,]\d+)?)/i);
@@ -4007,9 +4180,9 @@
         const minP = parseFloat(mRange[1].replace(',', '.'));
         const maxP = parseFloat(mRange[2].replace(',', '.'));
         let preset = 'custom';
-        if (minP === 10 && maxP === 20 && !isDat) preset = '10-20';
-        else if (minP === 20 && maxP === 30 && !isDat) preset = '20-30';
-        return { min: minP, max: maxP, isDat: isDat, preset: preset, label: prefix + minP + ' - ' + maxP };
+        if (minP === 10 && maxP === 20) preset = '10-20';
+        else if (minP === 20 && maxP === 30) preset = '20-30';
+        return { min: minP, max: maxP, preset: preset, label: minP + ' - ' + maxP };
       }
 
       // 2. >= X, > X, Trên X, Từ X trở lên
@@ -4017,10 +4190,10 @@
       if (mAbove) {
         const minP = parseFloat((mAbove[1] || mAbove[2] || mAbove[3] || mAbove[4]).replace(',', '.'));
         let preset = 'custom';
-        if (minP === 30 && !isDat) preset = 'gte30';
-        else if (minP === 10 && !isDat) preset = 'gte10';
-        else if (minP === 10 && isDat) preset = 'dat_gte10';
-        return { min: minP, max: 999, isDat: isDat, preset: preset, label: prefix + '>= ' + minP };
+        if (minP === 30) preset = 'gte30';
+        else if (minP === 10) preset = 'gte10';
+        const op = sLow.includes('>=') || sLow.includes('trở lên') ? '>=' : '>';
+        return { min: minP, max: 999, preset: preset, label: op + ' ' + minP };
       }
 
       // 3. <= X, < X, Dưới X
@@ -4028,57 +4201,60 @@
       if (mBelow) {
         const maxP = parseFloat((mBelow[1] || mBelow[2] || mBelow[3]).replace(',', '.'));
         let preset = 'custom';
-        if (maxP === 10 && !isDat) preset = 'lt10';
-        else if (maxP === 20 && !isDat) preset = 'lt20';
-        else if (maxP === 10 && isDat) preset = 'dat_lt10';
-        return { min: 0, max: maxP, isDat: isDat, preset: preset, label: prefix + '< ' + maxP };
+        if (maxP === 10) preset = 'lt10';
+        else if (maxP === 20) preset = 'lt20';
+        return { min: 0, max: maxP, preset: preset, label: '< ' + maxP };
       }
 
       // 4. = X (chắc chắn không phải >= hay <=)
       const mEq = sLow.match(/(?:^|[^<>!])=\s*(\d+(?:[.,]\d+)?)/);
       if (mEq) {
         const p = parseFloat(mEq[1].replace(',', '.'));
-        return { min: p, max: p, isDat: isDat, preset: 'custom', label: prefix + '= ' + p };
+        return { min: p, max: p, preset: 'custom', label: '= ' + p };
       }
 
-      return { min: 0, max: 999, isDat: isDat, preset: 'custom', label: s };
+      return { min: 0, max: 999, preset: 'custom', label: s };
     }
 
-    function formatPriceRangeOutput(min, max, isDat) {
-      const prefix = isDat ? 'Giá đất ' : '';
+    function formatPriceRangeOutput(min, max, isProgressive) {
       const minVal = (min !== '' && min !== null && min !== undefined) ? Number(min) : 0;
       const maxVal = (max !== '' && max !== null && max !== undefined) ? Number(max) : 999;
 
       const cleanMin = isNaN(minVal) ? 0 : minVal;
       const cleanMax = isNaN(maxVal) ? 999 : maxVal;
 
+      if (isProgressive) {
+        if (cleanMax >= 999) return `> ${cleanMin}`;
+        return `> ${cleanMin} đến ${cleanMax}`;
+      }
+
       if (cleanMin <= 0 && cleanMax >= 999) {
         return 'Tất cả';
       }
       if (cleanMin === cleanMax) {
-        return `${prefix}= ${cleanMin}`;
+        return `= ${cleanMin}`;
       }
       if (cleanMin <= 0 && cleanMax < 999) {
-        return `${prefix}< ${cleanMax}`;
+        return `< ${cleanMax}`;
       }
       if (cleanMin > 0 && cleanMax >= 999) {
-        return `${prefix}>= ${cleanMin}`;
+        return `>= ${cleanMin}`;
       }
-      return `${prefix}${cleanMin} - ${cleanMax}`;
+      return `${cleanMin} - ${cleanMax}`;
     }
 
     function onPriceInputChange(prefix) {
       const minEl = document.getElementById(prefix + 'GiaTu');
       const maxEl = document.getElementById(prefix + 'GiaDen');
-      const datEl = document.getElementById(prefix + 'IsDat');
       const previewEl = document.getElementById(prefix + 'KhoangGiaPreview');
       const inputEl = document.getElementById(prefix + 'KhoangGiaInput');
 
       const minVal = minEl ? minEl.value : 0;
       const maxVal = maxEl ? maxEl.value : 999;
-      const isDat = datEl ? datEl.checked : false;
+      const modeEl = document.getElementById(prefix + 'ScoreMode');
+      const isProgressive = !!(modeEl && modeEl.value === 'progressive');
 
-      const outStr = formatPriceRangeOutput(minVal, maxVal, isDat);
+      const outStr = formatPriceRangeOutput(minVal, maxVal, isProgressive);
 
       if (previewEl) {
         previewEl.innerText = outStr;
@@ -4325,7 +4501,7 @@
                 <label class="field-label" style="margin-bottom:0;">3. Khoảng Giá (tỷ VNĐ)</label>
                 <span id="addKhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">Tất cả</span>
               </div>
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+              <div class="price-range-controls" style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
                 <div style="display:flex; align-items:center; gap:6px; flex:1;">
                   <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Từ (Min):</span>
                   <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addGiaTu" placeholder="0" value="0" oninput="onPriceInputChange('add')">
@@ -4337,11 +4513,6 @@
                   <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addGiaDen" placeholder="999" value="999" oninput="onPriceInputChange('add')">
                   <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
                 </div>
-                <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
-                <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
-                  <input type="checkbox" id="addIsDat" style="cursor:pointer;" onchange="onPriceInputChange('add')">
-                  <span>Chỉ tính tiền đất (VHHVB)</span>
-                </label>
               </div>
               <input type="hidden" id="addKhoangGiaInput" value="Tất cả">
             </div>
@@ -4530,7 +4701,7 @@
                 <label class="field-label" style="margin-bottom:0;">3. Khoảng Giá (tỷ VNĐ)</label>
                 <span id="addKhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">Tất cả</span>
               </div>
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+              <div class="price-range-controls" style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
                 <div style="display:flex; align-items:center; gap:6px; flex:1;">
                   <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Từ (Min):</span>
                   <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addGiaTu" placeholder="0" value="0" oninput="onPriceInputChange('add')">
@@ -4542,11 +4713,6 @@
                   <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addGiaDen" placeholder="999" value="999" oninput="onPriceInputChange('add')">
                   <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
                 </div>
-                <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
-                <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
-                  <input type="checkbox" id="addIsDat" style="cursor:pointer;" onchange="onPriceInputChange('add')">
-                  <span>Chỉ tính tiền đất (VHHVB)</span>
-                </label>
               </div>
               <input type="hidden" id="addKhoangGiaInput" value="Tất cả">
             </div>
@@ -4554,7 +4720,7 @@
 
           <!-- Cấu hình điểm & Tháng áp dụng -->
           <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="score-config-heading" style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">
                 CẤU HÌNH ĐIỂM & THỜI GIAN ÁP DỤNG
               </span>
@@ -4562,6 +4728,7 @@
                 ⚡ CHỈ THÁNG ${latestM ? latestM.display : ''} (BẢO TOÀN THÁNG CŨ)
               </span>
             </div>
+            ${buildScoringModeMarkup('add', { mode: 'fixed', stepBillion: 10, stepPoints: 1 })}
             <div class="form-row-2">
               <div class="form-group" style="margin-bottom:0;">
                 <label class="field-label" for="addScoreMonth" style="font-weight:700; color:var(--text-secondary);">Tháng Áp Dụng Rule <span style="color:var(--danger)">*</span></label>
@@ -4632,7 +4799,7 @@
               <label class="field-label" style="margin-bottom:0; font-weight:700;">3. Khoảng Giá (tỷ VNĐ)</label>
               <span id="addF2KhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">Tất cả</span>
             </div>
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+            <div class="price-range-controls" style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
               <div style="display:flex; align-items:center; gap:6px; flex:1;">
                 <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Từ (Min):</span>
                 <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addF2GiaTu" placeholder="0" value="0" oninput="onPriceInputChange('addF2')">
@@ -4644,11 +4811,6 @@
                 <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="addF2GiaDen" placeholder="999" value="999" oninput="onPriceInputChange('addF2')">
                 <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
               </div>
-              <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
-              <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
-                <input type="checkbox" id="addF2IsDat" style="cursor:pointer;" onchange="onPriceInputChange('addF2')">
-                <span>Chỉ tính tiền đất (VHHVB)</span>
-              </label>
             </div>
             <input type="hidden" id="addF2KhoangGiaInput" value="Tất cả">
           </div>
@@ -4657,7 +4819,7 @@
 
           <!-- Cấu hình điểm & Tháng áp dụng -->
           <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="score-config-heading" style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">
                 CẤU HÌNH ĐIỂM & THỜI GIAN ÁP DỤNG
               </span>
@@ -4665,6 +4827,7 @@
                 ⚡ CHỈ THÁNG ${latestF2M ? latestF2M.display : ''} (BẢO TOÀN THÁNG CŨ)
               </span>
             </div>
+            ${buildScoringModeMarkup('addF2', { mode: 'fixed', stepBillion: 10, stepPoints: 1 })}
             <div class="form-row-2">
               <div class="form-group" style="margin-bottom:0;">
                 <label class="field-label" for="addF2ScoreMonth" style="font-weight:700; color:var(--text-secondary);">Tháng Áp Dụng Rule <span style="color:var(--danger)">*</span></label>
@@ -4807,6 +4970,8 @@
         const score = parseFloat(scoreVal) || 0;
 
         const scoreMonth = document.getElementById('addScoreMonth') ? document.getElementById('addScoreMonth').value : 'ALL';
+        const scoringState = readScoringConfig('add');
+        if (!scoringState.valid) { showToast(scoringState.error, true); return; }
         const scoresObj = {};
         if (scoreMonth === 'ALL') {
           configData.thMonths.forEach(m => { scoresObj[m.dateStr] = score; });
@@ -4828,7 +4993,11 @@
           loaiCan: vals.loaiCan,
           khoangGia: vals.khoangGia,
           condition: vals.loaiCan !== '*' ? vals.loaiCan : (vals.sanPham !== '*' ? vals.sanPham : (vals.khoangGia !== '*' ? vals.khoangGia : '')),
-          scores: scoresObj
+          scores: scoresObj,
+          scoringConfig: scoringState.value,
+          scoreMode: scoringState.value.mode,
+          stepBillion: scoringState.value.stepBillion,
+          stepPoints: scoringState.value.stepPoints
         });
 
         // Add to local view
@@ -4844,7 +5013,10 @@
           loaiCan: vals.loaiCan,
           khoangGia: vals.khoangGia,
           condition: vals.loaiCan !== '*' ? vals.loaiCan : (vals.sanPham !== '*' ? vals.sanPham : (vals.khoangGia !== '*' ? vals.khoangGia : '')),
-          scores: scoresObj
+          scores: scoresObj,
+          scoreMode: scoringState.value.mode,
+          stepBillion: scoringState.value.stepBillion,
+          stepPoints: scoringState.value.stepPoints
         });
 
         // Switch to TH tab if user was on F2 tab
@@ -4869,6 +5041,8 @@
         const scoreMonth = scoreMonthEl ? scoreMonthEl.value : 'ALL';
         const khoangGiaEl = document.getElementById('addF2KhoangGiaInput');
         const khoangGia = khoangGiaEl ? khoangGiaEl.value.trim() : 'Tất cả';
+        const scoringState = readScoringConfig('addF2');
+        if (!scoringState.valid) { showToast(scoringState.error, true); return; }
 
         const scoresObj = {};
         if (scoreMonth === 'ALL') {
@@ -4887,7 +5061,11 @@
             name: projName,
             fund: 'Quỹ chéo',
             khoangGia: khoangGia,
-            scores: Object.assign({}, scoresObj)
+            scores: Object.assign({}, scoresObj),
+            scoringConfig: scoringState.value,
+            scoreMode: scoringState.value.mode,
+            stepBillion: scoringState.value.stepBillion,
+            stepPoints: scoringState.value.stepPoints
           });
 
           configData.f2Rows.push({
@@ -4895,7 +5073,10 @@
             name: projName,
             fund: 'Quỹ chéo',
             khoangGia: khoangGia,
-            scores: Object.assign({}, scoresObj)
+            scores: Object.assign({}, scoresObj),
+            scoreMode: scoringState.value.mode,
+            stepBillion: scoringState.value.stepBillion,
+            stepPoints: scoringState.value.stepPoints
           });
         });
 
@@ -5333,7 +5514,7 @@
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <label class="field-label" style="margin-bottom:0;">3. Khoảng Giá (Tỷ VNĐ)</label>
                 <span id="editKhoangGiaPreview" style="font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--brand); background: var(--brand-subtle); padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--brand-border);">
-                  ${escapeHtml(formatPriceRangeOutput(parsedPrice.min, parsedPrice.max, parsedPrice.isDat))}
+                  ${escapeHtml(formatPriceRangeOutput(parsedPrice.min, parsedPrice.max, false))}
                 </span>
               </div>
               
@@ -5352,10 +5533,6 @@
                   <span style="font-size: 12px; color: var(--text-tertiary);">tỷ</span>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 4px; margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--border-subtle);">
-                  <input type="checkbox" id="editIsDat" ${parsedPrice.isDat ? 'checked' : ''} onchange="onPriceInputChange('edit')">
-                  <label for="editIsDat" style="font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-secondary);">Giá đất</label>
-                </div>
               </div>
               <input type="hidden" id="editKhoangGiaInput" value="${escapeHtml(giaVal)}">
             </div>
@@ -5587,7 +5764,7 @@
                 <label class="field-label" style="margin-bottom:0;">3. Khoảng Giá (tỷ VNĐ)</label>
                 <span id="editKhoangGiaPreview" style="font-size:11px; font-weight:800; color:${parsedPrice.label === 'Tất cả' ? 'var(--text-tertiary)' : '#92400e'}; background:${parsedPrice.label === 'Tất cả' ? 'var(--bg-muted)' : '#fef3c7'}; padding:2px 8px; border-radius:4px; border:1px solid ${parsedPrice.label === 'Tất cả' ? 'var(--border-subtle)' : '#fde68a'};">${escapeHtml(parsedPrice.label)}</span>
               </div>
-              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+              <div class="price-range-controls" style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
                 <div style="display:flex; align-items:center; gap:6px; flex:1;">
                   <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Từ (Min):</span>
                   <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="editGiaTu" placeholder="0" value="${parsedPrice.min}" oninput="onPriceInputChange('edit')">
@@ -5599,11 +5776,6 @@
                   <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="editGiaDen" placeholder="999" value="${parsedPrice.max}" oninput="onPriceInputChange('edit')">
                   <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
                 </div>
-                <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
-                <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
-                  <input type="checkbox" id="editIsDat" ${parsedPrice.isDat ? 'checked' : ''} style="cursor:pointer;" onchange="onPriceInputChange('edit')">
-                  <span>Chỉ tính tiền đất (VHHVB)</span>
-                </label>
               </div>
               <input type="hidden" id="editKhoangGiaInput" value="${escapeHtml(parsedPrice.label)}">
             </div>
@@ -5611,7 +5783,7 @@
 
           <!-- Cập nhật điểm cho tháng cụ thể hoặc tất cả -->
           <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="score-config-heading" style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">
                 CẬP NHẬT ĐIỂM CHO THÁNG
               </span>
@@ -5619,6 +5791,7 @@
                 ⚡ CHỈ THÁNG ${latestM ? latestM.display : ''}
               </span>
             </div>
+            ${buildScoringModeMarkup('edit', { mode: 'fixed', stepBillion: 10, stepPoints: 1 })}
             <div class="form-row-2">
               <div class="form-group" style="margin-bottom:0;">
                 <label class="field-label" for="editScoreMonth" style="font-weight:700;">Tháng Cần Đổi Điểm</label>
@@ -5705,7 +5878,7 @@
               <label class="field-label" style="margin-bottom:0; font-weight:700;">3. Khoảng Giá (tỷ VNĐ)</label>
               <span id="editF2KhoangGiaPreview" style="font-size:11px; font-weight:800; color:var(--text-tertiary); background:var(--bg-muted); padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle);">${escapeHtml(parsedPrice.label)}</span>
             </div>
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+            <div class="price-range-controls" style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--bg-surface); padding:8px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
               <div style="display:flex; align-items:center; gap:6px; flex:1;">
                 <span style="font-size:12px; font-weight:700; color:var(--text-secondary); white-space:nowrap;">Từ (Min):</span>
                 <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="editF2GiaTu" placeholder="0" value="${parsedPrice.min}" oninput="onPriceInputChange('editF2')">
@@ -5717,18 +5890,13 @@
                 <input type="number" step="0.5" min="0" max="999" class="filter-input" style="flex:1; width:100%; min-width:55px; height:32px; padding:4px 8px; font-weight:700;" id="editF2GiaDen" placeholder="999" value="${parsedPrice.max}" oninput="onPriceInputChange('editF2')">
                 <span style="font-size:11px; color:var(--text-tertiary);">tỷ</span>
               </div>
-              <div style="height:20px; width:1px; background:var(--border-subtle); margin:0 4px;"></div>
-              <label style="font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--text-secondary); white-space:nowrap; margin-bottom:0;">
-                <input type="checkbox" id="editF2IsDat" ${parsedPrice.isDat ? 'checked' : ''} style="cursor:pointer;" onchange="onPriceInputChange('editF2')">
-                <span>Chỉ tính tiền đất (VHHVB)</span>
-              </label>
             </div>
             <input type="hidden" id="editF2KhoangGiaInput" value="${escapeHtml(parsedPrice.label)}">
           </div>
 
           <!-- Cấu hình điểm & Tháng áp dụng -->
           <div style="background: var(--bg-muted); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="score-config-heading" style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: var(--text-xs); font-weight: 800; color: var(--text-secondary); text-transform: uppercase;">
                 CẬP NHẬT ĐIỂM CHO THÁNG
               </span>
@@ -5736,6 +5904,7 @@
                 ⚡ CHỈ THÁNG ${latestF2M ? latestF2M.display : ''}
               </span>
             </div>
+            ${buildScoringModeMarkup('editF2', { mode: 'fixed', stepBillion: 10, stepPoints: 1 })}
             <div class="form-row-2">
               <div class="form-group" style="margin-bottom:0;">
                 <label class="field-label" for="editF2ScoreMonth" style="font-weight:700;">Tháng Cần Đổi Điểm</label>
@@ -5937,6 +6106,8 @@
         const editScoreMonth = document.getElementById('editScoreMonth') ? document.getElementById('editScoreMonth').value : 'ALL';
         const editScoreValEl = document.getElementById('editScoreVal');
         const newScoreVal = editScoreValEl ? editScoreValEl.value.trim() : '';
+        const scoringState = readScoringConfig('edit');
+        if (!scoringState.valid) { showToast(scoringState.error, true); return; }
 
         const monthUpdates = [];
         if (row && newScoreVal !== '') {
@@ -5945,21 +6116,15 @@
             configData.thMonths.forEach(m => {
               row.scores[m.dateStr] = parsedScore;
               modifiedCellsTH.set(`${rowIdx}_${m.colIdx}`, { rowIdx, colIdx: m.colIdx, score: parsedScore });
-              monthUpdates.push({ colIdx: m.colIdx, score: parsedScore });
+              monthUpdates.push({ colIdx: m.colIdx, dateStr: m.dateStr, score: parsedScore });
             });
           } else {
-            // Tự động: Chọn tháng cụ thể thì CHỈ ghi điểm vào tháng đó, toàn bộ các tháng khác tự động xóa trống để bảo toàn lịch sử!
-            configData.thMonths.forEach(m => {
-              if (m.dateStr === editScoreMonth) {
-                row.scores[m.dateStr] = parsedScore;
-                modifiedCellsTH.set(`${rowIdx}_${m.colIdx}`, { rowIdx, colIdx: m.colIdx, score: parsedScore });
-                monthUpdates.push({ colIdx: m.colIdx, score: parsedScore });
-              } else {
-                row.scores[m.dateStr] = '';
-                modifiedCellsTH.set(`${rowIdx}_${m.colIdx}`, { rowIdx, colIdx: m.colIdx, score: '' });
-                monthUpdates.push({ colIdx: m.colIdx, score: '' });
-              }
-            });
+            const selectedMonth = configData.thMonths.find(m => m.dateStr === editScoreMonth);
+            if (selectedMonth) {
+              row.scores[selectedMonth.dateStr] = parsedScore;
+              modifiedCellsTH.set(`${rowIdx}_${selectedMonth.colIdx}`, { rowIdx, colIdx: selectedMonth.colIdx, score: parsedScore });
+              monthUpdates.push({ colIdx: selectedMonth.colIdx, dateStr: selectedMonth.dateStr, score: parsedScore });
+            }
           }
         }
 
@@ -5985,7 +6150,8 @@
             loaiCan: vals.loaiCan, 
             khoangGia: vals.khoangGia, 
             fund: fundInTH,
-            monthUpdates: monthUpdates
+            monthUpdates: monthUpdates,
+            scoringConfig: scoringState.value
           });
       } else {
         const name = document.getElementById('editNameF2').value.trim();
@@ -5999,6 +6165,8 @@
         const scoreMonth = scoreMonthEl ? scoreMonthEl.value : 'ALL';
         const scoreVal = scoreValEl ? scoreValEl.value.trim() : '';
         const khoangGia = khoangGiaEl ? khoangGiaEl.value.trim() : 'Tất cả';
+        const scoringState = readScoringConfig('editF2');
+        if (!scoringState.valid) { showToast(scoringState.error, true); return; }
 
         const monthUpdates = [];
         if (scoreVal !== '') {
@@ -6009,16 +6177,11 @@
               if (row && row.scores) row.scores[m.dateStr] = numScore;
             });
           } else {
-            // Tự động: Chọn tháng cụ thể thì CHỈ ghi điểm vào tháng đó, toàn bộ các tháng khác tự động xóa trống để bảo toàn lịch sử!
-            (configData.f2Months || []).forEach(m => {
-              if (m.dateStr === scoreMonth) {
-                monthUpdates.push({ colIdx: m.colIdx, dateStr: m.dateStr, score: numScore });
-                if (row && row.scores) row.scores[m.dateStr] = numScore;
-              } else {
-                monthUpdates.push({ colIdx: m.colIdx, dateStr: m.dateStr, score: '' });
-                if (row && row.scores) row.scores[m.dateStr] = '';
-              }
-            });
+            const selectedMonth = (configData.f2Months || []).find(m => m.dateStr === scoreMonth);
+            if (selectedMonth) {
+              monthUpdates.push({ colIdx: selectedMonth.colIdx, dateStr: selectedMonth.dateStr, score: numScore });
+              if (row && row.scores) row.scores[selectedMonth.dateStr] = numScore;
+            }
           }
         }
 
@@ -6047,7 +6210,8 @@
             name, 
             fund: 'Quỹ chéo',
             khoangGia: khoangGia,
-            monthUpdates: monthUpdates
+            monthUpdates: monthUpdates,
+            scoringConfig: scoringState.value
           });
       }
     }

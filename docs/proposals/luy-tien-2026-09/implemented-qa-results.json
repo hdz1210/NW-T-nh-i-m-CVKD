@@ -1,0 +1,34 @@
+[
+  {
+    "fund": "th",
+    "errors": [],
+    "state": {
+      "documentWidth": 430,
+      "viewportWidth": 430,
+      "modalFitsViewport": true,
+      "bodyScrollTop": 463,
+      "bodyScrollable": true,
+      "progressiveVisible": true,
+      "activeTab": "progressive",
+      "priceLabel": "> 50"
+    },
+    "desktopPath": "C:\\Users\\Admin\\Desktop\\Diem_CVKD\\docs\\proposals\\luy-tien-2026-09\\implemented-quy-nw.png",
+    "mobilePath": "C:\\Users\\Admin\\Desktop\\Diem_CVKD\\docs\\proposals\\luy-tien-2026-09\\implemented-mobile-quy-nw.png"
+  },
+  {
+    "fund": "f2",
+    "errors": [],
+    "state": {
+      "documentWidth": 430,
+      "viewportWidth": 430,
+      "modalFitsViewport": true,
+      "bodyScrollTop": 0,
+      "bodyScrollable": false,
+      "progressiveVisible": true,
+      "activeTab": "progressive",
+      "priceLabel": "> 50"
+    },
+    "desktopPath": "C:\\Users\\Admin\\Desktop\\Diem_CVKD\\docs\\proposals\\luy-tien-2026-09\\implemented-quy-cheo.png",
+    "mobilePath": "C:\\Users\\Admin\\Desktop\\Diem_CVKD\\docs\\proposals\\luy-tien-2026-09\\implemented-mobile-quy-cheo.png"
+  }
+]

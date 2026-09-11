@@ -34,7 +34,6 @@ let progressive=true;
 function updateProposal(){
   const min=Number(minEl.value),max=Number(maxEl.value);
   let range=progressive?(max>=999?'> '+min:min+' < Giá ≤ '+max):(min<=0&&max>=999?'Tất cả':min===max?'= '+min:min<=0?'< '+max:max>=999?'>= '+min:min+' - '+max);
-  if(document.getElementById(prefix+'IsDat').checked&&range!=='Tất cả')range='Giá đất '+range;
   priceLabel.textContent=range;
   priceLabel.style.color=range==='Tất cả'?'var(--text-tertiary)':'#92400e';
   priceLabel.style.background=range==='Tất cả'?'var(--bg-muted)':'#fef3c7';
